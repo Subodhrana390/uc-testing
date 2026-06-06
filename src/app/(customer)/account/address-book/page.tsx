@@ -82,7 +82,8 @@ export default function AddressBookPage() {
 
       if (error) throw error;
 
-      toast.success(currentAddress.id ? "Address updated" : "Address added");
+      const isNew = !currentAddress.id;
+      toast.success(isNew ? "Address added successfully!" : "Address updated");
       setIsEditing(false);
       setCurrentAddress({
         type: "Home",
@@ -95,11 +96,20 @@ export default function AddressBookPage() {
         country: "India",
         is_default: false
       });
+
+      // If we came from checkout (or any returnTo destination), go back there after saving
+      if (isNew && returnTo) {
+        toast.success("Redirecting back to checkout...");
+        setTimeout(() => router.push(returnTo), 600);
+        return;
+      }
+
       fetchAddresses();
     } catch (error: any) {
       toast.error(error.message || "Error saving address");
     }
   };
+
 
   const handleDelete = async (id: string) => {
     try {

@@ -123,3 +123,62 @@ export async function cancelOrder(orderId: string) {
     return { success: false, error: error.message || 'An unexpected error occurred' }
   }
 }
+
+/**
+ * deleteFailedOrder — Hard-deletes an order that failed at payment stage.
+ * Safety checks:
+ *  1. Order must belong to the authenticated user
+ *  2. Order payment_status must still be 'Unpaid' (not Paid / partially processed)
+ * This prevents accidental deletion of successfully paid orders.
+ */
+export async function deleteFailedOrder(orderId: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    // First verify the order belongs to this user and is still unpaid
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('id, payment_status, user_id')
+      .eq('id', orderId)
+      .eq('user_id', user.id)        // ownership check
+      .single()
+
+    if (fetchError || !order) {
+      console.error('deleteFailedOrder: order not found or unauthorized', fetchError)
+      return { success: false, error: 'Order not found or access denied' }
+    }
+
+    // Only delete if payment hasn't been processed
+    if (order.payment_status === 'Paid') {
+      console.warn('deleteFailedOrder: attempted to delete a paid order', orderId)
+      return { success: false, error: 'Cannot delete a successfully paid order' }
+    }
+
+    // Delete order items first (FK constraint)
+    await supabase.from('order_items').delete().eq('order_id', orderId)
+
+    // Delete the order itself
+    const { error: deleteError } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      console.error('deleteFailedOrder: delete error', deleteError)
+      return { success: false, error: 'Failed to remove failed order' }
+    }
+
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('deleteFailedOrder unexpected error:', error)
+    return { success: false, error: error.message || 'Unexpected error' }
+  }
+}
+

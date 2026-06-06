@@ -598,7 +598,7 @@ export default function ProductDetailPage() {
         <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
 
         {/* Top Selling Products */}
-        <TopSellingProducts currentProductId={product.id} />
+        {/* <TopSellingProducts currentProductId={product.id} /> */}
 
 
 

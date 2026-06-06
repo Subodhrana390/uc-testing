@@ -30,6 +30,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
 import { loadRazorpayScript } from "@/lib/razorpay";
+import { deleteFailedOrder } from "@/app/actions/orders";
 
 declare global {
   interface Window {
@@ -317,6 +318,9 @@ export default function CheckoutPage() {
     setIsPlacingOrder(true);
     setSubmitting(true);
 
+    // Track if an order was created so the catch block can clean it up
+    let createdOrderId: string | null = null;
+
     try {
       const { createOrder } = await import("@/app/actions/orders");
 
@@ -342,6 +346,7 @@ export default function CheckoutPage() {
         }
 
         const supabaseOrderId = res.orderId;
+        createdOrderId = supabaseOrderId; // track for catch cleanup
 
         // 2. Fetch Razorpay Order from server api
         const orderRes = await fetch("/api/razorpay/order", {
@@ -390,10 +395,13 @@ export default function CheckoutPage() {
                 clearCart();
                 router.push(`/checkout/success?orderId=${supabaseOrderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
               } else {
+                // Payment went through but DB sync failed — don't delete the order, just alert support
                 toast.error("Payment received but order registration failed. Please contact support.");
                 router.push(`/checkout/failed?error=${encodeURIComponent("Payment registered, but order database state sync failed. Please contact support.")}`);
               }
             } catch (err: any) {
+              // Verification threw — clean up the unpaid order
+              try { await deleteFailedOrder(supabaseOrderId); } catch (_) {}
               toast.error("An unexpected error occurred during order verification.");
               router.push(`/checkout/failed?error=${encodeURIComponent(err.message || "An unexpected error occurred during payment verification.")}`);
             }
@@ -413,9 +421,18 @@ export default function CheckoutPage() {
 
         const rzp = new (window as any).Razorpay(options);
         
-        // Handle Razorpay payment failure
-        rzp.on("payment.failed", function (response: any) {
-          router.push(`/checkout/failed?error=${encodeURIComponent(response.error.description || "Razorpay payment processing failed")}`);
+        // Handle Razorpay payment failure — clean up the unpaid order immediately
+        rzp.on("payment.failed", async function (response: any) {
+          try {
+            await deleteFailedOrder(supabaseOrderId);
+          } catch (e) {
+            console.error("Cleanup failed order error:", e);
+          }
+          router.push(
+            `/checkout/failed?error=${encodeURIComponent(
+              response.error?.description || "Razorpay payment processing failed"
+            )}`
+          );
         });
 
         rzp.open();
@@ -439,10 +456,11 @@ export default function CheckoutPage() {
         }
       }
     } catch (error: any) {
-      toast.error(
-        error.message ||
-        "Failed to place order"
-      );
+      // Clean up any Unpaid order that was created before the failure
+      if (createdOrderId) {
+        try { await deleteFailedOrder(createdOrderId); } catch (_) {}
+      }
+      toast.error(error.message || "Failed to place order");
       router.push(`/checkout/failed?error=${encodeURIComponent(error.message || "Failed to place order")}`);
     } finally {
       setSubmitting(false);
@@ -606,13 +624,17 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <div className="mb-8 p-10 border-2 border-dashed border-orange-100 rounded-[2rem] text-center">
-                  <p className="text-sm font-bold text-zinc-400 mb-4 uppercase tracking-widest">
+                  <MapPin className="h-10 w-10 text-orange-200 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-zinc-400 mb-2 uppercase tracking-widest">
                     No saved addresses found
                   </p>
+                  <p className="text-xs text-zinc-400 mb-5">
+                    Add a delivery address to continue placing your order.
+                  </p>
 
-                  <Link href="/account/address-book">
-                    <button className="rounded-xl h-12 px-8 bg-primary hover:bg-orange-600 text-white font-black uppercase tracking-widest text-xs transition">
-                      Add Your First Address
+                  <Link href="/account/address-book?returnTo=/checkout">
+                    <button className="rounded-xl h-12 px-8 bg-primary hover:bg-orange-600 text-white font-black uppercase tracking-widest text-xs transition inline-flex items-center gap-2">
+                      <Plus className="h-4 w-4" /> Add Delivery Address
                     </button>
                   </Link>
                 </div>

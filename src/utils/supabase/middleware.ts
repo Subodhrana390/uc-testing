@@ -86,10 +86,16 @@ export async function updateSession(request: NextRequest) {
   // Handle customer account and checkout routes
   if (pathname.startsWith("/account") || pathname === "/checkout") {
     if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("returnTo", pathname);
-      return NextResponse.redirect(url);
+      // Preserve full URL including search params so user returns to exact page+state after login
+      const originalUrl = request.nextUrl.clone();
+      const searchStr = originalUrl.search; // includes "?" prefix if present
+      const fullReturnTo = pathname + (searchStr || "");
+
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "";
+      loginUrl.searchParams.set("returnTo", fullReturnTo);
+      return NextResponse.redirect(loginUrl);
     } else if (userRole !== "customer") {
       // Prevent admins from accessing customer-only account/checkout pages
       const url = request.nextUrl.clone();

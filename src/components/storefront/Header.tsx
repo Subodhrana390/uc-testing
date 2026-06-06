@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Heart,
@@ -42,6 +43,15 @@ interface HeaderProps {
 export default function Header({ categories, user }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const supabase = createClient();
+  const router = useRouter();
+
+  // Build login URL with current page as returnTo at click-time (avoids useSearchParams Suspense requirement)
+  const goToLogin = () => {
+    const returnTo = typeof window !== "undefined"
+      ? window.location.pathname + window.location.search
+      : "/";
+    router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -121,13 +131,23 @@ export default function Header({ categories, user }: HeaderProps) {
 
               {/* Actions */}
               <div className="flex items-center gap-1 sm:gap-4">
-                <Link
-                  href={user ? "/account/profile" : "/login"}
-                  className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-700 hover:text-primary transition-colors"
-                >
-                  <User className="h-3.5 w-3.5" />
-                  <span>{user ? "Account" : "Login"}</span>
-                </Link>
+                {!user ? (
+                  <button
+                    onClick={goToLogin}
+                    className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-700 hover:text-primary transition-colors"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    <span>Login</span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/account/profile"
+                    className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-700 hover:text-primary transition-colors"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    <span>Account</span>
+                  </Link>
+                )}
 
                 {user && (
                   <button
@@ -142,12 +162,21 @@ export default function Header({ categories, user }: HeaderProps) {
                 <WishlistButton />
 
                 {/* Mobile Profile Icon */}
-                <Link
-                  href={user ? "/account/profile" : "/login"}
-                  className="sm:hidden p-2 text-zinc-700 hover:text-primary"
-                >
-                  <User className="h-4 w-4" />
-                </Link>
+                {!user ? (
+                  <button
+                    onClick={goToLogin}
+                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                  >
+                    <User className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <Link
+                    href="/account/profile"
+                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                  >
+                    <User className="h-4 w-4" />
+                  </Link>
+                )}
 
                 <div className="flex items-center">
                   <CartButton />
@@ -298,16 +327,27 @@ export default function Header({ categories, user }: HeaderProps) {
                 <div className="px-5 space-y-5">
                   {/* Account Links */}
                   <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href={user ? "/account/profile" : "/login"}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
-                    >
-                      <User className="h-4 w-4 text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        {user ? "Profile" : "Login"}
-                      </span>
-                    </Link>
+                    {/* Login / Profile */}
+                    {!user ? (
+                      <button
+                        onClick={() => { setIsMobileMenuOpen(false); goToLogin(); }}
+                        className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
+                      >
+                        <User className="h-5 w-5" />
+                        <span className="text-[10px] font-bold">Login</span>
+                      </button>
+                    ) : (
+                      <Link
+                        href="/account/profile"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
+                      >
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Profile</span>
+                      </Link>
+                    )}
+
+                    {/* Logout / Wishlist */}
                     {user ? (
                       <button
                         onClick={() => {
@@ -326,6 +366,7 @@ export default function Header({ categories, user }: HeaderProps) {
                       </div>
                     )}
                   </div>
+
 
                   {/* Navigation Links */}
                   <div className="space-y-1">

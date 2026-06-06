@@ -5,9 +5,17 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   baseUrl: string;
+  preserveParams?: Record<string, string | null | undefined>;
+  onPageChange?: (page: number) => void;
 }
 
-export default function Pagination({ currentPage, totalPages, baseUrl }: PaginationProps) {
+export default function Pagination({
+  currentPage,
+  totalPages,
+  baseUrl,
+  preserveParams,
+  onPageChange
+}: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -22,13 +30,35 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
     );
   });
 
-  const renderPageButton = (page: number | string, index: number) => {
+  const getPageHref = (page: number) => {
+    if (preserveParams) {
+      const params = new URLSearchParams();
+      Object.entries(preserveParams).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          params.set(key, val);
+        }
+      });
+      params.set("page", page.toString());
+      return `${baseUrl}?${params.toString()}`;
+    }
+    return `${baseUrl}?page=${page}`;
+  };
+
+  const handlePageClick = (page: number, e: React.MouseEvent) => {
+    if (onPageChange) {
+      e.preventDefault();
+      onPageChange(page);
+    }
+  };
+
+  const renderPageButton = (page: number, index: number) => {
     const isCurrent = page === currentPage;
     
     return (
       <Link
         key={index}
-        href={`${baseUrl}?page=${page}`}
+        href={getPageHref(page)}
+        onClick={(e) => handlePageClick(page, e)}
         className={`flex h-10 w-10 items-center justify-center border text-[10px] font-black transition-all ${
           isCurrent 
             ? "bg-zinc-950 text-white border-zinc-950" 
@@ -43,7 +73,8 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
   return (
     <div className="flex items-center justify-center gap-2 py-10">
       <Link
-        href={`${baseUrl}?page=${Math.max(1, currentPage - 1)}`}
+        href={getPageHref(Math.max(1, currentPage - 1))}
+        onClick={(e) => handlePageClick(Math.max(1, currentPage - 1), e)}
         className={`flex h-10 w-10 items-center justify-center border border-zinc-100 bg-white text-zinc-500 transition-all hover:border-primary hover:text-primary ${currentPage === 1 ? "pointer-events-none opacity-30" : ""}`}
       >
         <ChevronLeft className="h-4 w-4" />
@@ -64,7 +95,8 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
       })}
 
       <Link
-        href={`${baseUrl}?page=${Math.min(totalPages, currentPage + 1)}`}
+        href={getPageHref(Math.min(totalPages, currentPage + 1))}
+        onClick={(e) => handlePageClick(Math.min(totalPages, currentPage + 1), e)}
         className={`flex h-10 w-10 items-center justify-center border border-zinc-100 bg-white text-zinc-500 transition-all hover:border-primary hover:text-primary ${currentPage === totalPages ? "pointer-events-none opacity-30" : ""}`}
       >
         <ChevronRight className="h-4 w-4" />

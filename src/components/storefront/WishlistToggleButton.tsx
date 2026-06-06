@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
+import { useLoginRedirect } from "@/hooks/useLoginRedirect";
 
 type Props = {
   productId: string;
@@ -15,7 +15,7 @@ type Props = {
 
 export default function WishlistToggleButton({ productId, className, label = "Save" }: Props) {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
+  const { redirectToLogin } = useLoginRedirect();
   const [entryId, setEntryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +51,7 @@ export default function WishlistToggleButton({ productId, className, label = "Sa
 
     if (!user) {
       toast("Please login to save wishlist items");
-      router.push("/login");
+      redirectToLogin();
       return;
     }
 

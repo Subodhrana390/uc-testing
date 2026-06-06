@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Star, Heart, ShoppingCart, Check, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { addCartItem, removeCartItem, isInCart as checkInCart } from "@/lib/cart";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "react-hot-toast";
+import { useLoginRedirect } from "@/hooks/useLoginRedirect";
 
 interface ProductCardProps {
   product: {
@@ -40,7 +40,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [inWishlist, setInWishlist] = useState(false);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
-  const router = useRouter();
+  const { redirectToLogin } = useLoginRedirect();
 
   useEffect(() => {
     // Initial sync
@@ -106,8 +106,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error("Please login to manage wishlist");
-      router.push("/login");
+      toast.error("Please login to save to wishlist");
+      redirectToLogin();
       return;
     }
 

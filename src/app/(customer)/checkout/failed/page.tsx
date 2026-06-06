@@ -1,12 +1,26 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, RefreshCw, ShoppingCart } from "lucide-react";
+import { AlertCircle, RefreshCw, ShoppingCart } from "lucide-react";
+import { deleteFailedOrder } from "@/app/actions/orders";
 
 export default function OrderFailedPage() {
   const searchParams = useSearchParams();
   const errorMsg = searchParams.get("error") || "Payment transaction could not be processed.";
+  const orderId = searchParams.get("orderId");
+  const cleanupRan = useRef(false);
+
+  // Safety-net: delete the failed/unpaid order if orderId is in the URL
+  useEffect(() => {
+    if (orderId && !cleanupRan.current) {
+      cleanupRan.current = true;
+      deleteFailedOrder(orderId).catch((err) =>
+        console.warn("Failed page cleanup error:", err)
+      );
+    }
+  }, [orderId]);
 
   return (
     <div className="min-h-[75vh] flex items-center justify-center bg-zinc-50/50 py-12 px-4 sm:px-6 lg:px-8">
@@ -23,9 +37,9 @@ export default function OrderFailedPage() {
         </div>
 
         <div className="space-y-3">
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Payment / Order Failed</h1>
+          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Payment Failed</h1>
           <p className="text-sm text-zinc-500 font-medium">
-            We encountered a problem while processing your transaction. No funds were debited if the order was not created.
+            Your payment could not be processed. Any pending order has been automatically removed — your cart is safe.
           </p>
         </div>
 
