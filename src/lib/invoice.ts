@@ -19,10 +19,11 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   const doc = new jsPDF();
   const businessInfo = {
     name: "UC ENTERPRISES",
-    address: "123, Business Park, Industrial Area, New Delhi - 110001",
-    gstin: "07AAAAA0000A1Z5", // Placeholder GSTIN
-    email: "billing@ucenterprises.com",
-    phone: "+91 99999 88888"
+    address: "Hadhbast no-44, Ambala Delhi National Highway, Bisanpur, Zirakpur, Punjab, 140603, India.",
+    gstin: "03DYEPD4654N1ZB",
+    udyam: "UDYAM-PB-18-0013501",
+    email: "ucenterprises1@gmail.com",
+    phone: "9888863377"
   };
 
   // Set Header
@@ -32,13 +33,19 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text(businessInfo.address, 14, 28);
-  doc.text(`GSTIN: ${businessInfo.gstin}`, 14, 33);
-  doc.text(`Email: ${businessInfo.email} | Phone: ${businessInfo.phone}`, 14, 38);
+  
+  // Wrap business address text dynamically
+  const businessAddressLines = doc.splitTextToSize(businessInfo.address, 180);
+  doc.text(businessAddressLines, 14, 28);
+  
+  const nextY = 28 + (businessAddressLines.length * 5);
+  doc.text(`GSTIN: ${businessInfo.gstin} | UDYAM: ${businessInfo.udyam}`, 14, nextY);
+  doc.text(`Email: ${businessInfo.email} | Phone: ${businessInfo.phone}`, 14, nextY + 5);
 
   // Line
+  const lineY = nextY + 10;
   doc.setDrawColor(249, 115, 22);
-  doc.line(14, 45, 196, 45);
+  doc.line(14, lineY, 196, lineY);
 
   // Invoice Details
   doc.setFontSize(12);

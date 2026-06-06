@@ -20,13 +20,24 @@ import {
   RotateCcw,
   AlertCircle,
   HelpCircle,
-  FileDown
+  FileDown,
+  Star
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function TrackOrderContent() {
   const [orderId, setOrderId] = useState("");
@@ -34,8 +45,89 @@ function TrackOrderContent() {
   const [order, setOrder] = useState<any>(null);
   const [error, setError] = useState("");
 
+  // Review Modal State
+  const [reviewProduct, setReviewProduct] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+
+  const handleDownloadInvoice = async (order: any) => {
+    try {
+      const { generateInvoicePDF } = await import("@/lib/invoice");
+      const invoiceData = {
+        orderId: order.id,
+        date: order.created_at,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+        customerPhone: order.phone,
+        address: order.shipping_address || "N/A",
+        items: order.order_items || [],
+        totalAmount: parseFloat(order.total_amount)
+      };
+      const doc = await generateInvoicePDF(invoiceData);
+      doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
+      toast.success("Invoice downloaded successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to generate/download invoice.");
+    }
+  };
+
+  const handleOpenReviewDialog = (product: any) => {
+    setReviewProduct(product);
+    setReviewRating(5);
+    setReviewText("");
+    setIsReviewOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewText.trim()) {
+      toast.error("Please enter your review comments.");
+      return;
+    }
+
+    setReviewSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to write a review.");
+        setIsReviewOpen(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const reviewerName = profile?.full_name || user.user_metadata?.full_name || user.email || "Customer";
+
+      const { error } = await supabase.from("product_reviews").insert([
+        {
+          product_id: reviewProduct.id,
+          user_id: user.id,
+          reviewer_name: reviewerName,
+          rating: reviewRating,
+          review: reviewText,
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Thank you for your rating & review!");
+      setIsReviewOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to submit review.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const performTracking = async (id: string) => {
     setLoading(true);
@@ -143,9 +235,9 @@ function TrackOrderContent() {
     const statusStep = getStatusStep(order.status);
     const carrierName = order.carrier || "Delivery Partner";
     const statusLower = order.status.toLowerCase();
-    
+
     const list = [];
-    
+
     // Add Order Placed milestone for all orders
     list.push({
       title: "Order Placed",
@@ -201,7 +293,7 @@ function TrackOrderContent() {
         });
       }
     }
-    
+
     return list.reverse();
   }, [order]);
 
@@ -229,7 +321,7 @@ function TrackOrderContent() {
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="grid gap-8 lg:grid-cols-12 items-start">
-          
+
           {/* Form Box Column */}
           <div className="lg:col-span-4 sticky top-8">
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
@@ -333,19 +425,19 @@ function TrackOrderContent() {
                           order.status.toLowerCase() === "delivered"
                             ? "bg-emerald-500/8 text-emerald-700 border-emerald-500/15"
                             : order.status.toLowerCase() === "shipped"
-                            ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
-                            : order.status.toLowerCase() === "processing"
-                            ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
-                            : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
-                            ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
-                            : order.status.toLowerCase() === "returned"
-                            ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
-                            : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
+                              ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
+                              : order.status.toLowerCase() === "processing"
+                                ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
+                                : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
+                                  ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
+                                  : order.status.toLowerCase() === "returned"
+                                    ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
+                                    : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
                         )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                           {order.status}
                         </span>
-                        
+
                         <button
                           onClick={() => {
                             setOrderId("");
@@ -457,7 +549,7 @@ function TrackOrderContent() {
 
                   {/* Visual Transit Logs & Item list Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                    
+
                     {/* Visual Transit Log Updates */}
                     <div className="md:col-span-3 bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
                       <div className="flex items-center gap-2 mb-6 border-b border-zinc-100 pb-4">
@@ -471,11 +563,11 @@ function TrackOrderContent() {
                             {/* Point Indicator */}
                             <span className={cn(
                               "absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border border-white transition-all duration-300",
-                              idx === 0 
+                              idx === 0
                                 ? "bg-emerald-500 ring-4 ring-emerald-500/10"
                                 : "bg-zinc-350"
                             )} />
-                            
+
                             <div>
                               <div className="flex items-baseline justify-between gap-4 flex-wrap">
                                 <h5 className={cn(
@@ -500,7 +592,7 @@ function TrackOrderContent() {
                       {/* Total Card */}
                       <div className="bg-zinc-950 p-6 md:p-8 rounded-3xl shadow-xl text-white flex flex-col justify-between relative overflow-hidden min-h-[180px]">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-                        
+
                         <div className="relative z-10">
                           <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest">
                             Total Order Value
@@ -513,10 +605,22 @@ function TrackOrderContent() {
                           </span>
                         </div>
 
-                        <button className="relative z-10 mt-6 flex items-center justify-between w-full p-4 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 active:scale-95 transition-all text-xs font-bold uppercase tracking-wider group">
-                          Download Invoice
-                          <FileDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                        </button>
+                        {order.status?.toLowerCase() === "delivered" ? (
+                          <button
+                            onClick={() => handleDownloadInvoice(order)}
+                            className="relative z-10 mt-6 flex items-center justify-between w-full p-4 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 active:scale-95 transition-all text-xs font-bold uppercase tracking-wider group cursor-pointer"
+                          >
+                            Download Invoice
+                            <FileDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                          </button>
+                        ) : (
+                          <div
+                            title="Invoice will generate after delivery"
+                            className="relative z-10 mt-6 p-4 bg-white/5 rounded-2xl border border-dashed border-white/10 text-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider"
+                          >
+                            Invoice generated after delivery
+                          </div>
+                        )}
                       </div>
 
                       {/* Return CTA */}
@@ -541,36 +645,45 @@ function TrackOrderContent() {
                     <div className="flex items-center gap-2 mb-6 border-b border-zinc-100 pb-4">
                       <ReceiptText className="w-4.5 h-4.5 text-zinc-400" />
                       <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Consolidated Items</h4>
-                    </div>
-
-                    <div className="grid gap-3.5 sm:grid-cols-2">
+                    </div>                    <div className="grid gap-3.5 sm:grid-cols-2">
                       {order.order_items?.map((item: any) => (
                         <div
                           key={item.id}
-                          className="flex gap-4 p-3 rounded-2xl border border-zinc-150/70 hover:bg-zinc-50 hover:border-zinc-250 transition-all duration-300"
+                          className="flex items-center justify-between gap-4 p-3 rounded-2xl border border-zinc-150/70 hover:bg-zinc-50 hover:border-zinc-250 transition-all duration-300 w-full"
                         >
-                          <div className="w-14 h-14 rounded-xl bg-zinc-50 border border-zinc-200 overflow-hidden flex-shrink-0 relative">
-                            {item.products?.image_url ? (
-                              <Image
-                                src={item.products.image_url}
-                                alt={item.products.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <Package className="w-5 h-5 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                            )}
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className="w-14 h-14 rounded-xl bg-zinc-50 border border-zinc-200 overflow-hidden flex-shrink-0 relative">
+                              {item.products?.image_url ? (
+                                <Image
+                                  src={item.products.image_url}
+                                  alt={item.products.name}
+                                  fill
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <Package className="w-5 h-5 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
+                              <p className="text-xs font-bold text-zinc-850 truncate leading-snug">
+                                {item.products?.name}
+                              </p>
+                              <p className="text-[10px] text-zinc-450 font-bold uppercase mt-1">
+                                Quantity: <span className="text-zinc-650">{item.quantity}</span>
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
-                            <p className="text-xs font-bold text-zinc-850 truncate leading-snug">
-                              {item.products?.name}
-                            </p>
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">
-                              Quantity: <span className="text-zinc-650">{item.quantity}</span>
-                            </p>
-                          </div>
+                          {order.status?.toLowerCase() === "delivered" && item.products && (
+                            <button
+                              onClick={() => handleOpenReviewDialog(item.products)}
+                              className="shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95"
+                            >
+                              Give Review
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -601,6 +714,77 @@ function TrackOrderContent() {
 
         </div>
       </div>
+
+      <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
+        <DialogContent className="sm:max-w-md bg-white border border-zinc-150 p-6 rounded-3xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-zinc-900">Write a Review</DialogTitle>
+            <DialogDescription className="text-xs text-zinc-500">
+              Share your feedback for {reviewProduct?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {reviewProduct?.image_url && (
+              <div className="flex justify-center mb-2">
+                <div className="w-16 h-16 bg-gray-50 border border-zinc-100 rounded-xl overflow-hidden relative animate-in zoom-in-95 duration-200">
+                  <Image
+                    src={reviewProduct.image_url}
+                    alt={reviewProduct.name}
+                    fill
+                    className="object-contain p-2"
+                    unoptimized
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-center gap-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setReviewRating(index + 1)}
+                  className="text-amber-500 transition-transform hover:scale-110 active:scale-95"
+                >
+                  <Star className={`h-8 w-8 ${index < reviewRating ? "fill-current" : "text-zinc-200"}`} />
+                </button>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Your Review</label>
+              <textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="Share your experience using this product..."
+                rows={4}
+                className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsReviewOpen(false)}
+              className="w-full sm:w-auto rounded-xl border-zinc-200"
+              disabled={reviewSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitReview}
+              className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl"
+              disabled={reviewSubmitting}
+            >
+              {reviewSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting
+                </>
+              ) : (
+                "Submit Review"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -611,9 +795,6 @@ export default function TrackOrderPage() {
       fallback={
         <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-zinc-50">
           <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
-          <p className="text-sm font-medium text-zinc-500">
-            Initializing tracking dashboard...
-          </p>
         </div>
       }
     >
