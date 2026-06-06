@@ -155,7 +155,8 @@ export async function POST(req: Request) {
       }
 
       // If customer successfully paid online, transition order status to CONFIRMED using state machine
-      if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && existingOrder.status === "PENDING") {
+      if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && 
+          (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PLACED")) {
         await serviceRoleSupabase.rpc(
           "transition_order_status",
           {
@@ -194,6 +195,7 @@ export async function POST(req: Request) {
         .from("payments")
         .update({
           status: "completed",
+          payment_method: order.payment_method || "ONLINE",
           transaction_id: razorpayPaymentId || order.razorpay_payment_id || `tx_${Math.random().toString(36).substring(2, 11)}`
         })
         .eq("order_id", orderId)

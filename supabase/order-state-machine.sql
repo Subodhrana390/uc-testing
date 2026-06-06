@@ -76,10 +76,10 @@ BEGIN
   UPDATE public.orders
   SET status = p_new_status,
       payment_status = CASE 
-        WHEN p_new_status = 'CANCELLED' AND payment_status = 'Paid' THEN 'Refund Pending'
+        WHEN p_new_status = 'CANCELLED' AND payment_status = 'Paid' AND payment_method <> 'COD' THEN 'Refund Pending'
         WHEN p_new_status = 'CANCELLED' THEN 'Cancelled'
         WHEN p_new_status = 'REFUNDED' THEN 'Refunded'
-        WHEN p_new_status = 'FAILED' AND payment_status = 'Paid' THEN 'Refund Pending'
+        WHEN p_new_status = 'FAILED' AND payment_status = 'Paid' AND payment_method <> 'COD' THEN 'Refund Pending'
         WHEN p_new_status = 'FAILED' THEN 'Failed'
         ELSE payment_status
       END
@@ -88,13 +88,13 @@ BEGIN
   -- 5. Update Payment Status in payments table
   IF p_new_status = 'CANCELLED' THEN
     UPDATE public.payments 
-    SET status = CASE WHEN status = 'paid' OR status = 'captured' OR status = 'completed' THEN 'refund_pending' ELSE 'cancelled' END 
+    SET status = CASE WHEN (status = 'paid' OR status = 'captured' OR status = 'completed') AND payment_method <> 'COD' THEN 'refund_pending' ELSE 'cancelled' END 
     WHERE order_id = p_order_id;
   ELSIF p_new_status = 'REFUNDED' THEN
     UPDATE public.payments SET status = 'refunded' WHERE order_id = p_order_id;
   ELSIF p_new_status = 'FAILED' THEN
     UPDATE public.payments 
-    SET status = CASE WHEN status = 'paid' OR status = 'captured' OR status = 'completed' THEN 'refund_pending' ELSE 'failed' END 
+    SET status = CASE WHEN (status = 'paid' OR status = 'captured' OR status = 'completed') AND payment_method <> 'COD' THEN 'refund_pending' ELSE 'failed' END 
     WHERE order_id = p_order_id;
   END IF;
 
