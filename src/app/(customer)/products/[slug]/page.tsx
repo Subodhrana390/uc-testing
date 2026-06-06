@@ -112,7 +112,6 @@ export default function ProductDetailPage() {
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       try {
         await navigator.share(shareData);
-        toast.success("Shared successfully!");
       } catch (error: any) {
         if (error.name !== "AbortError") {
           toast.error("Failed to share product.");

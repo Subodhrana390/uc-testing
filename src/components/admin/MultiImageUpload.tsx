@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Plus, Image as ImageIcon, Loader2, Upload, Star, ArrowLeft, ArrowRight } from "lucide-react";
+import { X, Plus, Image as ImageIcon, Loader2, Upload, Star, ArrowLeft, ArrowRight, Maximize2 } from "lucide-react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ interface MultiImageUploadProps {
 export default function MultiImageUpload({ images, onChange }: MultiImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const supabase = createClient();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,19 +84,40 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
     onChange(newImages);
   };
 
+  const handlePrev = () => {
+    if (selectedImageIndex === null) return;
+    setSelectedImageIndex(prev => prev !== null ? (prev - 1 + images.length) % images.length : null);
+  };
+
+  const handleNext = () => {
+    if (selectedImageIndex === null) return;
+    setSelectedImageIndex(prev => prev !== null ? (prev + 1) % images.length : null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {images.map((url, index) => (
-          <div key={index} className="relative aspect-square border border-zinc-150 overflow-hidden bg-zinc-50 group/item shadow-sm rounded-xl flex items-center justify-center p-2">
-            <img src={url} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+          <div key={index} className="relative aspect-square border border-zinc-150 overflow-hidden bg-zinc-50 group/item shadow-sm rounded-xl flex items-center justify-center p-2 hover:border-zinc-350 hover:shadow-md transition-all duration-200">
+            <div 
+              onClick={() => setSelectedImageIndex(index)}
+              className="w-full h-full cursor-pointer flex items-center justify-center relative"
+              title="Click to view large preview"
+            >
+              <img src={url} alt="" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
+              
+              {/* Click to expand overlay */}
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                <Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
+              </div>
+            </div>
             
             {/* Top Bar Actions */}
             <div className="absolute top-2 left-2 right-2 flex justify-between items-center opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
               {index > 0 ? (
                 <button
                   type="button"
-                  onClick={() => makePrimary(index)}
+                  onClick={(e) => { e.stopPropagation(); makePrimary(index); }}
                   className="p-1.5 bg-white hover:bg-teal-50 border border-zinc-150 text-zinc-500 hover:text-teal-600 rounded-lg shadow-sm transition-all hover:scale-105"
                   title="Make Primary Asset"
                 >
@@ -103,13 +125,13 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                 </button>
               ) : (
                 <div className="p-1.5 bg-teal-50 border border-teal-100 text-teal-650 rounded-lg shadow-sm">
-                  <Star className="w-3.5 h-3.5 fill-teal-600 text-teal-600" />
+                  <Star className="w-3.5 h-3.5 fill-teal-650 text-teal-650" />
                 </div>
               )}
               
               <button
                 type="button"
-                onClick={() => removeImage(index)}
+                onClick={(e) => { e.stopPropagation(); removeImage(index); }}
                 className="p-1.5 bg-white hover:bg-red-50 border border-zinc-150 text-zinc-500 hover:text-red-650 rounded-lg shadow-sm transition-all hover:scale-105"
                 title="Remove Asset"
               >
@@ -123,7 +145,7 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                 {index > 0 && (
                   <button
                     type="button"
-                    onClick={() => moveImage(index, "left")}
+                    onClick={(e) => { e.stopPropagation(); moveImage(index, "left"); }}
                     className="p-1 bg-white hover:bg-zinc-50 border border-zinc-150 text-zinc-500 hover:text-zinc-800 rounded-md shadow-sm transition-all"
                     title="Move Left"
                   >
@@ -133,7 +155,7 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                 {index < images.length - 1 && (
                   <button
                     type="button"
-                    onClick={() => moveImage(index, "right")}
+                    onClick={(e) => { e.stopPropagation(); moveImage(index, "right"); }}
                     className="p-1 bg-white hover:bg-zinc-50 border border-zinc-150 text-zinc-500 hover:text-zinc-800 rounded-md shadow-sm transition-all"
                     title="Move Right"
                   >
@@ -190,6 +212,152 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
           <Plus className="w-5 h-5" />
         </Button>
       </div>
+
+      {/* Large Image Preview Modal / Lightbox */}
+      {selectedImageIndex !== null && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-200">
+          <div className="relative bg-white border border-zinc-150 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-white">
+              <div className="flex flex-col">
+                <h3 className="font-bold text-zinc-900 text-base">Image Preview</h3>
+                <p className="text-xs text-zinc-400">
+                  Asset {selectedImageIndex + 1} of {images.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedImageIndex(null)}
+                className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body - Large Image View */}
+            <div className="flex-1 min-h-0 bg-zinc-50 relative flex items-center justify-center p-6 group">
+              <img
+                src={images[selectedImageIndex]}
+                alt={`Asset ${selectedImageIndex + 1}`}
+                className="max-w-full max-h-[55vh] object-contain rounded-lg shadow-sm"
+              />
+
+              {/* Navigation Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    className="absolute left-4 p-2 bg-white/95 hover:bg-white border border-zinc-150 text-zinc-700 rounded-full shadow-lg transition opacity-80 hover:opacity-100 hover:scale-105"
+                    title="Previous Image"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="absolute right-4 p-2 bg-white/95 hover:bg-white border border-zinc-150 text-zinc-700 rounded-full shadow-lg transition opacity-80 hover:opacity-100 hover:scale-105"
+                    title="Next Image"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex flex-wrap items-center justify-between px-6 py-4 border-t border-zinc-100 bg-white gap-4">
+              <div className="flex items-center gap-2">
+                {selectedImageIndex === 0 ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 border border-teal-100 text-teal-700 rounded-lg text-xs font-bold uppercase tracking-wider">
+                    <Star className="w-3.5 h-3.5 fill-teal-600 text-teal-600" />
+                    Primary Asset
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      makePrimary(selectedImageIndex);
+                      setSelectedImageIndex(0);
+                    }}
+                    className="flex items-center gap-1.5 text-zinc-650 hover:text-teal-600 hover:bg-teal-50 hover:border-teal-200"
+                  >
+                    <Star className="w-3.5 h-3.5 text-zinc-400" />
+                    Set as Primary
+                  </Button>
+                )}
+                
+                {images.length > 1 && (
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={selectedImageIndex === 0}
+                      onClick={() => {
+                        moveImage(selectedImageIndex, "left");
+                        setSelectedImageIndex(selectedImageIndex - 1);
+                      }}
+                      className="px-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={selectedImageIndex === images.length - 1}
+                      onClick={() => {
+                        moveImage(selectedImageIndex, "right");
+                        setSelectedImageIndex(selectedImageIndex + 1);
+                      }}
+                      className="px-2"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(images[selectedImageIndex!]);
+                    toast.success("Image URL copied!");
+                  }}
+                  className="text-zinc-600"
+                >
+                  Copy URL
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    const idx = selectedImageIndex!;
+                    removeImage(idx);
+                    if (images.length <= 1) {
+                      setSelectedImageIndex(null);
+                    } else {
+                      setSelectedImageIndex(Math.min(idx, images.length - 2));
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete Image
+                </Button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

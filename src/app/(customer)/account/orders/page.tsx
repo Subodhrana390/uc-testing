@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { loadRazorpayScript } from "@/lib/razorpay";
 
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -32,15 +33,9 @@ export default function OrderHistoryPage() {
 
     try {
       // 1. Ensure Razorpay script is loaded
-      if (!window.Razorpay) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load Razorpay SDK"));
-          document.body.appendChild(script);
-        });
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        throw new Error("Failed to load Razorpay SDK. Please check your internet connection or disable ad-blockers.");
       }
 
       // 2. Fetch Razorpay Order from server api

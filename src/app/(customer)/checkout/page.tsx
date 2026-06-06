@@ -29,6 +29,7 @@ import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
+import { loadRazorpayScript } from "@/lib/razorpay";
 
 declare global {
   interface Window {
@@ -89,14 +90,7 @@ export default function CheckoutPage() {
     }
 
     async function fetchData() {
-      const script = document.createElement("script");
-
-      script.src =
-        "https://checkout.razorpay.com/v1/checkout.js";
-
-      script.async = true;
-
-      document.body.appendChild(script);
+      loadRazorpayScript();
 
       const {
         data: { user },
@@ -327,6 +321,12 @@ export default function CheckoutPage() {
       const { createOrder } = await import("@/app/actions/orders");
 
       if (paymentMethod === "ONLINE") {
+        // Ensure Razorpay script is loaded
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          throw new Error("Failed to load Razorpay SDK. Please check your internet connection or disable ad-blockers.");
+        }
+
         // 1. Create order in Supabase as Unpaid
         const res = await createOrder({
           ...form,
