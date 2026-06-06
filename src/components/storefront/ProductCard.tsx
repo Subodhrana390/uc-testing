@@ -1,0 +1,249 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Star, Heart, ShoppingCart, Check, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
+import { addCartItem, removeCartItem, isInCart as checkInCart } from "@/lib/cart";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "react-hot-toast";
+
+interface ProductCardProps {
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    sale_price: number | null;
+    image_url: string | null;
+    status: string | null;
+    stock_quantity: number;
+    moq?: number | null;
+    categories?: {
+      name: string;
+      slug: string;
+      parent?: {
+        name: string;
+        slug: string;
+      } | null;
+    } | null;
+    product_reviews?: {
+      rating: number;
+    }[];
+  };
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  const [inCart, setInCart] = useState(false);
+  const [inWishlist, setInWishlist] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Initial sync
+    setInCart(checkInCart(product.id));
+
+    async function checkWishlist() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("wishlist")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("product_id", product.id)
+        .single();
+
+      if (data) setInWishlist(true);
+    }
+
+    checkWishlist();
+
+    const handleCartSync = () => setInCart(checkInCart(product.id));
+    window.addEventListener("cart-updated", handleCartSync);
+    return () => window.removeEventListener("cart-updated", handleCartSync);
+  }, [product.id, supabase]);
+
+  const price = Number(product.price);
+  const salePrice = product.sale_price ? Number(product.sale_price) : 0;
+  const discount = (salePrice > 0 && price > 0 && price > salePrice)
+    ? Math.round(((price - salePrice) / price) * 100)
+    : null;
+
+  const reviews = product.product_reviews || [];
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : "0.0";
+
+  const categoryName = product.categories?.name || "Industrial";
+  const mainCategory = product.categories?.parent?.name || categoryName;
+
+  const toggleCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (inCart) {
+      removeCartItem(product.id);
+      toast.success("Removed from cart");
+    } else {
+      addCartItem({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.sale_price || product.price,
+        image_url: product.image_url
+      });
+      toast.success("Added to cart");
+    }
+  };
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please login to manage wishlist");
+      router.push("/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (inWishlist) {
+        const { error } = await supabase
+          .from("wishlist")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", product.id);
+
+        if (!error) {
+          setInWishlist(false);
+          toast.success("Removed from wishlist");
+        }
+      } else {
+        const { error } = await supabase
+          .from("wishlist")
+          .insert({
+            user_id: user.id,
+            product_id: product.id
+          });
+
+        if (!error) {
+          setInWishlist(true);
+          toast.success("Added to wishlist");
+        }
+      }
+      // Notify other components
+      window.dispatchEvent(new CustomEvent("wishlist-updated"));
+    } catch (err) {
+      toast.error("Failed to update wishlist");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="group/prodcard relative flex flex-col bg-transparent transition-all h-full overflow-hidden rounded-2xl">
+      {/* Image Container */}
+      <div className="relative aspect-square overflow-hidden">
+        <Link href={`/products/${product.slug}`} className="absolute inset-0 z-0">
+          <Image
+            src={product.image_url || "/images/prod_main.png"}
+            alt={product.name}
+            fill
+            className="object-contain p-3.5 transition-transform duration-700 group-hover/prodcard:scale-105"
+            unoptimized
+          />
+        </Link>
+
+        {/* Badges */}
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10 pointer-events-none">
+          {discount && (
+            <div className="bg-primary text-white text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm shadow-md">
+              -{discount}%
+            </div>
+          )}
+          {product.status === "New" && (
+            <div className="bg-emerald-600 text-white text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm shadow-md">
+              New
+            </div>
+          )}
+        </div>
+
+        {/* Wishlist Button */}
+        <button
+          onClick={toggleWishlist}
+          disabled={loading}
+          className={`absolute top-2.5 right-2.5 z-20 p-1.5 rounded-full transition-all shadow-sm active:scale-95 ${inWishlist
+            ? "bg-rose-500 text-white"
+            : "bg-white/95 backdrop-blur-sm text-zinc-400 hover:text-rose-500 hover:bg-white"
+            }`}
+        >
+          {loading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Heart className={`w-3 h-3 ${inWishlist ? "fill-current" : ""}`} />
+          )}
+        </button>
+      </div>
+
+      {/* Content Section */}
+      <Link href={`/products/${product.slug}`} className="p-2.5 space-y-1.5 flex-1 flex flex-col">
+        {/* Category & Rating */}
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary truncate max-w-[65%]">{mainCategory}</span>
+          <div className="flex items-center gap-0.5 text-amber-500">
+            <Star className="h-3 w-3 fill-amber-500" />
+            <span className="text-[11px] font-black text-zinc-900">{avgRating}</span>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-xs font-bold text-zinc-900 line-clamp-2 leading-tight group-hover/prodcard:text-primary transition-colors">
+          {product.name}
+        </h3>
+
+        {/* Price & Inventory */}
+        <div className="flex items-center justify-between pt-1 mt-auto">
+          <div className="flex flex-col">
+            <span className="text-sm font-black text-zinc-950 leading-none">
+              {formatCurrency(product.sale_price || product.price)}
+            </span>
+            {product.sale_price && (
+              <span className="text-[10px] text-zinc-400 line-through mt-0.5 font-bold">
+                {formatCurrency(product.price)}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col items-end text-right">
+            <span className={`text-[9px] font-black uppercase tracking-widest ${product.stock_quantity > 0 ? "text-emerald-600" : "text-amber-600"}`}>
+              {product.stock_quantity > 0 ? "In Stock" : "Out"}
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      {/* Bottom Action Bar with expanded Cart button */}
+      <div className="px-2.5 pb-2.5 mt-auto">
+        <button
+          onClick={toggleCart}
+          className={`w-full flex items-center justify-center gap-2 py-3.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] ${inCart
+            ? "bg-emerald-600 text-white"
+            : "bg-primary text-white hover:bg-zinc-950"
+            }`}
+        >
+          {inCart ? (
+            <>In Cart <Check className="w-3.5 h-3.5" /></>
+          ) : (
+            <>Add To Cart <ShoppingCart className="w-3.5 h-3.5" /></>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}

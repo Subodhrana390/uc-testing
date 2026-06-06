@@ -1,0 +1,622 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 0 72% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 0%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 0 72% 51%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 0 72% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 0%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    --sidebar: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 224.3 76.3% 48%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Premium Admin Scrollbar */
+.admin-sidebar-scroll [data-slot="scroll-area-scrollbar"] {
+  width: 4px !important;
+  margin-right: 2px;
+  background: transparent !important;
+}
+
+.admin-sidebar-scroll [data-slot="scroll-area-thumb"] {
+  background: oklch(0.92 0.02 75) !important;
+  border-radius: 10px !important;
+  transition: background 0.2s ease !important;
+}
+
+.admin-sidebar-scroll:hover [data-slot="scroll-area-thumb"] {
+  background: oklch(0.72 0.18 55) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.92 0.02 75);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.72 0.18 55);
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Tiptap Editor ProseMirror styling */
+.ProseMirror {
+  outline: none;
+  min-height: 250px;
+}
+
+.ProseMirror p,
+.prose p {
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror p:last-child,
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror h1,
+.prose h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25;
+}
+
+.ProseMirror h2,
+.prose h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}
+
+.ProseMirror h3,
+.prose h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}
+
+.ProseMirror ul,
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror ol,
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror li,
+.prose li {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror blockquote,
+.prose blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 0.75rem;
+  background-color: hsl(var(--muted) / 0.3);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.ProseMirror a,
+.prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.ProseMirror img {
+  max-width: 448px;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.prose img {
+  border: none !important;
+  box-shadow: none !important;
+  max-width: 448px !important;
+  width: 100% !important;
+  height: auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+  border-radius: var(--radius) !important;
+}
+
+.ProseMirror hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.5rem 0;
+}
+
+/* Premium Tiptap Editor / Prose Table Styles */
+.ProseMirror table,
+.prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1.5rem 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+}
+
+.ProseMirror th,
+.ProseMirror td,
+.prose th,
+.prose td {
+  min-width: 1em;
+  border: 1px solid hsl(var(--border));
+  padding: 8px 12px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror th,
+.prose th {
+  font-weight: 700;
+  text-align: left;
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.ProseMirror .selectedCell:after,
+.prose .selectedCell:after {
+  background: rgba(200, 200, 255, 0.4);
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.ProseMirror .column-resize-handle,
+.prose .column-resize-handle {
+  background-color: hsl(var(--primary));
+  bottom: -2px;
+  position: absolute;
+  right: -2px;
+  pointer-events: none;
+  top: 0;
+  width: 4px;
+  z-index: 20;
+}
+
+/* ==========================================================================
+   Premium Admin Dashboard Theme Overrides
+   Matches design system: Black background, Pure White Card base, Cyan accents
+   ========================================================================== */
+
+/* Page titles and headers (outside white cards) */
+.admin-dashboard-main h1,
+.admin-dashboard-main h2:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main h3:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-zinc-800:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-zinc-900:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-zinc-950:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-slate-900:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-slate-800:not(.bg-white *):not(.bg-card *) {
+  color: #0f172a !important; /* Slate 900 */
+}
+
+/* Subheadings and small captions (outside white cards) */
+.admin-dashboard-main p.text-zinc-500:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main p.text-slate-500:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main span.text-zinc-500:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main span.text-slate-500:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-zinc-500:not(.bg-white *):not(.bg-card *),
+.admin-dashboard-main .text-slate-500:not(.bg-white *):not(.bg-card *) {
+  color: #64748b !important; /* Slate 500 */
+}
+
+/* Base style for all white cards/boxes */
+.admin-dashboard-main .bg-white,
+.admin-dashboard-main .bg-card {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Text elements inside white cards */
+.admin-dashboard-main .bg-white .text-zinc-950,
+.admin-dashboard-main .bg-white .text-zinc-900,
+.admin-dashboard-main .bg-white .text-zinc-800,
+.admin-dashboard-main .bg-white .text-zinc-700,
+.admin-dashboard-main .bg-white .text-slate-950,
+.admin-dashboard-main .bg-white .text-slate-900,
+.admin-dashboard-main .bg-white .text-slate-800,
+.admin-dashboard-main .bg-white h2,
+.admin-dashboard-main .bg-white h3,
+.admin-dashboard-main .bg-white h4,
+.admin-dashboard-main .bg-card .text-zinc-950,
+.admin-dashboard-main .bg-card .text-zinc-900,
+.admin-dashboard-main .bg-card .text-zinc-800,
+.admin-dashboard-main .bg-card .text-zinc-700,
+.admin-dashboard-main .bg-card h2,
+.admin-dashboard-main .bg-card h3,
+.admin-dashboard-main .bg-card h4 {
+  color: #18181b !important;
+}
+
+/* Subtitles / Secondary text inside white cards */
+.admin-dashboard-main .bg-white .text-zinc-500,
+.admin-dashboard-main .bg-white .text-slate-500,
+.admin-dashboard-main .bg-white .text-zinc-400,
+.admin-dashboard-main .bg-white .text-slate-400,
+.admin-dashboard-main .bg-card .text-zinc-500,
+.admin-dashboard-main .bg-card .text-slate-500,
+.admin-dashboard-main .bg-card .text-zinc-400,
+.admin-dashboard-main .bg-card .text-slate-400 {
+  color: #71717a !important;
+}
+
+/* Transparent wrap helpers */
+.admin-dashboard-main .bg-\[\#fafafa\],
+.admin-dashboard-main .min-h-screen {
+  background-color: transparent !important;
+}
+
+/* Border default alignment */
+.admin-dashboard-main .border-zinc-100,
+.admin-dashboard-main .border-zinc-100\/90,
+.admin-dashboard-main .border-zinc-150,
+.admin-dashboard-main .border-zinc-200\/60,
+.admin-dashboard-main .border-zinc-200\/80,
+.admin-dashboard-main .border-\[\#e1e3e5\],
+.admin-dashboard-main .border-slate-100,
+.admin-dashboard-main .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Theme-scoped CSS variables for multi-color scheme */
+.admin-dashboard-main.theme-overview {
+  --theme-color: #06b6d4;
+  --theme-color-hover: #0891b2;
+  --theme-color-glow: rgba(6, 182, 212, 0.25);
+  --theme-text: #18181b;
+}
+.admin-dashboard-main.theme-orders {
+  --theme-color: #3b82f6;
+  --theme-color-hover: #2563eb;
+  --theme-color-glow: rgba(59, 130, 246, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-payments {
+  --theme-color: #f59e0b;
+  --theme-color-hover: #d97706;
+  --theme-color-glow: rgba(245, 158, 11, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-delivery {
+  --theme-color: #f43f5e;
+  --theme-color-hover: #e11d48;
+  --theme-color-glow: rgba(244, 63, 94, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-products {
+  --theme-color: #f97316;
+  --theme-color-hover: #ea580c;
+  --theme-color-glow: rgba(249, 115, 22, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-categories-main {
+  --theme-color: #a855f7;
+  --theme-color-hover: #9333ea;
+  --theme-color-glow: rgba(168, 85, 247, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-categories-sub {
+  --theme-color: #8b5cf6;
+  --theme-color-hover: #7c3aed;
+  --theme-color-glow: rgba(139, 92, 246, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-brands {
+  --theme-color: #3b82f6;
+  --theme-color-hover: #2563eb;
+  --theme-color-glow: rgba(59, 130, 246, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-attributes {
+  --theme-color: #d946ef;
+  --theme-color-hover: #c026d3;
+  --theme-color-glow: rgba(217, 70, 239, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-inventory {
+  --theme-color: #10b981;
+  --theme-color-hover: #059669;
+  --theme-color-glow: rgba(16, 185, 129, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-banners {
+  --theme-color: #eab308;
+  --theme-color-hover: #ca8a04;
+  --theme-color-glow: rgba(234, 179, 8, 0.25);
+  --theme-text: #18181b;
+}
+.admin-dashboard-main.theme-deals {
+  --theme-color: #ec4899;
+  --theme-color-hover: #db2777;
+  --theme-color-glow: rgba(236, 72, 153, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-customers {
+  --theme-color: #14b8a6;
+  --theme-color-hover: #0d9488;
+  --theme-color-glow: rgba(20, 184, 166, 0.25);
+  --theme-text: #ffffff;
+}
+.admin-dashboard-main.theme-security {
+  --theme-color: #84cc16;
+  --theme-color-hover: #65a30d;
+  --theme-color-glow: rgba(132, 204, 22, 0.25);
+  --theme-text: #18181b;
+}
+
+/* Tab navigation states & standard colored button overrides using variables */
+.admin-dashboard-main button[class*="bg-zinc-950"],
+.admin-dashboard-main button[class*="bg-zinc-900"],
+.admin-dashboard-main button[class*="bg-black"],
+.admin-dashboard-main button[class*="bg-[#f97316]"],
+.admin-dashboard-main button[class*="bg-[#06b6d4]"],
+.admin-dashboard-main a[class*="bg-zinc-900"],
+.admin-dashboard-main a[class*="bg-zinc-950"],
+.admin-dashboard-main a[class*="bg-black"],
+.admin-dashboard-main button.bg-zinc-950,
+.admin-dashboard-main button.bg-zinc-900,
+.admin-dashboard-main button.bg-black,
+.admin-dashboard-main a.bg-zinc-900,
+.admin-dashboard-main a.bg-black,
+.admin-dashboard-main .bg-\[\#f97316\],
+.admin-dashboard-main .bg-\[\#06b6d4\] {
+  background-color: var(--theme-color, #06b6d4) !important;
+  color: var(--theme-text, #18181b) !important;
+  font-weight: 700 !important;
+  border-color: transparent !important;
+}
+
+.admin-dashboard-main button[class*="bg-zinc-950"]:hover,
+.admin-dashboard-main button[class*="bg-zinc-900"]:hover,
+.admin-dashboard-main button[class*="bg-black"]:hover,
+.admin-dashboard-main button[class*="bg-[#f97316]"]:hover,
+.admin-dashboard-main button[class*="bg-[#06b6d4]"]:hover,
+.admin-dashboard-main a[class*="bg-zinc-900"]:hover,
+.admin-dashboard-main a[class*="bg-zinc-950"]:hover,
+.admin-dashboard-main a[class*="bg-black"]:hover,
+.admin-dashboard-main button.bg-zinc-950:hover,
+.admin-dashboard-main button.bg-zinc-900:hover,
+.admin-dashboard-main button.bg-black:hover,
+.admin-dashboard-main a.bg-zinc-900:hover,
+.admin-dashboard-main a.bg-black:hover,
+.admin-dashboard-main .bg-\[\#f97316\]:hover,
+.admin-dashboard-main .bg-\[\#06b6d4\]:hover {
+  background-color: var(--theme-color-hover, #0891b2) !important;
+  color: var(--theme-text, #18181b) !important;
+}
+
+/* Inputs and Select trigger focus rings */
+.admin-dashboard-main input:focus,
+.admin-dashboard-main input:focus-visible,
+.admin-dashboard-main textarea:focus,
+.admin-dashboard-main select:focus,
+.admin-dashboard-main [data-slot="select-trigger"]:focus {
+  border-color: var(--theme-color, #06b6d4) !important;
+  box-shadow: 0 0 0 2px var(--theme-color-glow, rgba(6, 182, 212, 0.25)) !important;
+  outline: none !important;
+}
+
+/* Recharts Tooltip styling */
+.admin-dashboard-main .recharts-tooltip-wrapper {
+  background-color: #09090b !important;
+  border: 1px solid var(--theme-color, #06b6d4) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+}
+
+.admin-dashboard-main .recharts-tooltip-wrapper * {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   Premium Page Accent & Identity System
+   Adds vivid per-page themed visual identity markers
+   ========================================================================== */
+
+/* Theme-colored top page accent glow bar */
+.admin-dashboard-main::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width, 288px); /* sidebar width */
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--theme-color, #06b6d4) 0%, transparent 80%);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 100;
+  transition: background 0.4s ease, left 0.3s ease;
+}
+
+/* On mobile (no sidebar), start from left edge */
+@media (max-width: 1023px) {
+  .admin-dashboard-main::before {
+    left: 0;
+  }
+}
+
+/* Themed h1 left accent bar */
+.admin-dashboard-main h1 {
+  position: relative;
+  padding-left: 14px !important;
+}
+
+.admin-dashboard-main h1::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8%;
+  height: 84%;
+  width: 3px;
+  border-radius: 6px;
+  background-color: var(--theme-color, #06b6d4);
+  box-shadow: 0 0 12px var(--theme-color-glow, rgba(6, 182, 212, 0.5));
+}
+
+/* Theme-colored switch track (overrides hardcoded teal) */
+.admin-dashboard-main [data-state="checked"][data-slot="switch"],
+.admin-dashboard-main [role="switch"][data-state="checked"] {
+  background-color: var(--theme-color, #06b6d4) !important;
+}
+
+/* Theme-colored tab active state */
+.admin-dashboard-main [data-state="active"][data-slot="tabs-trigger"] {
+  color: var(--theme-color, #06b6d4) !important;
+}
+
+/* Themed scrollbar for admin main area */
+.admin-dashboard-main::-webkit-scrollbar {
+  width: 5px;
+}
+.admin-dashboard-main::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.admin-dashboard-main::-webkit-scrollbar-thumb {
+  background-color: var(--theme-color, #06b6d4);
+  border-radius: 10px;
+  opacity: 0.6;
+}
+
+/* Card hover elevation */
+.admin-dashboard-main .bg-white {
+  transition: box-shadow 0.2s ease;
+}
+.admin-dashboard-main .bg-white:hover {
+  box-shadow: 0 2px 20px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Theme-tinted stat card metric numbers */
+.admin-dashboard-main .bg-white .text-teal-600,
+.admin-dashboard-main .bg-white .text-teal-700,
+.admin-dashboard-main .bg-white .text-cyan-600 {
+  color: var(--theme-color, #06b6d4) !important;
+}
