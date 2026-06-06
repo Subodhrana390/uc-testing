@@ -13,32 +13,30 @@ export default async function HomePage() {
   const supabase = await createClient();
 
   const [
-    { data: featuredProducts },
-    { data: bestSellers },
-    { data: newArrivals },
-    { data: trendingProducts },
+    { data: activeProductsData },
     { data: categories },
     { data: banners },
-    { data: flashDeals },
     { data: deals }
   ] = await Promise.all([
-    supabase.from("products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").eq("is_featured", true).eq("status", "Active").limit(12),
-    supabase.from("products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").eq("is_best_seller", true).eq("status", "Active").limit(12),
-    supabase.from("products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").eq("is_new_arrival", true).eq("status", "Active").limit(12),
-    supabase.from("products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").eq("is_trending", true).eq("status", "Active").limit(12),
+    supabase
+      .from("products")
+      .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_featured, is_best_seller, is_new_arrival, is_trending, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
+      .eq("status", "Active")
+      .or("is_featured.eq.true,is_best_seller.eq.true,is_new_arrival.eq.true,is_trending.eq.true,sale_price.not.is.null"),
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", "Active").order("name", { ascending: true }),
     supabase.from("banners").select("*").eq("is_active", true).order("position", { ascending: true }),
-    supabase.from("products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").not("sale_price", "is", null).eq("status", "Active").limit(12),
     supabase.from("deals").select("*").eq("is_active", true).order("position", { ascending: true }),
   ]);
 
-  const safeFeatured = featuredProducts || [];
-  const safeBestSellers = bestSellers || [];
-  const safeNewArrivals = newArrivals || [];
-  const safeTrending = trendingProducts || [];
+  const allActiveProducts = activeProductsData || [];
+
+  const safeFeatured = allActiveProducts.filter(p => p.is_featured).slice(0, 12);
+  const safeBestSellers = allActiveProducts.filter(p => p.is_best_seller).slice(0, 12);
+  const safeNewArrivals = allActiveProducts.filter(p => p.is_new_arrival).slice(0, 12);
+  const safeTrending = allActiveProducts.filter(p => p.is_trending).slice(0, 12);
   const safeCategories = categories || [];
   const safeBanners = banners || [];
-  const safeFlashDeals = flashDeals || [];
+  const safeFlashDeals = allActiveProducts.filter(p => p.sale_price !== null).slice(0, 12);
   const safeDeals = (deals as any[]) || [];
 
   return (
