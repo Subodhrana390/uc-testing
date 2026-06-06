@@ -116,12 +116,22 @@ export async function POST(req: Request) {
     if (targetPaymentStatus === "Paid" && order.status === "Pending") {
       try {
         const { sendOrderConfirmationEmail } = await import('@/lib/email')
-        await sendOrderConfirmationEmail(
-          updatedOrder.customer_email,
-          updatedOrder.customer_name,
-          updatedOrder.id,
-          updatedOrder.total_amount
-        )
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("*, products(name)")
+          .eq("order_id", updatedOrder.id);
+
+        await sendOrderConfirmationEmail({
+          orderId: updatedOrder.id,
+          orderDate: updatedOrder.created_at,
+          customerName: updatedOrder.customer_name,
+          customerEmail: updatedOrder.customer_email,
+          shippingAddress: updatedOrder.shipping_address,
+          totalAmount: updatedOrder.total_amount,
+          items: items || [],
+          trackingId: updatedOrder.tracking_id,
+          carrier: updatedOrder.carrier
+        });
       } catch (err) {
         console.error("Failed to send webhook order confirmation email:", err);
       }
