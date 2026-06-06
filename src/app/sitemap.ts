@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export const revalidate = 3600; // Regenerate sitemap hourly
 
-const SITE_URL = "https://ucenterprises.in";
+const SITE_URL = "https://uc-enterprises.vercel.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();

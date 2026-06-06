@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = "https://ucenterprises.in";
+export const SITE_URL = "https://uc-enterprises.vercel.app";
 export const SITE_NAME = "UC Enterprises";
 export const SITE_DESCRIPTION =
   "UC Enterprises — India's trusted supplier of laboratory chemicals, glassware, safety equipment, industrial tools & electrical goods. Wholesale pricing, pan-India delivery.";
