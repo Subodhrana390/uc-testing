@@ -7,19 +7,13 @@ interface LogoLoaderProps {
   minHeight?: string;
 }
 
-export default function LogoLoader({ text = "Loading...", minHeight = "70vh" }: LogoLoaderProps) {
+export default function LogoLoader({ minHeight = "70vh" }: LogoLoaderProps) {
   return (
     <div
-      className="flex flex-col items-center justify-center w-full gap-5 transition-all duration-300"
+      className="flex items-center justify-center w-full"
       style={{ minHeight }}
     >
       <div className="spinner" />
-
-      {text && (
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest animate-pulse">
-          {text}
-        </p>
-      )}
 
       <style>{`
         .spinner {
