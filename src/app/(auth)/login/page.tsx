@@ -301,7 +301,7 @@ function AuthContainer() {
                     <input type="checkbox" required className="w-4 h-4 border-zinc-300 rounded text-zinc-900 focus:ring-zinc-900" id="terms-auth" />
                   </div>
                   <label htmlFor="terms-auth" className="text-xs text-zinc-500 leading-relaxed">
-                    By creating an account, you agree to our <Link href="/terms" className="text-zinc-900 hover:underline font-medium">Terms of Service</Link> and <Link href="/privacy" className="text-zinc-900 hover:underline font-medium">Privacy Policy</Link>.
+                    By creating an account, you agree to our <Link href="/terms-of-service" className="text-zinc-900 hover:underline font-medium">Terms of Service</Link> and <Link href="/privacy-policy" className="text-zinc-900 hover:underline font-medium">Privacy Policy</Link>.
                   </label>
                 </div>
 
