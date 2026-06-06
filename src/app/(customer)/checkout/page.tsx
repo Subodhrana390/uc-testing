@@ -420,7 +420,7 @@ export default function CheckoutPage() {
         };
 
         const rzp = new (window as any).Razorpay(options);
-        
+
         // Handle Razorpay payment failure — clean up the unpaid order immediately
         rzp.on("payment.failed", async function (response: any) {
           try {
@@ -428,9 +428,27 @@ export default function CheckoutPage() {
           } catch (e) {
             console.error("Cleanup failed order error:", e);
           }
+          setSubmitting(false);
+          setIsPlacingOrder(false);
           router.push(
             `/checkout/failed?error=${encodeURIComponent(
               response.error?.description || "Razorpay payment processing failed"
+            )}`
+          );
+        });
+
+        // Handle modal dismiss (user closes the popup without paying)
+        rzp.on("modal.ondismiss", async function () {
+          try {
+            await deleteFailedOrder(supabaseOrderId);
+          } catch (e) {
+            console.error("Cleanup dismissed order error:", e);
+          }
+          setSubmitting(false);
+          setIsPlacingOrder(false);
+          router.push(
+            `/checkout/failed?error=${encodeURIComponent(
+              "Payment was cancelled. Your order has not been placed."
             )}`
           );
         });

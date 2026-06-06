@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, BadgePercent, Layers, CheckSquare } from "lucide-react";
@@ -87,7 +88,9 @@ export default async function ProductsPage({
             <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 py-2 rounded-lg shadow-2xs">
               Total SKU: <span className="font-semibold text-zinc-900">{count || 0} Items</span>
             </span>
-            <SortDropdown />
+            <Suspense fallback={<div className="h-10 w-40 animate-pulse bg-zinc-100 rounded-lg" />}>
+              <SortDropdown />
+            </Suspense>
           </div>
         </div>
 
