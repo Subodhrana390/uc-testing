@@ -28,11 +28,7 @@ export async function POST(req: Request) {
       receipt: idempotencyKey ? `rcpt_${idempotencyKey.slice(0, 10)}` : `receipt_${crypto.randomUUID().slice(0, 8)}`,
     };
 
-    // Use idempotency key if provided to prevent duplicate orders
-    // @ts-ignore - Razorpay types sometimes lag behind the actual SDK capability for headers
-    const order = await razorpay.orders.create(options, idempotencyKey ? {
-      "X-Razorpay-Idempotency-Key": idempotencyKey
-    } : undefined);
+    const order = await razorpay.orders.create(options);
 
     return NextResponse.json(order);
   } catch (error: any) {

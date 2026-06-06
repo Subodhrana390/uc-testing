@@ -43,47 +43,11 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [chartMode, setChartMode] = useState<"revenue" | "orders" | "profit">("revenue");
-  const [liveUsers, setLiveUsers] = useState<any[]>([]);
-  const [currentTime, setCurrentTime] = useState(Date.now());
 
   const supabase = useMemo(() => createClient(), []);
 
-  const fetchLiveUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, role, last_activity")
-        .order("last_activity", { ascending: false });
-      if (!error && data) {
-        setLiveUsers(data);
-      }
-    } catch (err) {
-      console.error("Error fetching live users:", err);
-    }
-  };
-
   useEffect(() => {
     setIsMounted(true);
-    fetchLiveUsers();
-
-    const timeInterval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 10000);
-
-    const usersInterval = setInterval(() => {
-      fetchLiveUsers();
-    }, 30000);
-
-    const channel = supabase
-      .channel("live-users-tracker")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => {
-          fetchLiveUsers();
-        }
-      )
-      .subscribe();
 
     async function fetchDashboardData() {
       try {
@@ -142,11 +106,7 @@ export default function AdminDashboardPage() {
 
     fetchDashboardData();
 
-    return () => {
-      clearInterval(timeInterval);
-      clearInterval(usersInterval);
-      supabase.removeChannel(channel);
-    };
+    return () => {};
   }, [supabase]);
 
   const activeChartConfig = useMemo(() => {
@@ -590,102 +550,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Live User Monitoring Section */}
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 flex flex-col mt-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-[#18181b] tracking-tight flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              Live User Monitoring
-            </h3>
-            <p className="text-xs font-semibold text-zinc-400 mt-1">Currently active/logged-in users on the platform</p>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#06b6d4] bg-cyan-50 px-3 py-1.5 rounded-full border border-cyan-100">
-            Realtime Active
-          </span>
-        </div>
-
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr className="border-b border-zinc-200 pb-3">
-                <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-left">User Name</th>
-                <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-left">Email Address</th>
-                <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-left">Role</th>
-                <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-left">Last Activity</th>
-                <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {liveUsers.map((u) => {
-                const lastAct = u.last_activity ? new Date(u.last_activity).getTime() : 0;
-                const diffMs = currentTime - lastAct;
-                const isOnline = diffMs < 120000; // 2 minutes window
-
-                // Format activity time
-                let lastActivityText = "Never";
-                if (u.last_activity) {
-                  const diffSecs = Math.floor(diffMs / 1000);
-                  if (diffSecs < 10) lastActivityText = "Just now";
-                  else if (diffSecs < 60) lastActivityText = `${diffSecs}s ago`;
-                  else if (diffSecs < 3600) lastActivityText = `${Math.floor(diffSecs / 60)}m ago`;
-                  else if (diffSecs < 86400) lastActivityText = `${Math.floor(diffSecs / 3600)}h ago`;
-                  else lastActivityText = new Date(u.last_activity).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-                }
-
-                return (
-                  <tr key={u.id} className="group hover:bg-zinc-50 transition-colors">
-                    <td className="py-3.5 flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-inner text-white ${
-                        u.role === 'admin' 
-                          ? 'bg-gradient-to-tr from-cyan-500 to-blue-500' 
-                          : 'bg-gradient-to-tr from-slate-400 to-zinc-500'
-                      }`}>
-                        {u.full_name?.charAt(0) || u.email?.charAt(0) || "U"}
-                      </div>
-                      <span className="text-sm font-semibold text-[#18181b]">{u.full_name || "Anonymous User"}</span>
-                    </td>
-                    <td className="py-3.5 text-xs font-medium text-zinc-600">{u.email || "N/A"}</td>
-                    <td className="py-3.5 text-xs">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                        u.role === 'admin' 
-                          ? 'bg-purple-50 text-purple-700 border border-purple-100' 
-                          : 'bg-zinc-100 text-zinc-700'
-                      }`}>
-                        {u.role || "customer"}
-                      </span>
-                    </td>
-                    <td className="py-3.5 text-xs text-zinc-500 font-medium">{lastActivityText}</td>
-                    <td className="py-3.5 text-right">
-                      {isOnline ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Online
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-zinc-50 text-zinc-400 border border-zinc-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                          Offline
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {liveUsers.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                    No active user data available.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
