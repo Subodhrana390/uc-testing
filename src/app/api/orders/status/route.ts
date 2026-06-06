@@ -59,19 +59,24 @@ export async function POST(req: Request) {
 
     const actor = profile?.role || "customer";
 
-    // Fetch the order using the user's client (naturally checks SELECT RLS)
-    const { data: existingOrder, error: fetchOrderError } = await supabase
+    const isAdmin = actor === "admin";
+    const serviceRoleSupabase = createServiceRoleClient();
+
+    // Fetch the order using Service Role Client to bypass potential SELECT RLS issues
+    const { data: existingOrder, error: fetchOrderError } = await serviceRoleSupabase
       .from("orders")
       .select("*")
       .eq("id", orderId)
       .single();
 
     if (fetchOrderError || !existingOrder) {
-      return NextResponse.json({ error: "Order not found or unauthorized" }, { status: 404 });
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const isAdmin = actor === "admin";
-    const serviceRoleSupabase = createServiceRoleClient();
+    // Enforce authorization: only admins can view other users' orders. Customers can only view their own.
+    if (!isAdmin && existingOrder.user_id !== user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
     // 1. If order status is being updated, enforce State Machine transition
     if (status !== undefined && status.toUpperCase() !== existingOrder.status.toUpperCase()) {
