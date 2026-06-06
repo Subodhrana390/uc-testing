@@ -64,6 +64,67 @@ export const sendInvoiceEmail = async (
   return await response.json();
 };
 
+export const sendOrderConfirmationEmail = async (
+  email: string,
+  customerName: string,
+  orderId: string,
+  totalAmount: string | number
+) => {
+  const apiKey = env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error("BREVO_API_KEY is not defined in environment variables");
+    return;
+  }
+
+  const payload = {
+    sender: {
+      name: env.BREVO_SENDER_NAME,
+      email: env.BREVO_SENDER_EMAIL || "info@ucenterprises.com"
+    },
+    to: [
+      {
+        email: email,
+        name: customerName
+      }
+    ],
+    subject: `Order Confirmation - #${orderId.slice(0, 8).toUpperCase()}`,
+    htmlContent: `
+      <html>
+        <head></head>
+        <body style="font-family: sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #f97316;">Order Confirmation</h2>
+          <p>Dear ${customerName},</p>
+          <p>Thank you for your order!</p>
+          <p>We have successfully received your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> for a total amount of <strong>₹${totalAmount}</strong>.</p>
+          <p>We will notify you once your order is processed and shipped.</p>
+          <br/>
+          <p>Best regards,</p>
+          <p><strong>${env.BREVO_SENDER_NAME}</strong></p>
+        </body>
+      </html>
+    `
+  };
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "api-key": apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Brevo Email Notification failed:", err);
+    }
+  } catch (err) {
+    console.error("Error sending email notification:", err);
+  }
+};
+
 export const sendStatusUpdateEmail = async (
   email: string,
   customerName: string,

@@ -76,6 +76,21 @@ export async function createOrder(orderData: {
       return { success: false, error: result.error || 'Failed to place order' }
     }
 
+    // Send confirmation email for COD immediately, since they are placed right away
+    if (orderData.paymentMethod === 'COD') {
+      try {
+        const { sendOrderConfirmationEmail } = await import('@/lib/email')
+        await sendOrderConfirmationEmail(
+          orderData.email,
+          orderData.fullName,
+          result.order_id,
+          orderData.total
+        )
+      } catch (emailErr) {
+        console.error('Failed to send COD order confirmation email:', emailErr)
+      }
+    }
+
     revalidatePath('/account/orders')
     return { success: true, orderId: result.order_id }
   } catch (error: any) {

@@ -113,6 +113,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Database update failed" }, { status: 500 });
     }
 
+    if (targetPaymentStatus === "Paid" && order.status === "Pending") {
+      try {
+        const { sendOrderConfirmationEmail } = await import('@/lib/email')
+        await sendOrderConfirmationEmail(
+          updatedOrder.customer_email,
+          updatedOrder.customer_name,
+          updatedOrder.id,
+          updatedOrder.total_amount
+        )
+      } catch (err) {
+        console.error("Failed to send webhook order confirmation email:", err);
+      }
+    }
+
     // Insert payment record if not exists
     let targetTxId = razorpayPaymentId || `tx_${Math.random().toString(36).substring(2, 11)}`;
     if (eventName === "refund.processed") {

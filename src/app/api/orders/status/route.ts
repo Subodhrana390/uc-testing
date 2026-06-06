@@ -177,6 +177,20 @@ export async function POST(req: Request) {
         if (refreshedOrder) {
           order = refreshedOrder;
         }
+
+        if (existingOrder.status.toUpperCase() === "PENDING") {
+          try {
+            const { sendOrderConfirmationEmail } = await import('@/lib/email');
+            await sendOrderConfirmationEmail(
+              order.customer_email,
+              order.customer_name,
+              order.id,
+              order.total_amount
+            );
+          } catch (emailErr) {
+            console.error("Failed to send verification order confirmation email:", emailErr);
+          }
+        }
       }
     } else {
       // No updates, just fetch current order (using service role to ensure consistency)
