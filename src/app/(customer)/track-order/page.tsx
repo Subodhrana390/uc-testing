@@ -150,6 +150,9 @@ function TrackOrderContent() {
           order_items (
             *,
             products (name, image_url)
+          ),
+          payments (
+            *
           )
         `);
 
@@ -600,9 +603,20 @@ function TrackOrderContent() {
                           <h4 className="text-3xl font-black tracking-tight mt-2 text-white">
                             ₹{order.total_amount.toLocaleString("en-IN")}
                           </h4>
-                          <span className="text-[10px] text-emerald-400 font-bold mt-1.5 block uppercase tracking-wider">
-                            Paid via Credit / Netbanking
+                          <span className={cn(
+                            "text-[10px] font-bold mt-1.5 block uppercase tracking-wider",
+                            order.payment_status?.toLowerCase() === "paid" ? "text-emerald-400" : "text-amber-400"
+                          )}>
+                            {order.payment_status?.toLowerCase() === "paid" ? "Paid" : (order.payment_status || "Unpaid")} via {order.payment_method || "ONLINE"}
                           </span>
+                          {order.payments?.[0] && (
+                            <div className="mt-2 text-[9px] text-zinc-400 font-mono tracking-tight uppercase space-y-0.5">
+                              <div>Status: {order.payments[0].status}</div>
+                              {order.payments[0].transaction_id && (
+                                <div className="truncate">TXID: {order.payments[0].transaction_id}</div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {order.status?.toLowerCase() === "delivered" ? (
@@ -644,8 +658,8 @@ function TrackOrderContent() {
                   <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
                     <div className="flex items-center gap-2 mb-6 border-b border-zinc-100 pb-4">
                       <ReceiptText className="w-4.5 h-4.5 text-zinc-400" />
-                      <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Consolidated Items</h4>
-                    </div>                    <div className="grid gap-3.5 sm:grid-cols-2">
+                      <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Order Items</h4>
+                    </div><div className="grid gap-3.5 sm:grid-cols-2">
                       {order.order_items?.map((item: any) => (
                         <div
                           key={item.id}

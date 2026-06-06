@@ -112,10 +112,10 @@ function AuthContainer() {
     <div className="w-full max-w-[1000px] mx-auto overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row min-h-[600px] border border-zinc-200">
 
       {/* Visual Side Panel - "The Experience" */}
-      <div className={`relative w-full md:w-5/12 bg-zinc-950 text-white p-10 md:p-12 flex flex-col justify-between overflow-hidden transition-all duration-500 ease-in-out ${mode === 'register' ? 'md:order-last' : 'md:order-first'}`}>
+      <div className={`relative w-full md:w-5/12 bg-zinc-50 text-zinc-900 p-10 md:p-12 flex flex-col justify-between overflow-hidden transition-all duration-500 ease-in-out ${mode === 'register' ? 'md:order-last border-l border-zinc-200' : 'md:order-first border-r border-zinc-200'}`}>
         {/* Sleek Minimal Background Elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full -mr-64 -mt-64 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-zinc-800/30 rounded-full -ml-32 -mb-32 blur-3xl" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/[0.04] rounded-full -mr-64 -mt-64 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/[0.04] rounded-full -ml-32 -mb-32 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-8">
           <div className="flex items-center gap-3">
@@ -129,7 +129,7 @@ function AuthContainer() {
                 unoptimized
               />
             </div>
-            <span className="text-sm font-semibold tracking-widest uppercase text-zinc-100">
+            <span className="text-sm font-black tracking-widest uppercase text-zinc-800">
               UC Enterprises
             </span>
           </div>
@@ -141,12 +141,12 @@ function AuthContainer() {
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="space-y-4 pt-8"
           >
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white leading-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-950 leading-tight">
               {mode === 'login' && "Welcome back."}
               {mode === 'register' && "Start your journey."}
               {mode === 'forgot' && "Reset access."}
             </h2>
-            <p className="text-zinc-400 text-sm leading-relaxed max-w-sm">
+            <p className="text-zinc-500 text-sm leading-relaxed max-w-sm font-medium">
               {mode === 'login' && "Sign in to your account to manage orders, access saved items, and view exclusive offers."}
               {mode === 'register' && "Create a secure account today to experience seamless checkout and member-only benefits."}
               {mode === 'forgot' && "Enter your email and we'll send you secure instructions to reset your password."}
@@ -156,19 +156,19 @@ function AuthContainer() {
 
         <div className="relative z-10 pt-12">
           <div className="space-y-4 mb-10">
-            <div className="flex items-center gap-3 text-zinc-300">
-              <CheckCircle2 className="w-5 h-5 text-zinc-500" />
-              <span className="text-sm font-medium">Fast, reliable fulfillment</span>
+            <div className="flex items-center gap-3 text-zinc-650">
+              <CheckCircle2 className="w-5 h-5 text-orange-600" />
+              <span className="text-sm font-semibold">Fast, reliable fulfillment</span>
             </div>
-            <div className="flex items-center gap-3 text-zinc-300">
-              <ShieldCheck className="w-5 h-5 text-zinc-500" />
-              <span className="text-sm font-medium">Secure, encrypted checkout</span>
+            <div className="flex items-center gap-3 text-zinc-650">
+              <ShieldCheck className="w-5 h-5 text-orange-600" />
+              <span className="text-sm font-semibold">Secure, encrypted checkout</span>
             </div>
           </div>
 
           <button
             onClick={() => changeMode(mode === 'login' ? 'register' : 'login')}
-            className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-white hover:text-zinc-900 font-medium rounded-lg h-12 transition-colors duration-200"
+            className="w-full bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 font-bold rounded-xl h-12 transition-all duration-200 active:scale-95 shadow-sm"
           >
             {mode === 'login' ? "Create an account" : "Sign in to existing account"}
           </button>
