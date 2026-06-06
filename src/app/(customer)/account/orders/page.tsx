@@ -77,7 +77,7 @@ export default function OrderHistoryPage() {
         currency: razorpayOrder.currency || "INR",
         name: "UC Enterprises",
         description: `Payment for Order #${getDisplayOrderId(order.id, order.created_at)}`,
-        image: "/logo.jpg",
+        image: "/logo.png",
         order_id: razorpayOrder.id,
         handler: async function (response: any) {
           try {
@@ -89,6 +89,7 @@ export default function OrderHistoryPage() {
                 orderId: order.id,
                 paymentStatus: "Paid",
                 paymentMethod: "ONLINE",
+                razorpayOrderId: response.razorpay_order_id || razorpayOrder.id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature
               })

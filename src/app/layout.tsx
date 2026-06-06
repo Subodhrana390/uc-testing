@@ -19,11 +19,8 @@ export const metadata: Metadata = {
   title: "UC Enterprises",
   description: "UC Enterprises supplies laboratory chemicals, glassware, tools, safety equipment, and industrial electrical goods across India.",
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/logo.jpg" },
-    ],
-    apple: "/logo.jpg",
+    icon: "/favicon.png",
+    apple: "/logo.png",
   },
 };
 

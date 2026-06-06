@@ -102,9 +102,9 @@ function AuthContainer() {
 
         <div className="relative z-10 space-y-8">
           <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+            <div className="relative w-10 h-10 flex items-center justify-center overflow-hidden">
               <Image
-                src="/logo.jpg"
+                src="/logo.png"
                 alt="UC Enterprises Logo"
                 width={40}
                 height={40}

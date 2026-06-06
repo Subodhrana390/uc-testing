@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 overflow-hidden flex items-center justify-center p-1">
-              <Image src="/logo.jpg" alt="UC Enterprises" width={48} height={48} className="w-full h-full object-contain" />
+              <Image src="/logo.png" alt="UC Enterprises" width={48} height={48} className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-lg font-bold tracking-tight text-black">UC <span className="text-red-500">Enterprises</span></h2>

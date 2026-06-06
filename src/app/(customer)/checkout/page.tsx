@@ -367,7 +367,7 @@ export default function CheckoutPage() {
           currency: razorpayOrder.currency || "INR",
           name: "UC Enterprises",
           description: "Purchase Payment",
-          image: "/logo.jpg",
+          image: "/logo.png",
           order_id: razorpayOrder.id,
           handler: async function (response: any) {
             // Payment success callback

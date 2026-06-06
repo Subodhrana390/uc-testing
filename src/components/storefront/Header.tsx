@@ -97,11 +97,11 @@ export default function Header({ categories, user }: HeaderProps) {
               >
                 <div className="w-8 h-8 sm:w-10 sm:h-10 overflow-hidden flex items-center justify-center p-1 transition group-hover:border-primary group-hover:scale-105">
                   <Image
-                    src="/logo.jpg"
+                    src="/logo.png"
                     alt="UC Enterprises"
                     width={40}
                     height={40}
-                    className="w-full h-full object-contain mix-blend-multiply"
+                    className="w-full h-full object-contain"
                   />
                 </div>
                 <div className="flex flex-col">
@@ -215,7 +215,7 @@ export default function Header({ categories, user }: HeaderProps) {
                   <div className="flex-1 p-6 flex flex-col justify-center text-center bg-white">
                     <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3">
                       <Image
-                        src="/logo.jpg"
+                        src="/logo.png"
                         alt="Logo"
                         width={32}
                         height={32}
@@ -275,9 +275,9 @@ export default function Header({ categories, user }: HeaderProps) {
                   className="flex items-center gap-2 font-black text-lg tracking-tight"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <div className="w-7 h-7 bg-zinc-50 rounded-lg border border-zinc-100 flex items-center justify-center p-1">
+                  <div className="w-7 h-7 flex items-center justify-center">
                     <Image
-                      src="/logo.jpg"
+                      src="/logo.png"
                       alt="Logo"
                       width={28}
                       height={28}
@@ -304,7 +304,7 @@ export default function Header({ categories, user }: HeaderProps) {
                       className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
                     >
                       <User className="h-4 w-4 text-primary" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">
+                      <span className="text-[10px] font-black uppercase tracking-widest">
                         {user ? "Profile" : "Login"}
                       </span>
                     </Link>
@@ -317,12 +317,12 @@ export default function Header({ categories, user }: HeaderProps) {
                         className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Logout</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
                       </button>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors">
                         <WishlistButton />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Saved</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Saved</span>
                       </div>
                     )}
                   </div>
@@ -337,7 +337,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         key={link.href}
                         href={link.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-4 px-4 py-2.5 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest"
+                        className="flex items-center gap-4 px-4 py-2.5 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-black text-xs uppercase tracking-widest"
                       >
                         {link.label}
                       </Link>
@@ -357,7 +357,7 @@ export default function Header({ categories, user }: HeaderProps) {
                             <Link
                               href={`/search?main=${mainCat.slug}`}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center justify-between px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-950 bg-zinc-50 border border-zinc-100"
+                              className="flex items-center justify-between px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-zinc-950 bg-zinc-50 border border-zinc-100"
                             >
                               {mainCat.name}
                             </Link>
@@ -369,7 +369,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                     key={subCat.id}
                                     href={`/search?main=${mainCat.slug}&sub=${subCat.slug}`}
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="px-4 py-1.5 rounded-lg text-[9px] font-bold text-zinc-500 hover:text-primary transition-colors"
+                                    className="px-4 py-1.5 rounded-lg text-[10px] font-bold text-zinc-500 hover:text-primary transition-colors"
                                   >
                                     {subCat.name}
                                   </Link>

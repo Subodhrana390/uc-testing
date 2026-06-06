@@ -40,8 +40,8 @@ export async function updateSession(request: NextRequest) {
   // Do not run auth logic for static files
   if (
     pathname.startsWith('/_next') ||
-    pathname.includes('/favicon.ico') ||
-    pathname.includes('/logo.jpg') ||
+    pathname.includes('/favicon.png') ||
+    pathname.includes('/logo.png') ||
     pathname.includes('/images/')
   ) {
     return supabaseResponse;

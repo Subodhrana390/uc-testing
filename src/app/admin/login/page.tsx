@@ -85,11 +85,11 @@ export default function AdminLoginPage() {
 
               <div className="relative flex items-center justify-center">
                 <Image
-                  src="/logo.jpg"
+                  src="/logo.png"
                   alt="UC Enterprises"
                   width={100}
                   height={100}
-                  className="object-contain mix-blend-multiply"
+                  className="object-contain"
                 />
               </div>
             </div>

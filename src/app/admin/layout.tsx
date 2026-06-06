@@ -312,8 +312,8 @@ export default function AdminLayout({
         <div className={cn("p-6 border-b border-slate-100 bg-white flex items-center", isSidebarCollapsed ? "justify-center" : "justify-between")}>
           <Link href="/admin" className="flex items-center gap-3">
             {/* Logo Image */}
-            <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200/80 flex items-center justify-center shadow-sm select-none shrink-0 bg-white">
-              <img src="/logo.jpg" alt="UC Logo" className="w-full h-full object-contain" />
+            <div className="w-9 h-9 overflow-hidden flex items-center justify-center select-none shrink-0">
+              <img src="/logo.png" alt="UC Logo" className="w-full h-full object-contain" />
             </div>
             {!isSidebarCollapsed && (
               <div className="flex flex-col">
@@ -476,7 +476,7 @@ export default function AdminLayout({
           </button>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200">
-              <img src="/logo.jpg" alt="UC" className="w-full h-full object-contain" />
+              <img src="/logo.png" alt="UC" className="w-full h-full object-contain" />
             </div>
             <span className="text-xs font-black uppercase tracking-widest text-slate-800">Admin Panel</span>
           </div>
@@ -523,7 +523,7 @@ export default function AdminLayout({
               <div className="p-6 border-b border-slate-100 bg-white text-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200/80 flex items-center justify-center bg-white shadow-sm shrink-0">
-                    <img src="/logo.jpg" alt="UC Logo" className="w-full h-full object-contain" />
+                    <img src="/logo.png" alt="UC Logo" className="w-full h-full object-contain" />
                   </div>
                   <span className="text-xs font-black uppercase tracking-widest text-slate-800">Admin Hub</span>
                 </div>
