@@ -109,6 +109,126 @@ export default function ProductDetailPage() {
     );
   }
 
+  const renderTabContent = (tabId: string) => {
+    switch (tabId) {
+      case "description":
+        return (
+          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
+        );
+      case "specification":
+        return (
+          <div className="space-y-12">
+            {/* HTML Specification Field */}
+            {product.specification && (
+              <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
+              />
+            )}
+
+            {/* Dynamic Attributes */}
+            {attributes.length > 0 && (
+              <div className="space-y-10">
+                {Object.entries(
+                  attributes.reduce((acc: any, curr: any) => {
+                    const groupName = curr.attribute?.group?.name || "Other Specifications";
+                    if (!acc[groupName]) acc[groupName] = [];
+                    acc[groupName].push(curr);
+                    return acc;
+                  }, {})
+                ).map(([groupName, items]: [string, any]) => (
+                  <div key={groupName} className="space-y-5">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 border-b border-zinc-100 pb-3">{groupName}</h4>
+                    <div className="grid gap-x-12 gap-y-4 sm:grid-cols-2">
+                      {items.map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between py-1 border-b border-zinc-50/50">
+                          <span className="text-xs font-bold text-zinc-500">{item.attribute?.name}</span>
+                          <span className="text-xs font-black text-zinc-950">
+                            {typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Datasheet Download */}
+            {product.datasheet_url && (
+              <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-xl flex items-center justify-between mb-8 max-w-xl">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-teal-650" />
+                  <div>
+                    <p className="text-xs font-bold text-zinc-800">Product Datasheet (PDF)</p>
+                    <p className="text-[10px] text-zinc-400">Technical specifications and usage guidelines</p>
+                  </div>
+                </div>
+                <a
+                  href={product.datasheet_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-sm transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            )}
+
+            {!product.specification && attributes.length === 0 && (
+              <p className="text-sm text-zinc-400 font-bold uppercase tracking-widest">Technical Specifications Pending.</p>
+            )}
+          </div>
+        );
+      case "manufacturing":
+        return (
+          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
+          />
+        );
+      case "warranty":
+        return (
+          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
+          />
+        );
+      case "shipping":
+        return (
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Dispatch Schedule Card */}
+            <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-6">
+                Dispatch Schedule
+              </h4>
+              <div className="space-y-4">
+                <div className="flex justify-between border-b border-orange-200/30 pb-3">
+                  <span className="text-xs font-bold text-zinc-600">Local (Punjab):</span>
+                  <span className="text-xs font-black text-zinc-900">24-48 Hours</span>
+                </div>
+                <div className="flex justify-between border-b border-orange-200/30 pb-3">
+                  <span className="text-xs font-bold text-zinc-600">North India:</span>
+                  <span className="text-xs font-black text-zinc-900">2-4 Working Days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs font-bold text-zinc-600">Metros:</span>
+                  <span className="text-xs font-black text-zinc-900">3-5 Working Days</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Heavy Freight Notice Card */}
+            <div className="flex flex-col justify-center p-8 border-2 border-dashed border-zinc-100 rounded-[2.5rem]">
+              <p className="text-xs font-bold text-zinc-500 leading-relaxed italic">
+                "For heavy industrial machinery exceeding 200kg, custom freight quotes will be provided post-checkout by our logistics team."
+              </p>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bg-white min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -287,7 +407,8 @@ export default function ProductDetailPage() {
 
         {/* Technical Tabs */}
         <section className="mt-8">
-          <div className="flex flex-col sm:flex-row w-full justify-start sm:border-b border-zinc-100 gap-3 sm:gap-12 pb-2 sm:pb-0">
+          {/* Desktop Tab Headers (hidden on mobile) */}
+          <div className="hidden sm:flex w-full justify-start border-b border-zinc-100 gap-12 pb-0">
             {[
               { id: "description", label: "Overview" },
               { id: "specification", label: "Technical Specs" },
@@ -298,7 +419,7 @@ export default function ProductDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 sm:pb-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 text-left sm:text-center whitespace-nowrap ${activeTab === tab.id
+                className={`pb-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
                   ? "border-primary text-zinc-950"
                   : "border-transparent text-zinc-400 hover:text-zinc-600"
                   }`}
@@ -307,7 +428,38 @@ export default function ProductDetailPage() {
               </button>
             ))}
           </div>
-          <div className="mt-12 max-w-5xl">
+
+          {/* Mobile Tab-Accordion (hidden on desktop) */}
+          <div className="flex sm:hidden flex-col w-full gap-3">
+            {[
+              { id: "description", label: "Overview" },
+              { id: "specification", label: "Technical Specs" },
+              { id: "manufacturing", label: "Applications & Mfg" },
+              { id: "warranty", label: "Warranty & Support" },
+              { id: "shipping", label: "Shipping & Delivery" }
+            ].map((tab) => (
+              <div key={tab.id} className="w-full border-b border-zinc-100 pb-3">
+                <button
+                  onClick={() => setActiveTab(activeTab === tab.id ? "" : tab.id)}
+                  className={`w-full py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all text-left flex items-center justify-between ${activeTab === tab.id
+                    ? "text-primary"
+                    : "text-zinc-600 hover:text-zinc-950"
+                    }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="text-xs">{activeTab === tab.id ? "−" : "+"}</span>
+                </button>
+                {activeTab === tab.id && (
+                  <div className="pt-4 pb-2">
+                    {renderTabContent(tab.id)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Tab Content Panel (hidden on mobile) */}
+          <div className="hidden sm:block mt-12 max-w-5xl">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -316,114 +468,7 @@ export default function ProductDetailPage() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                {activeTab === "description" && (
-                  <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
-                )}
-                {activeTab === "specification" && (
-                  <div className="space-y-12">
-                    {/* HTML Specification Field */}
-                    {product.specification && (
-                      <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
-                      />
-                    )}
-
-                    {/* Dynamic Attributes */}
-                    {attributes.length > 0 && (
-                      <div className="space-y-10">
-                        {Object.entries(
-                          attributes.reduce((acc: any, curr: any) => {
-                            const groupName = curr.attribute?.group?.name || "Other Specifications";
-                            if (!acc[groupName]) acc[groupName] = [];
-                            acc[groupName].push(curr);
-                            return acc;
-                          }, {})
-                        ).map(([groupName, items]: [string, any]) => (
-                          <div key={groupName} className="space-y-5">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 border-b border-zinc-100 pb-3">{groupName}</h4>
-                            <div className="grid gap-x-12 gap-y-4 sm:grid-cols-2">
-                              {items.map((item: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between py-1 border-b border-zinc-50/50">
-                                  <span className="text-xs font-bold text-zinc-500">{item.attribute?.name}</span>
-                                  <span className="text-xs font-black text-zinc-950">
-                                    {typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Datasheet Download */}
-                    {product.datasheet_url && (
-                      <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-xl flex items-center justify-between mb-8 max-w-xl">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-teal-650" />
-                          <div>
-                            <p className="text-xs font-bold text-zinc-800">Product Datasheet (PDF)</p>
-                            <p className="text-[10px] text-zinc-400">Technical specifications and usage guidelines</p>
-                          </div>
-                        </div>
-                        <a
-                          href={product.datasheet_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-sm transition-all"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </a>
-                      </div>
-                    )}
-
-                    {!product.specification && attributes.length === 0 && (
-                      <p className="text-sm text-zinc-400 font-bold uppercase tracking-widest">Technical Specifications Pending.</p>
-                    )}
-                  </div>
-                )}
-                {activeTab === "manufacturing" && (
-                  <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
-                  />
-                )}
-                {activeTab === "warranty" && (
-                  <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
-                  />
-                )}
-                {activeTab === "shipping" && (
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    {/* Dispatch Schedule Card */}
-                    <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-6">
-                        Dispatch Schedule
-                      </h4>
-                      <div className="space-y-4">
-                        <div className="flex justify-between border-b border-orange-200/30 pb-3">
-                          <span className="text-xs font-bold text-zinc-600">Local (Punjab):</span>
-                          <span className="text-xs font-black text-zinc-900">24-48 Hours</span>
-                        </div>
-                        <div className="flex justify-between border-b border-orange-200/30 pb-3">
-                          <span className="text-xs font-bold text-zinc-600">North India:</span>
-                          <span className="text-xs font-black text-zinc-900">2-4 Working Days</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-xs font-bold text-zinc-600">Metros:</span>
-                          <span className="text-xs font-black text-zinc-900">3-5 Working Days</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Heavy Freight Notice Card */}
-                    <div className="flex flex-col justify-center p-8 border-2 border-dashed border-zinc-100 rounded-[2.5rem]">
-                      <p className="text-xs font-bold text-zinc-500 leading-relaxed italic">
-                        "For heavy industrial machinery exceeding 200kg, custom freight quotes will be provided post-checkout by our logistics team."
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {renderTabContent(activeTab)}
               </motion.div>
             </AnimatePresence>
           </div>
