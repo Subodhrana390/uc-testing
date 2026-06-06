@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, BadgePercent, Layers, CheckSquare } from "lucide-react";
@@ -6,6 +7,19 @@ import { createClient } from "@/utils/supabase/server";
 import ProductCard from "@/components/storefront/ProductCard";
 import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
+import JsonLd from "@/components/seo/JsonLd";
+import { itemListSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
+import { productsListingMetadata, SITE_URL } from "@/lib/seo";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: { page?: string; sort?: string };
+}): Promise<Metadata> {
+  const page = parseInt(searchParams.page || "1");
+  const sort = searchParams.sort || "latest";
+  return productsListingMetadata(page, sort);
+}
 
 export default async function ProductsPage({
   searchParams
@@ -71,6 +85,18 @@ export default async function ProductsPage({
 
   return (
     <div className="bg-zinc-50/60 min-h-screen text-zinc-900 antialiased">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "All Products", url: `${SITE_URL}/products` },
+        ]),
+        itemListSchema(sortedProducts, "Laboratory & Industrial Products", `${SITE_URL}/products`),
+        webPageSchema({
+          name: "All Products — Laboratory Chemicals, Glassware & Industrial Supplies",
+          description: "Browse UC Enterprises' complete product catalogue. Wholesale pricing, pan-India delivery.",
+          url: `${SITE_URL}/products`,
+        }),
+      ]} />
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Top Header Grid Section */}

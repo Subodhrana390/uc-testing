@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, FolderTree, Star } from "lucide-react";
@@ -8,6 +9,14 @@ import DealBanner from "@/components/storefront/DealBanner";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
 import FAQAccordion from "@/components/storefront/FAQAccordion";
 import { faqItems } from "@/lib/storefront";
+import JsonLd from "@/components/seo/JsonLd";
+import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
+import { homepageMetadata, SITE_URL } from "@/lib/seo";
+import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
+
+
+export const metadata: Metadata = homepageMetadata();
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -44,6 +53,19 @@ export default async function HomePage() {
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/20 to-white min-h-screen relative overflow-hidden">
+      {/* Structured Data */}
+      <JsonLd data={[
+        webPageSchema({
+          name: "UC Enterprises — Laboratory, Industrial & Safety Supplies India",
+          description: "Shop laboratory chemicals, glassware, safety equipment and industrial tools at UC Enterprises. Pan-India delivery, wholesale pricing.",
+          url: SITE_URL,
+          type: "WebPage",
+        }),
+        faqSchema(faqItems.slice(0, 5)),
+        ...(safeFeatured.length > 0 ? [itemListSchema(safeFeatured, "Featured Industrial Picks", `${SITE_URL}/products?filter=featured`)] : []),
+        ...(safeBestSellers.length > 0 ? [itemListSchema(safeBestSellers, "Best Selling Products", `${SITE_URL}/products?filter=best-seller`)] : []),
+      ]} />
+
       {/* Decorative Floating Brand blurs */}
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-red-500/[0.015] rounded-full blur-[130px] pointer-events-none -z-10" />
       <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] bg-indigo-500/[0.015] rounded-full blur-[150px] pointer-events-none -z-10" />
@@ -357,6 +379,12 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Personalised sections — only visible to returning visitors */}
+      <section className="container mx-auto px-4">
+        <RecentlyViewedProducts maxItems={8} />
+        <RecommendedProducts maxItems={8} />
       </section>
     </div >
   );

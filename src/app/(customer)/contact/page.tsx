@@ -1,9 +1,29 @@
+import type { Metadata } from "next";
 import { supportEmail, supportPhone, companyAddress, companyTagline } from "@/lib/storefront";
 import { MapPin, Phone, Mail } from "lucide-react";
+import JsonLd from "@/components/seo/JsonLd";
+import { localBusinessSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
+import { staticPageMetadata, SITE_URL } from "@/lib/seo";
+
+export const metadata: Metadata = staticPageMetadata.contact;
+
 
 export default function ContactPage() {
   return (
     <div className="bg-white min-h-[calc(100vh-80px)]">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "Contact", url: `${SITE_URL}/contact` },
+        ]),
+        webPageSchema({
+          name: "Contact UC Enterprises — Sales, Support & Bulk Enquiries",
+          description: "Contact UC Enterprises for sales enquiries, bulk orders or technical support.",
+          url: `${SITE_URL}/contact`,
+          type: "ContactPage",
+        }),
+        localBusinessSchema(),
+      ]} />
       <section className="container mx-auto max-w-4xl px-4 py-20">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-primary mb-3">Contact Us</p>
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-zinc-950 mb-6">Reach our sales and support desk</h1>

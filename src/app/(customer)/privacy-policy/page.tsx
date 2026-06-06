@@ -1,6 +1,9 @@
-"use client";
-
+import type { Metadata } from "next";
 import { ShieldCheck, Lock, Eye, FileText, Database, UserCheck } from "lucide-react";
+import { staticPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = staticPageMetadata.privacyPolicy;
+
 
 export default function PrivacyPolicyPage() {
   const sections = [

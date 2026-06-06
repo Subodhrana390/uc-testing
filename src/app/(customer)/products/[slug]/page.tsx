@@ -19,6 +19,9 @@ import RelatedProducts from "@/components/storefront/RelatedProducts";
 import ProductCard from "@/components/storefront/ProductCard";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
 import TopSellingProducts from "@/components/storefront/TopSellingProducts";
+import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
+import { addRecentlyViewed } from "@/lib/recentlyViewed";
 import { isInCart, updateCartItemQuantity } from "@/lib/cart";
 import { sanitizeHtml } from "@/lib/sanitize";
 
@@ -163,10 +166,22 @@ export default function ProductDetailPage() {
 
         setAttributes(attrData || []);
 
-        setProduct({
+        const finalProduct = {
           ...productData,
           averageRating: averageRating.toFixed(1),
-          reviewCount
+          reviewCount,
+        };
+        setProduct(finalProduct);
+
+        // Record to recently viewed (localStorage)
+        addRecentlyViewed({
+          id: productData.id,
+          slug: productData.slug,
+          name: productData.name,
+          price: productData.price,
+          sale_price: productData.sale_price ?? null,
+          image_url: productData.image_url ?? null,
+          category_name: productData.categories?.name ?? null,
         });
       }
       setLoading(false);
@@ -597,12 +612,15 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
 
-        {/* Top Selling Products */}
-        {/* <TopSellingProducts currentProductId={product.id} /> */}
+        {/* Recommended Products — personalised based on browsing history */}
+        <div className="border-t border-zinc-100 pt-4">
+          <RecommendedProducts excludeId={product.id} categoryId={product.category_id} />
+        </div>
 
-
-
-
+        {/* Recently Viewed Products */}
+        <div className="border-t border-zinc-100 pt-4">
+          <RecentlyViewedProducts excludeId={product.id} />
+        </div>
       </div>
     </div>
   );

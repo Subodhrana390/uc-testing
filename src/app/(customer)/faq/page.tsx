@@ -6,6 +6,9 @@ import Link from "next/link";
 import { faqItems } from "@/lib/storefront";
 import FAQAccordion from "@/components/storefront/FAQAccordion";
 import { cn } from "@/lib/utils";
+import JsonLd from "@/components/seo/JsonLd";
+import { faqSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
+import { SITE_URL } from "@/lib/seo";
 
 const CATEGORIES = [
   { id: "all", label: "All Questions" },
@@ -35,6 +38,19 @@ export default function FAQPage() {
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/15 to-white min-h-screen relative overflow-hidden py-12">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "FAQ", url: `${SITE_URL}/faq` },
+        ]),
+        webPageSchema({
+          name: "FAQ — Ordering, Shipping & Product Questions",
+          description: "Answers to common questions about ordering laboratory supplies, shipping and product certifications at UC Enterprises.",
+          url: `${SITE_URL}/faq`,
+          type: "FAQPage",
+        }),
+        faqSchema(faqItems),
+      ]} />
       {/* Decorative blurs */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-red-500/[0.012] rounded-full blur-[130px] pointer-events-none -z-10" />
 

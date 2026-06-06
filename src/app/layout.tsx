@@ -3,27 +3,30 @@ import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import TrackingInitializer from "@/components/TrackingInitializer";
+import JsonLd from "@/components/seo/JsonLd";
+import { organizationSchema, websiteSchema, localBusinessSchema } from "@/lib/jsonld";
+import { baseMetadata } from "@/lib/seo";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin"],
   variable: "--font-roboto",
+  display: "swap",
 });
 
 const robotoMono = Roboto_Mono({
   subsets: ["latin"],
   variable: "--font-roboto-mono",
+  display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "UC Enterprises",
-  description: "UC Enterprises supplies laboratory chemicals, glassware, tools, safety equipment, and industrial electrical goods across India.",
+export const metadata: Metadata = baseMetadata({
   icons: {
-    icon: "/favicon.png",
-    apple: "/logo.png",
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: "/favicon.png",
+    shortcut: "/favicon.png",
   },
-};
-
+});
 
 export default function RootLayout({
   children,
@@ -32,10 +35,12 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="en-IN"
       className={`${roboto.variable} ${robotoMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col">
+        {/* Global structured data — injected on every page */}
+        <JsonLd data={[organizationSchema(), websiteSchema(), localBusinessSchema()]} />
         <TrackingInitializer />
         {children}
         <Toaster position="top-center" />

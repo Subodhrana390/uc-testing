@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+import { staticPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = staticPageMetadata.cookiePolicy;
+
 export default function CookiePolicyPage() {
   return (
     <div className="bg-white">

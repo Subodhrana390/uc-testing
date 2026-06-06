@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { companyTagline, companyCoreValues } from "@/lib/storefront";
 import { CheckCircle2, ShieldCheck, Beaker, Wrench, Factory, GraduationCap, HeartPulse } from "lucide-react";
 import Image from "next/image";
+import JsonLd from "@/components/seo/JsonLd";
+import { organizationSchema, localBusinessSchema, webPageSchema, breadcrumbSchema } from "@/lib/jsonld";
+import { staticPageMetadata, SITE_URL } from "@/lib/seo";
+
+export const metadata: Metadata = staticPageMetadata.about;
+
 
 const serviceSectors = [
   { name: "Laboratories", icon: Beaker },
@@ -32,6 +39,20 @@ const brandCategories = [
 export default function AboutPage() {
   return (
     <div className="bg-white">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "About Us", url: `${SITE_URL}/about` },
+        ]),
+        webPageSchema({
+          name: "About UC Enterprises — India's Trusted Lab & Industrial Supplier",
+          description: "Learn about UC Enterprises, established 2018, serving labs, industries and institutions across India.",
+          url: `${SITE_URL}/about`,
+          type: "AboutPage",
+        }),
+        organizationSchema(),
+        localBusinessSchema(),
+      ]} />
       {/* Hero Section */}
       <section className="bg-zinc-950 text-white py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
