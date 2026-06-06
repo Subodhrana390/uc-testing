@@ -18,6 +18,7 @@ import RelatedProducts from "@/components/storefront/RelatedProducts";
 import ProductCard from "@/components/storefront/ProductCard";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
 import { isInCart, updateCartItemQuantity } from "@/lib/cart";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -286,7 +287,7 @@ export default function ProductDetailPage() {
 
         {/* Technical Tabs */}
         <section className="mt-8">
-          <div className="flex w-full justify-start border-b border-zinc-100 gap-12 overflow-x-auto no-scrollbar">
+          <div className="flex flex-col sm:flex-row w-full justify-start sm:border-b border-zinc-100 gap-3 sm:gap-12 pb-2 sm:pb-0">
             {[
               { id: "description", label: "Overview" },
               { id: "specification", label: "Technical Specs" },
@@ -297,7 +298,7 @@ export default function ProductDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
+                className={`pb-3 sm:pb-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 text-left sm:text-center whitespace-nowrap ${activeTab === tab.id
                   ? "border-primary text-zinc-950"
                   : "border-transparent text-zinc-400 hover:text-zinc-600"
                   }`}
@@ -316,14 +317,14 @@ export default function ProductDetailPage() {
                 transition={{ duration: 0.2 }}
               >
                 {activeTab === "description" && (
-                  <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose" dangerouslySetInnerHTML={{ __html: product.long_description || product.description || "<p>Detailed description coming soon.</p>" }} />
+                  <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
                 )}
                 {activeTab === "specification" && (
                   <div className="space-y-12">
                     {/* HTML Specification Field */}
                     {product.specification && (
                       <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: product.specification }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
                       />
                     )}
 
@@ -384,12 +385,12 @@ export default function ProductDetailPage() {
                 )}
                 {activeTab === "manufacturing" && (
                   <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
-                    dangerouslySetInnerHTML={{ __html: product.manufacturing_info || "<p>Manufacturing details pending.</p>" }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
                   />
                 )}
                 {activeTab === "warranty" && (
                   <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
-                    dangerouslySetInnerHTML={{ __html: product.warranty_info || "<p>Warranty details pending.</p>" }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
                   />
                 )}
                 {activeTab === "shipping" && (

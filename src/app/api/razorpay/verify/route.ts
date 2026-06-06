@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;

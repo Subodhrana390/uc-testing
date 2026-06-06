@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { createClient } from "@/utils/supabase/server";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { sendInvoiceEmail, sendStatusUpdateEmail } from "@/lib/email";
@@ -6,7 +7,18 @@ import { createServiceRoleClient } from "@/utils/supabase/service-role";
 
 export async function POST(req: Request) {
   try {
-    const { orderId, status, trackingId, carrier, paymentStatus, paymentMethod, razorpayPaymentId, razorpaySignature, remarks } = await req.json();
+    const {
+      orderId,
+      status,
+      trackingId,
+      carrier,
+      paymentStatus,
+      paymentMethod,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      remarks,
+    } = await req.json();
 
     if (!orderId) {
       return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
@@ -28,6 +40,20 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     const actor = profile?.role || "customer";
+
+    // Fetch the order using the user's client (naturally checks SELECT RLS)
+    const { data: existingOrder, error: fetchOrderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+
+    if (fetchOrderError || !existingOrder) {
+      return NextResponse.json({ error: "Order not found or unauthorized" }, { status: 404 });
+    }
+
+    const isAdmin = actor === "admin";
+    const serviceRoleSupabase = createServiceRoleClient();
 
     // 1. If order status is being updated, enforce State Machine transition
     if (status !== undefined) {
@@ -63,7 +89,32 @@ export async function POST(req: Request) {
 
     let order = null;
     if (Object.keys(updateData).length > 0) {
-      const { data: updatedOrder, error: updateError } = await supabase
+      if (!isAdmin) {
+        // If customer is updating, only allow verifying and setting online payments
+        if (paymentStatus === "Paid" && paymentMethod === "ONLINE") {
+          if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return NextResponse.json({ error: "Missing Razorpay details for verification" }, { status: 400 });
+          }
+
+          // Cryptographically verify Razorpay signature
+          const body = razorpayOrderId + "|" + razorpayPaymentId;
+          const expectedSignature = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+            .update(body)
+            .digest("hex");
+
+          if (expectedSignature !== razorpaySignature) {
+            return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
+          }
+
+          updateData.razorpay_order_id = razorpayOrderId;
+        } else {
+          return NextResponse.json({ error: "Unauthorized metadata update" }, { status: 403 });
+        }
+      }
+
+      // Perform update via Service Role Client to bypass customer UPDATE RLS restriction
+      const { data: updatedOrder, error: updateError } = await serviceRoleSupabase
         .from("orders")
         .update(updateData)
         .eq("id", orderId)
@@ -72,8 +123,32 @@ export async function POST(req: Request) {
 
       if (updateError) throw updateError;
       order = updatedOrder;
+
+      // If customer successfully paid online, transition order status to CONFIRMED using state machine
+      if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && existingOrder.status === "PENDING") {
+        await serviceRoleSupabase.rpc(
+          "transition_order_status",
+          {
+            p_order_id: orderId,
+            p_new_status: "CONFIRMED",
+            p_actor_type: "system",
+            p_actor_id: user.id,
+            p_remarks: "Paid online via Razorpay (verified)"
+          }
+        );
+        // Refresh order status
+        const { data: refreshedOrder } = await serviceRoleSupabase
+          .from("orders")
+          .select("*")
+          .eq("id", orderId)
+          .single();
+        if (refreshedOrder) {
+          order = refreshedOrder;
+        }
+      }
     } else {
-      const { data: currentOrder } = await supabase
+      // No updates, just fetch current order (using service role to ensure consistency)
+      const { data: currentOrder } = await serviceRoleSupabase
         .from("orders")
         .select("*")
         .eq("id", orderId)

@@ -360,17 +360,6 @@ export default function CheckoutPage() {
 
         const razorpayOrder = await orderRes.json();
 
-        // 3. Update Supabase order with Razorpay Order ID
-        const { error: updateOrderError } = await supabase
-          .from("orders")
-          .update({ razorpay_order_id: razorpayOrder.id })
-          .eq("id", supabaseOrderId);
-
-        if (updateOrderError) {
-          console.error("Failed to associate Razorpay Order ID:", updateOrderError);
-          // Continue anyway, webhook or frontend can fall back
-        }
-
         // Razorpay Integration
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
@@ -390,6 +379,7 @@ export default function CheckoutPage() {
                   orderId: supabaseOrderId,
                   paymentStatus: "Paid",
                   paymentMethod: "ONLINE",
+                  razorpayOrderId: response.razorpay_order_id || razorpayOrder.id,
                   razorpayPaymentId: response.razorpay_payment_id,
                   razorpaySignature: response.razorpay_signature
                 })

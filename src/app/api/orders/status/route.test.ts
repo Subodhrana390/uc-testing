@@ -39,7 +39,12 @@ vi.mock("@/utils/supabase/service-role", () => {
   chain.select = vi.fn().mockReturnValue(chain);
   chain.eq = vi.fn().mockReturnValue(chain);
   chain.maybeSingle = vi.fn().mockReturnValue({ data: null, error: null });
+  chain.single = vi.fn().mockResolvedValue({
+    data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid" },
+    error: null
+  });
   chain.update = vi.fn().mockReturnValue(chain);
+  chain.rpc = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
   chain.insert = vi.fn().mockImplementation((...args) => {
     mockInsert(...args);
     return chain;
@@ -113,6 +118,10 @@ describe("Order Status API Route", () => {
   it("should return 400 if state machine transition is rejected by RPC", async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: "usr_customer" } }, error: null });
     mockMaybeSingle.mockResolvedValueOnce({ data: { role: "customer" }, error: null });
+    mockSingle.mockResolvedValueOnce({
+      data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid" },
+      error: null
+    });
     mockRpc.mockResolvedValueOnce({ data: { success: false, error: "Invalid status transition" }, error: null });
 
     const req = new Request("http://localhost:3000/api/orders/status", {
