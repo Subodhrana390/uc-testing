@@ -117,9 +117,12 @@ function TrackOrderContent() {
   };
 
   const getStatusStep = (status: string) => {
-    const steps = ["pending", "processing", "shipped", "delivered"];
-    const currentIdx = steps.indexOf(status.toLowerCase());
-    return currentIdx === -1 ? 0 : currentIdx;
+    const s = status.toLowerCase();
+    if (s === "pending" || s === "placed" || s === "confirmed") return 0;
+    if (s === "processing") return 1;
+    if (s === "shipped") return 2;
+    if (s === "delivered") return 3;
+    return -1; // Terminal / Special status (Cancelled, Returned, Failed)
   };
 
   const formatMilestoneDate = (baseDateStr: string, hoursToAdd: number) => {
@@ -139,40 +142,64 @@ function TrackOrderContent() {
     const baseDate = order.created_at;
     const statusStep = getStatusStep(order.status);
     const carrierName = order.carrier || "Delivery Partner";
+    const statusLower = order.status.toLowerCase();
     
     const list = [];
     
-    if (statusStep >= 0) {
+    // Add Order Placed milestone for all orders
+    list.push({
+      title: "Order Placed",
+      description: "Your order details have been successfully saved. Payment authorized.",
+      time: formatMilestoneDate(baseDate, 0),
+      status: "confirmed"
+    });
+
+    if (statusLower === "cancelled") {
       list.push({
-        title: "Order Placed",
-        description: "Your order details have been successfully saved. Payment authorized.",
-        time: formatMilestoneDate(baseDate, 0),
-        status: "confirmed"
+        title: "Cancelled",
+        description: "This order has been cancelled and will not be processed further.",
+        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        status: "cancelled"
       });
-    }
-    if (statusStep >= 1) {
+    } else if (statusLower === "returned") {
       list.push({
-        title: "Under Processing",
-        description: "Items picked and undergoing quality inspection at Zirakpur hub.",
-        time: formatMilestoneDate(baseDate, 4),
-        status: "processing"
+        title: "Returned",
+        description: "This order has been returned to our hub.",
+        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        status: "returned"
       });
-    }
-    if (statusStep >= 2) {
+    } else if (statusLower === "failed") {
       list.push({
-        title: "Dispatched",
-        description: `Handed over to ${carrierName}. Tracking details generated.`,
-        time: formatMilestoneDate(baseDate, 12),
-        status: "shipped"
+        title: "Failed",
+        description: "The order transaction or processing has failed.",
+        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        status: "failed"
       });
-    }
-    if (statusStep >= 3) {
-      list.push({
-        title: "Delivered",
-        description: "Package received and signed. Transaction complete.",
-        time: formatMilestoneDate(baseDate, 32),
-        status: "delivered"
-      });
+    } else {
+      if (statusStep >= 1) {
+        list.push({
+          title: "Under Processing",
+          description: "Items picked and undergoing quality inspection at Zirakpur hub.",
+          time: formatMilestoneDate(baseDate, 4),
+          status: "processing"
+        });
+      }
+      if (statusStep >= 2) {
+        list.push({
+          title: "Dispatched",
+          description: `Handed over to ${carrierName}. Tracking details generated.`,
+          time: formatMilestoneDate(baseDate, 12),
+          status: "shipped"
+        });
+      }
+      if (statusStep >= 3) {
+        list.push({
+          title: "Delivered",
+          description: "Package received and signed. Transaction complete.",
+          time: formatMilestoneDate(baseDate, 32),
+          status: "delivered"
+        });
+      }
     }
     
     return list.reverse();
@@ -309,7 +336,11 @@ function TrackOrderContent() {
                             ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
                             : order.status.toLowerCase() === "processing"
                             ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
-                            : "bg-amber-500/8 text-amber-700 border-amber-500/15"
+                            : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
+                            ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
+                            : order.status.toLowerCase() === "returned"
+                            ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
+                            : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
                         )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                           {order.status}
@@ -328,56 +359,78 @@ function TrackOrderContent() {
                       </div>
                     </div>
 
-                    {/* Timeline Progress */}
-                    <div className="relative py-4 mb-6">
-                      {/* Background track line */}
-                      <div className="absolute top-[28px] left-[12.5%] right-[12.5%] h-0.5 bg-zinc-100 z-0" />
-
-                      {/* Active progress line */}
-                      <div
-                        className="absolute top-[28px] left-[12.5%] h-0.5 bg-zinc-900 z-0 transition-all duration-700 ease-out"
-                        style={{
-                          width: `${(getStatusStep(order.status) / 3) * 75}%`,
-                        }}
-                      />
-
-                      <div className="relative z-10 flex justify-between">
-                        {[
-                          { icon: Clock, label: "Confirmed" },
-                          { icon: Package, label: "Processing" },
-                          { icon: Truck, label: "Shipped" },
-                          { icon: CheckCircle2, label: "Delivered" },
-                        ].map((step, idx) => {
-                          const isCompleted = getStatusStep(order.status) >= idx;
-                          const isCurrent = getStatusStep(order.status) === idx;
-                          const Icon = step.icon;
-
-                          return (
-                            <div key={step.label} className="flex flex-col items-center gap-2.5 w-1/4">
-                              <div
-                                className={cn(
-                                  "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 border bg-white",
-                                  isCompleted
-                                    ? "border-zinc-950 text-zinc-950 shadow-sm"
-                                    : "border-zinc-200 text-zinc-300",
-                                  isCurrent && "ring-4 ring-zinc-900/5 bg-zinc-950 border-zinc-950 text-white"
-                                )}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <span
-                                className={cn(
-                                  "text-[10px] font-black uppercase tracking-wider text-center select-none",
-                                  isCompleted ? "text-zinc-800" : "text-zinc-400"
-                                )}
-                              >
-                                {step.label}
-                              </span>
-                            </div>
-                          );
-                        })}
+                    {/* Terminal Status Alert Banner */}
+                    {getStatusStep(order.status) === -1 && (
+                      <div className={cn(
+                        "p-4 mb-6 rounded-2xl border flex items-center gap-3",
+                        order.status.toLowerCase() === "cancelled" && "bg-red-50 border-red-200 text-red-800",
+                        order.status.toLowerCase() === "returned" && "bg-amber-50 border-amber-200 text-amber-800",
+                        order.status.toLowerCase() === "failed" && "bg-rose-50 border-rose-200 text-rose-800"
+                      )}>
+                        <AlertCircle className="w-5 h-5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wider">Order {order.status}</p>
+                          <p className="text-[11px] font-medium opacity-90 mt-0.5">
+                            {order.status.toLowerCase() === "cancelled" && "This order has been cancelled and cannot be tracked further."}
+                            {order.status.toLowerCase() === "returned" && "This order has been returned to our warehouse."}
+                            {order.status.toLowerCase() === "failed" && "This order payment or transaction has failed."}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Timeline Progress */}
+                    {getStatusStep(order.status) !== -1 && (
+                      <div className="relative py-4 mb-6">
+                        {/* Background track line */}
+                        <div className="absolute top-[28px] left-[12.5%] right-[12.5%] h-0.5 bg-zinc-100 z-0" />
+
+                        {/* Active progress line */}
+                        <div
+                          className="absolute top-[28px] left-[12.5%] h-0.5 bg-zinc-900 z-0 transition-all duration-700 ease-out"
+                          style={{
+                            width: `${(getStatusStep(order.status) / 3) * 75}%`,
+                          }}
+                        />
+
+                        <div className="relative z-10 flex justify-between">
+                          {[
+                            { icon: Clock, label: "Confirmed" },
+                            { icon: Package, label: "Processing" },
+                            { icon: Truck, label: "Shipped" },
+                            { icon: CheckCircle2, label: "Delivered" },
+                          ].map((step, idx) => {
+                            const isCompleted = getStatusStep(order.status) >= idx;
+                            const isCurrent = getStatusStep(order.status) === idx;
+                            const Icon = step.icon;
+
+                            return (
+                              <div key={step.label} className="flex flex-col items-center gap-2.5 w-1/4">
+                                <div
+                                  className={cn(
+                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 border bg-white",
+                                    isCompleted
+                                      ? "border-zinc-950 text-zinc-950 shadow-sm"
+                                      : "border-zinc-200 text-zinc-300",
+                                    isCurrent && "ring-4 ring-zinc-900/5 bg-zinc-950 border-zinc-950 text-white"
+                                  )}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-black uppercase tracking-wider text-center select-none",
+                                    isCompleted ? "text-zinc-800" : "text-zinc-400"
+                                  )}
+                                >
+                                  {step.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Carrier Info */}
                     {order.tracking_id && (

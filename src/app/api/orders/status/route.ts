@@ -25,19 +25,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
     }
 
-    let supabase = await createClient();
+    const { cookies } = await import("next/headers");
+    const cookieStore = cookies();
+    const hasAdminCookie = cookieStore.has("sb-admin-auth-token");
 
-    // Authenticate the user
-    let { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    // If not authenticated, check if the admin cookie is present
-    if (authError || !user) {
+    let supabase = await createClient();
+    let user = null;
+
+    if (hasAdminCookie) {
       const adminSupabase = await createAdminServerClient();
       const { data: { user: adminUser }, error: adminAuthError } = await adminSupabase.auth.getUser();
       if (!adminAuthError && adminUser) {
         user = adminUser;
         supabase = adminSupabase;
       }
+    }
+
+    if (!user) {
+      const { data: { user: customerUser } } = await supabase.auth.getUser();
+      user = customerUser;
     }
 
     if (!user) {
@@ -68,7 +74,7 @@ export async function POST(req: Request) {
     const serviceRoleSupabase = createServiceRoleClient();
 
     // 1. If order status is being updated, enforce State Machine transition
-    if (status !== undefined) {
+    if (status !== undefined && status.toUpperCase() !== existingOrder.status.toUpperCase()) {
       const { data: transitionResult, error: rpcError } = await supabase.rpc(
         "transition_order_status",
         {
@@ -135,6 +141,13 @@ export async function POST(req: Request) {
 
       if (updateError) throw updateError;
       order = updatedOrder;
+
+      if (paymentStatus === "Refunded") {
+        await serviceRoleSupabase
+          .from("payments")
+          .update({ status: "refunded" })
+          .eq("order_id", orderId);
+      }
 
       // If customer successfully paid online, transition order status to CONFIRMED using state machine
       if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && existingOrder.status === "PENDING") {

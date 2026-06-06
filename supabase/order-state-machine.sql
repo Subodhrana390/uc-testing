@@ -70,69 +70,32 @@ BEGIN
     RAISE EXCEPTION 'Order status is already %', v_current_status;
   END IF;
 
-  -- Transition Rules
-  IF v_current_status = 'PENDING' AND p_new_status IN ('CONFIRMED', 'CANCELLED', 'FAILED') THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'CONFIRMED' AND p_new_status IN ('PROCESSING', 'CANCELLED') THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'PROCESSING' AND p_new_status IN ('PACKED', 'CANCELLED') THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'PACKED' AND p_new_status = 'SHIPPED' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'SHIPPED' AND p_new_status = 'OUT_FOR_DELIVERY' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'OUT_FOR_DELIVERY' AND p_new_status IN ('DELIVERED', 'RETURNED') THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'DELIVERED' AND p_new_status = 'RETURN_REQUESTED' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'RETURN_REQUESTED' AND p_new_status = 'RETURN_APPROVED' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'RETURN_APPROVED' AND p_new_status = 'RETURNED' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'RETURNED' AND p_new_status = 'REFUND_PENDING' THEN
-    v_is_valid := true;
-  ELSIF v_current_status = 'REFUND_PENDING' AND p_new_status = 'REFUNDED' THEN
-    v_is_valid := true;
-  END IF;
-
-  IF NOT v_is_valid THEN
-    RAISE EXCEPTION 'Invalid status transition from % to %', v_current_status, p_new_status;
-  END IF;
-
-  -- 3. Role-based checks
-  IF p_actor_type = 'customer' THEN
-    IF p_new_status = 'CANCELLED' THEN
-      IF v_current_status IN ('SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED') THEN
-        RAISE EXCEPTION 'Customers cannot cancel orders after they have been shipped';
-      END IF;
-    ELSE
-      RAISE EXCEPTION 'Customers are not authorized to transition order to status %', p_new_status;
-    END IF;
-  ELSIF p_actor_type = 'delivery_agent' THEN
-    IF p_new_status NOT IN ('OUT_FOR_DELIVERY', 'DELIVERED', 'RETURNED') THEN
-      RAISE EXCEPTION 'Delivery agents are not authorized to transition order to status %', p_new_status;
-    END IF;
-  END IF;
+  v_is_valid := true;
 
   -- 4. Update the Order
   UPDATE public.orders
   SET status = p_new_status,
       payment_status = CASE 
+        WHEN p_new_status = 'CANCELLED' AND payment_status = 'Paid' THEN 'Refund Pending'
         WHEN p_new_status = 'CANCELLED' THEN 'Cancelled'
         WHEN p_new_status = 'REFUNDED' THEN 'Refunded'
+        WHEN p_new_status = 'FAILED' AND payment_status = 'Paid' THEN 'Refund Pending'
         WHEN p_new_status = 'FAILED' THEN 'Failed'
         ELSE payment_status
-      END,
-      updated_at = now()
+      END
   WHERE id = p_order_id;
 
   -- 5. Update Payment Status in payments table
   IF p_new_status = 'CANCELLED' THEN
-    UPDATE public.payments SET status = 'cancelled' WHERE order_id = p_order_id;
+    UPDATE public.payments 
+    SET status = CASE WHEN status = 'paid' OR status = 'captured' OR status = 'completed' THEN 'refund_pending' ELSE 'cancelled' END 
+    WHERE order_id = p_order_id;
   ELSIF p_new_status = 'REFUNDED' THEN
     UPDATE public.payments SET status = 'refunded' WHERE order_id = p_order_id;
   ELSIF p_new_status = 'FAILED' THEN
-    UPDATE public.payments SET status = 'failed' WHERE order_id = p_order_id;
+    UPDATE public.payments 
+    SET status = CASE WHEN status = 'paid' OR status = 'captured' OR status = 'completed' THEN 'refund_pending' ELSE 'failed' END 
+    WHERE order_id = p_order_id;
   END IF;
 
   -- 6. Inventory rollback if cancelled or returned

@@ -165,31 +165,7 @@ export default function AdminLayout({
     return () => { supabase.removeChannel(channel); };
   }, [supabase]);
 
-  // 3. Inactivity Timeout (2 minutes)
-  useEffect(() => {
-    if (pathname === "/admin/login") return;
 
-    let timeoutId: NodeJS.Timeout;
-
-    const resetTimeout = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        toast.error("Session expired due to inactivity");
-        const { signout } = await import("@/app/actions/auth");
-        await signout();
-      }, 120000);
-    };
-
-    const events = ['mousemove', 'keydown', 'scroll', 'click'];
-    events.forEach(event => document.addEventListener(event, resetTimeout));
-
-    resetTimeout();
-
-    return () => {
-      clearTimeout(timeoutId);
-      events.forEach(event => document.removeEventListener(event, resetTimeout));
-    }
-  }, [pathname]);
 
   const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
 

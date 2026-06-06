@@ -79,6 +79,11 @@ import {
 
 type StatusType = "All" | "Placed" | "Confirmed" | "Processing" | "Pending" | "Shipped" | "Delivered" | "Cancelled" | "Return";
 
+const getPossibleNextStatuses = (currentStatus: string): string[] => {
+  const statuses = ["Pending", "Placed", "Confirmed", "Processing", "Shipped", "Delivered", "Cancelled", "Returned", "Failed"];
+  return statuses.filter(s => s.toUpperCase() !== (currentStatus || "").toUpperCase());
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -744,7 +749,12 @@ export default function OrdersPage() {
                     <TableCell className="text-sm text-[#18181b]">
                       <div className="font-bold">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</div>
                       <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
-                        {order.payment_method} • <span className={cn(order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold')}>{order.payment_status || 'Unpaid'}</span>
+                        {order.payment_method} • <span className={cn(
+                          order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' :
+                          order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
+                          order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
+                          'text-amber-600 font-bold'
+                        )}>{order.payment_status || 'Unpaid'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -763,35 +773,21 @@ export default function OrdersPage() {
                             <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
-                                <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                Change Status
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="w-40 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Placed")}>
-                                  Placed
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Confirmed")}>
-                                  Confirmed
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Processing")}>
-                                  Processing
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Shipped")}>
-                                  Shipped
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Delivered")}>
-                                  Delivered
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Cancelled")}>
-                                  Cancelled
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Return")}>
-                                  Return
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
+                            {getPossibleNextStatuses(order.status).length > 0 && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
+                                  <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                  Change Status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-48 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
+                                  {getPossibleNextStatuses(order.status).map((s) => (
+                                    <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>
+                                      {s}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )}
 
                             <DropdownMenuItem onClick={() => {
                               setSelectedOrder(order);
@@ -803,7 +799,7 @@ export default function OrdersPage() {
                               Update Shipping
                             </DropdownMenuItem>
 
-                            {order.payment_status?.toLowerCase() !== 'paid' && (
+                            {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
@@ -811,6 +807,15 @@ export default function OrdersPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "ONLINE")}>
                                   Mark Paid (Online)
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
+                            {order.payment_status === 'Refund Pending' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Refunded")}>
+                                  Mark Refunded
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -896,6 +901,39 @@ export default function OrdersPage() {
           <ScrollArea className="max-h-[60vh]">
             {selectedOrder && (
               <div className="p-6 space-y-6 text-[#18181b]">
+                {/* Order Status Controller */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-200 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Status:</span>
+                    {getStatusBadge(selectedOrder.status)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-zinc-600">Update Status:</span>
+                    <Select
+                      value={selectedOrder.status}
+                      onValueChange={async (newStatus) => {
+                        await updateStatus(selectedOrder.id, newStatus);
+                        setSelectedOrder((prev: any) => ({ ...prev, status: newStatus }));
+                      }}
+                      disabled={getPossibleNextStatuses(selectedOrder.status).length === 0}
+                    >
+                      <SelectTrigger className="w-[180px] h-9 bg-white border-zinc-200 text-sm font-medium text-zinc-850 focus:ring-2 focus:ring-blue-500 rounded-xl">
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-zinc-200 rounded-xl shadow-lg z-50">
+                        {/* Include the current status so it remains visible in trigger */}
+                        <SelectItem value={selectedOrder.status}>{selectedOrder.status}</SelectItem>
+                        {getPossibleNextStatuses(selectedOrder.status)
+                          .filter((s) => s.toUpperCase() !== selectedOrder.status.toUpperCase())
+                          .map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-6 text-sm">
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Customer Information</h4>
@@ -912,9 +950,28 @@ export default function OrdersPage() {
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Payment Details</h4>
                     <p className="text-zinc-600 text-xs font-semibold uppercase">{selectedOrder.payment_method || 'N/A'}</p>
-                    <p className={cn("text-xs font-bold", selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-amber-600')}>
+                    <p className={cn(
+                      "text-xs font-bold",
+                      selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' :
+                      selectedOrder.payment_status === 'Refund Pending' ? 'text-orange-600' :
+                      selectedOrder.payment_status === 'Refunded' ? 'text-indigo-650 font-bold' :
+                      'text-amber-600'
+                    )}>
                       {selectedOrder.payment_status || 'Unpaid'}
                     </p>
+                    {selectedOrder.payment_status === 'Refund Pending' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 text-[10px] h-7 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 hover:text-orange-800 font-bold rounded-lg w-full"
+                        onClick={async () => {
+                          await updatePaymentStatus(selectedOrder.id, "Refunded");
+                          setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
+                        }}
+                      >
+                        Mark Refunded
+                      </Button>
+                    )}
                   </div>
                 </div>
 
