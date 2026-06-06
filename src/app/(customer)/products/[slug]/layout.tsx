@@ -23,15 +23,16 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+  const { slug } = await params;
   const supabase = await createClient();
   const { data: p } = await supabase
     .from("products")
     .select(
       "name, slug, description, price, sale_price, image_url, status, stock_quantity, categories(name), brands(name)"
     )
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .single();
 
   if (!p)
@@ -61,8 +62,9 @@ export default async function ProductDetailLayout({
   params,
 }: {
   children: ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const supabase = await createClient();
 
   const { data: p } = await supabase
@@ -70,7 +72,7 @@ export default async function ProductDetailLayout({
     .select(
       "*, categories(id, name, slug, parent:categories!parent_id(name, slug)), brands(name), product_reviews(rating)"
     )
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .single();
 
   if (!p) {
