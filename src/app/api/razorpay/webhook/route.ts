@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
+import { env } from "@/env";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No signature provided" }, { status: 400 });
     }
 
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const secret = env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) {
       console.error("RAZORPAY_WEBHOOK_SECRET is not defined");
       return NextResponse.json({ error: "Configuration error" }, { status: 500 });
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     const { data: order, error: fetchError } = await query.maybeSingle();
 
     if (fetchError || !order) {
-      console.error("Webhook Order Fetch Error:", fetchError, "IDs:", { supabaseOrderId, razorpayOrderId, razorpayPaymentId });
+      console.error("Webhook Order Fetch Error:", fetchError?.message || "Not found", "IDs:", { supabaseOrderId, razorpayOrderId, razorpayPaymentId });
       return NextResponse.json({ error: "Order not found in database" }, { status: 404 });
     }
 
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
       .single();
 
     if (updateError) {
-      console.error("Webhook Database Update Error:", updateError);
+      console.error("Webhook Database Update Error:", updateError?.message || "Update failed");
       return NextResponse.json({ error: "Database update failed" }, { status: 500 });
     }
 
@@ -139,14 +140,14 @@ export async function POST(req: Request) {
         });
 
       if (paymentError) {
-        console.error("Webhook Payment log insert error:", paymentError);
+        console.error("Webhook Payment log insert error:", paymentError?.message || "Insert failed");
       }
     }
 
     console.log(`Webhook: Order ${order.id} verified and updated payment_status to ${targetPaymentStatus}`);
     return NextResponse.json({ status: "ok" });
   } catch (error: any) {
-    console.error("Razorpay Webhook Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Razorpay Webhook Error:", error?.message || "Unknown error");
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

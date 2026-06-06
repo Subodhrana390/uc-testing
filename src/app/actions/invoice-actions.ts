@@ -1,5 +1,7 @@
 "use server";
 
+import { env } from "@/env";
+
 export async function sendInvoiceEmail(formData: {
   orderId: string;
   customerName: string;
@@ -7,7 +9,7 @@ export async function sendInvoiceEmail(formData: {
   pdfBase64: string;
 }) {
   try {
-    const apiKey = process.env.BREVO_API_KEY;
+    const apiKey = env.BREVO_API_KEY;
     if (!apiKey) {
       throw new Error("BREVO_API_KEY is not configured");
     }
@@ -21,8 +23,8 @@ export async function sendInvoiceEmail(formData: {
       },
       body: JSON.stringify({
         sender: {
-          name: process.env.BREVO_SENDER_NAME || "UC ENTERPRISES",
-          email: process.env.BREVO_SENDER_EMAIL || "ucenterprises1@gmail.com",
+          name: env.BREVO_SENDER_NAME || "UC ENTERPRISES",
+          email: env.BREVO_SENDER_EMAIL || "ucenterprises1@gmail.com",
         },
         to: [
           {
@@ -60,7 +62,7 @@ export async function sendInvoiceEmail(formData: {
 
     return { success: true, message: "Invoice sent successfully!" };
   } catch (error: any) {
-    console.error("Brevo API Error:", error);
+    console.error("Brevo API Error:", error?.message || "Unknown error");
     return {
       success: false,
       message: error.message || "An unexpected error occurred while sending the invoice.",

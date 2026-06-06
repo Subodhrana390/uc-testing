@@ -5,6 +5,7 @@ import { createAdminClient as createAdminServerClient } from "@/utils/supabase/a
 import { generateInvoicePDF } from "@/lib/invoice";
 import { sendInvoiceEmail, sendStatusUpdateEmail } from "@/lib/email";
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
+import { env } from "@/env";
 
 export async function POST(req: Request) {
   try {
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
           // Cryptographically verify Razorpay signature
           const body = razorpayOrderId + "|" + razorpayPaymentId;
           const expectedSignature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+            .createHmac("sha256", env.RAZORPAY_KEY_SECRET!)
             .update(body)
             .digest("hex");
 
@@ -281,7 +282,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, order });
   } catch (error: any) {
-    console.error("Order Status Update Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Order Status Update Error:", error?.message || "Unknown error");
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

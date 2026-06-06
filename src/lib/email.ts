@@ -1,18 +1,21 @@
+import 'server-only'
+import { env } from '@/env'
+
 export const sendInvoiceEmail = async (
   email: string,
   customerName: string,
   orderId: string,
   pdfBase64: string
 ) => {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = env.BREVO_API_KEY;
   if (!apiKey) {
     throw new Error("BREVO_API_KEY is not defined in environment variables");
   }
 
   const payload = {
     sender: {
-      name: process.env.BREVO_SENDER_NAME,
-      email: process.env.BREVO_SENDER_EMAIL
+      name: env.BREVO_SENDER_NAME,
+      email: env.BREVO_SENDER_EMAIL
     },
     to: [
       {
@@ -31,7 +34,7 @@ export const sendInvoiceEmail = async (
           <p>If you have any questions, feel free to contact our support team.</p>
           <br/>
           <p>Best regards,</p>
-          <p><strong>${process.env.BREVO_SENDER_NAME}</strong></p>
+          <p><strong>${env.BREVO_SENDER_NAME}</strong></p>
         </body>
       </html>
     `,
@@ -68,7 +71,7 @@ export const sendStatusUpdateEmail = async (
   status: string,
   remarks?: string
 ) => {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = env.BREVO_API_KEY;
   if (!apiKey) {
     console.error("BREVO_API_KEY is not defined in environment variables");
     return;
@@ -76,8 +79,8 @@ export const sendStatusUpdateEmail = async (
 
   const payload = {
     sender: {
-      name: process.env.BREVO_SENDER_NAME || "UC Enterprises",
-      email: process.env.BREVO_SENDER_EMAIL || "info@ucenterprises.com"
+      name: env.BREVO_SENDER_NAME,
+      email: env.BREVO_SENDER_EMAIL || "info@ucenterprises.com"
     },
     to: [
       {
@@ -100,7 +103,7 @@ export const sendStatusUpdateEmail = async (
           <p>You can view and track your order details on your dashboard.</p>
           <br/>
           <p>Best regards,</p>
-          <p><strong>${process.env.BREVO_SENDER_NAME || "UC Enterprises"}</strong></p>
+          <p><strong>${env.BREVO_SENDER_NAME}</strong></p>
         </body>
       </html>
     `

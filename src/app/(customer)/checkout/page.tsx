@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
 import { loadRazorpayScript } from "@/lib/razorpay";
 import { deleteFailedOrder } from "@/app/actions/orders";
+import { env } from "@/env";
 
 declare global {
   interface Window {
@@ -367,7 +368,7 @@ export default function CheckoutPage() {
 
         // Razorpay Integration
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
+          key: env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
           amount: razorpayOrder.amount, // from Razorpay Order object
           currency: razorpayOrder.currency || "INR",
           name: "UC Enterprises",
