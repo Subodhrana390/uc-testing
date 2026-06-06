@@ -294,6 +294,12 @@ export default async function HomePage() {
         ))
       }
 
+      {/* Personalised sections — only visible to returning visitors */}
+      <section className="container mx-auto px-4">
+        <RecentlyViewedProducts maxItems={8} />
+        <RecommendedProducts maxItems={8} />
+      </section>
+
       {/* FAQ Accordion Section */}
       <section className="max-w-7xl mx-auto px-4 py-10">
         <div className="text-center mb-12 space-y-3">
@@ -379,12 +385,6 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* Personalised sections — only visible to returning visitors */}
-      <section className="container mx-auto px-4">
-        <RecentlyViewedProducts maxItems={8} />
-        <RecommendedProducts maxItems={8} />
       </section>
     </div >
   );
