@@ -1,7 +1,6 @@
 import Header from "@/components/storefront/Header";
 import Footer from "@/components/storefront/Footer";
 import { createClient } from "@/utils/supabase/server";
-import UserActivityTracker from "@/components/storefront/UserActivityTracker";
 
 export default async function CustomerLayout({
   children,
@@ -22,7 +21,6 @@ export default async function CustomerLayout({
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <UserActivityTracker />
       <Header categories={categories || []} user={user} />
 
       <main className="flex-1">{children}</main>
