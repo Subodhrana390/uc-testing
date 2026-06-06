@@ -26,31 +26,44 @@ export default function ProductReviews({ productId }: { productId: string }) {
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  async function loadReviews(page = 1) {
+  async function loadInitialReviews() {
     setLoading(true);
-    const from = (page - 1) * REVIEWS_PER_PAGE;
-    const to = from + REVIEWS_PER_PAGE - 1;
-
     const { data, error, count } = await supabase
       .from("product_reviews")
       .select("id, reviewer_name, rating, title, review, created_at", { count: "exact" })
       .eq("product_id", productId)
       .order("created_at", { ascending: false })
-      .range(from, to);
+      .range(0, 2); // Fetch latest 3 (indexes 0, 1, 2)
 
     if (!error) {
       setReviews((data as Review[]) || []);
       setTotalCount(count || 0);
+      setIsExpanded(false);
+    }
+    setLoading(false);
+  }
+
+  async function loadAllReviews() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("product_reviews")
+      .select("id, reviewer_name, rating, title, review, created_at")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setReviews((data as Review[]) || []);
+      setIsExpanded(true);
     }
     setLoading(false);
   }
 
   useEffect(() => {
-    loadReviews(currentPage);
-  }, [productId, currentPage]);
+    loadInitialReviews();
+  }, [productId]);
 
   async function handleSubmit() {
     if (!review.trim()) {
@@ -96,22 +109,24 @@ export default function ProductReviews({ productId }: { productId: string }) {
     setReview("");
     setRating(5);
     toast.success("Review submitted");
-    setCurrentPage(1);
-    loadReviews(1);
+    loadInitialReviews();
   }
-
-  const totalPages = Math.ceil(totalCount / REVIEWS_PER_PAGE);
 
   return (
     <section className="mt-12 space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-zinc-950">Product Reviews</h2>
+        <h2 className="text-2xl font-black text-zinc-950 flex items-center gap-2">
+          <span>Product Reviews</span>
+          <span className="text-sm font-bold text-zinc-400 bg-zinc-100 px-2.5 py-0.5 rounded-full">
+            {totalCount}
+          </span>
+        </h2>
         <p className="mt-2 text-sm text-zinc-600">Customer feedback, buying experience and product usage notes.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
-          {loading ? (
+          {loading && reviews.length === 0 ? (
             <div className="border border-zinc-200 bg-white p-6 text-sm text-zinc-500">Loading reviews...</div>
           ) : reviews.length > 0 ? (
             <>
@@ -134,37 +149,14 @@ export default function ProductReviews({ productId }: { productId: string }) {
                 ))}
               </div>
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
+              {!isExpanded && totalCount > 3 && (
+                <div className="pt-4 text-center">
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-none border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
+                    onClick={loadAllReviews}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center px-6 py-2.5 border border-zinc-900 bg-white text-zinc-900 text-xs font-black uppercase tracking-widest hover:bg-zinc-900 hover:text-white transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentPage(i + 1)}
-                        className={cn(
-                          "inline-flex items-center justify-center h-8 min-w-[2rem] rounded-none px-2 text-xs font-bold transition-all",
-                          currentPage === i + 1 
-                            ? "bg-zinc-950 text-white" 
-                            : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-                        )}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-none border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    <ChevronRight className="h-4 w-4" />
+                    View More Reviews
                   </button>
                 </div>
               )}

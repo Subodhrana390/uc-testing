@@ -34,6 +34,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
 import "../globals.css";
+import UserActivityTracker from "@/components/storefront/UserActivityTracker";
 
 export default function AdminLayout({
   children,
@@ -294,6 +295,7 @@ export default function AdminLayout({
   if (pathname === "/admin/login") return <>{children}</>;
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f6fa] text-slate-600 selection:bg-indigo-500 selection:text-white">
+      <UserActivityTracker />
 
       {/* Desktop Sidebar (Collapsible Solid White Theme) */}
       <aside className={cn(

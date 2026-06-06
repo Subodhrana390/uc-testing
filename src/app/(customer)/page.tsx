@@ -16,7 +16,8 @@ export default async function HomePage() {
     { data: activeProductsData },
     { data: categories },
     { data: banners },
-    { data: deals }
+    { data: deals },
+    { data: topSelling }
   ] = await Promise.all([
     supabase
       .from("products")
@@ -26,6 +27,7 @@ export default async function HomePage() {
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", "Active").order("name", { ascending: true }),
     supabase.from("banners").select("*").eq("is_active", true).order("position", { ascending: true }),
     supabase.from("deals").select("*").eq("is_active", true).order("position", { ascending: true }),
+    supabase.from("top_selling_products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").limit(12),
   ]);
 
   const allActiveProducts = activeProductsData || [];
@@ -38,6 +40,7 @@ export default async function HomePage() {
   const safeBanners = banners || [];
   const safeFlashDeals = allActiveProducts.filter(p => p.sale_price !== null).slice(0, 12);
   const safeDeals = (deals as any[]) || [];
+  const safeTopSelling = topSelling || [];
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/20 to-white min-h-screen relative overflow-hidden">
@@ -221,6 +224,27 @@ export default async function HomePage() {
               </Link>
             </div>
             <ProductCarousel products={safeBestSellers} />
+          </section>
+        )
+      }
+
+      {/* Top Selling Products Segment */}
+      {
+        safeTopSelling.length > 0 && (
+          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+            <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
+              <div className="relative pl-4 border-l-4 border-primary">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Trending Demands</p>
+                <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Top Selling Products</h2>
+              </div>
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
+              >
+                View all products <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <ProductCarousel products={safeTopSelling} />
           </section>
         )
       }

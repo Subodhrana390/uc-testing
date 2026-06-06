@@ -39,14 +39,27 @@ function AuthContainer() {
     const password = formData.get("password") as string;
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       toast.error(error.message);
       setLoading(false);
     } else {
-      toast.success("Welcome back!");
-      window.location.href = returnTo;
+      // Verify user has customer role
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user?.id)
+        .single();
+
+      if (profileError || profile?.role !== "customer") {
+        await supabase.auth.signOut();
+        toast.error("Unauthorized: Customer credentials required.");
+        setLoading(false);
+      } else {
+        toast.success("Welcome back!");
+        window.location.href = returnTo;
+      }
     }
   }
 

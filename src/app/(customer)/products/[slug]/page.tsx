@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, ShieldCheck, ShoppingBag, Truck, X, Star, FileText, Download } from "lucide-react";
+import { ChevronRight, ShieldCheck, ShoppingBag, Truck, X, Star, FileText, Download, Share2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { formatCurrency } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import LogoLoader from "@/components/ui/LogoLoader";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
@@ -17,6 +18,7 @@ import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTo
 import RelatedProducts from "@/components/storefront/RelatedProducts";
 import ProductCard from "@/components/storefront/ProductCard";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
+import TopSellingProducts from "@/components/storefront/TopSellingProducts";
 import { isInCart, updateCartItemQuantity } from "@/lib/cart";
 import { sanitizeHtml } from "@/lib/sanitize";
 
@@ -30,6 +32,102 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
+
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
+  const resumeTimeoutRef = useMemo(() => ({ current: null as any }), []);
+
+  const handleUserInteraction = () => {
+    setIsAutoScrollPaused(true);
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+    }
+    resumeTimeoutRef.current = setTimeout(() => {
+      setIsAutoScrollPaused(false);
+    }, 6000); // Resume auto-scroll after 6 seconds of inactivity
+  };
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+      }
+    };
+  }, [resumeTimeoutRef]);
+
+  // Auto-scrolling gallery effect
+  useEffect(() => {
+    if (!product || !product.images || product.images.length <= 1) return;
+    if (isAutoScrollPaused) return;
+
+    const interval = setInterval(() => {
+      setActiveImage((prev) => {
+        const imgs = product.images;
+        const currIndex = imgs.indexOf(prev || "");
+        const nextIndex = (currIndex + 1) % imgs.length;
+        return imgs[nextIndex];
+      });
+    }, 4000); // Auto-slide every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [product, isAutoScrollPaused]);
+
+  // Touch swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleUserInteraction();
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diffX = touchStartX - touchEndX;
+
+    if (Math.abs(diffX) > 50) { // Swipe threshold: 50px
+      const imgs = product?.images || [];
+      if (imgs.length > 1) {
+        const currIdx = imgs.indexOf(activeImage || "");
+        if (diffX > 0) {
+          // Swipe left -> Next image
+          const nextIdx = (currIdx + 1) % imgs.length;
+          setActiveImage(imgs[nextIdx]);
+        } else {
+          // Swipe right -> Prev image
+          const prevIdx = (currIdx - 1 + imgs.length) % imgs.length;
+          setActiveImage(imgs[prevIdx]);
+        }
+      }
+    }
+    setTouchStartX(null);
+  };
+
+  const handleShare = async () => {
+    if (!product) return;
+    const shareData = {
+      title: product.name,
+      text: product.short_description || `Check out ${product.name} on UC Enterprises`,
+      url: window.location.origin + `/products/${product.slug}`,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast.success("Shared successfully!");
+      } catch (error: any) {
+        if (error.name !== "AbortError") {
+          toast.error("Failed to share product.");
+        }
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Product link copied to clipboard!");
+      } catch (err) {
+        toast.error("Failed to copy link.");
+      }
+    }
+  };
 
   useEffect(() => {
     async function fetchProduct() {
@@ -256,7 +354,10 @@ export default function ProductDetailPage() {
                 {product.images.map((img: string, idx: number) => (
                   <button
                     key={idx}
-                    onClick={() => setActiveImage(img)}
+                    onClick={() => {
+                      handleUserInteraction();
+                      setActiveImage(img);
+                    }}
                     className={`relative w-20 h-20 lg:w-24 lg:h-24 shrink-0 snap-center transition-all rounded-sm overflow-hidden ${activeImage === img
                       ? "border-1 border-black" : "border-none"}`}
                   >
@@ -276,6 +377,8 @@ export default function ProductDetailPage() {
             <div className="flex-1 max-w-[450px] mx-auto lg:mx-0 w-full">
               <div
                 className="relative aspect-square overflow-hidden rounded-[2.5rem] group cursor-zoom-in"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
                 onMouseMove={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -386,6 +489,14 @@ export default function ProductDetailPage() {
                     className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
                   />
 
+                  <button
+                    onClick={handleShare}
+                    className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors text-zinc-500 hover:text-zinc-900"
+                    title="Share Product"
+                  >
+                    <Share2 className="w-4 h-4 text-zinc-500" />
+                  </button>
+
                   {product.datasheet_url && (
                     <a
                       href={product.datasheet_url}
@@ -486,6 +597,9 @@ export default function ProductDetailPage() {
 
         {/* Related Products */}
         <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
+
+        {/* Top Selling Products */}
+        <TopSellingProducts currentProductId={product.id} />
 
 
 

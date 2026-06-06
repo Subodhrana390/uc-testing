@@ -24,17 +24,22 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  // Role check for admin login
-  if (redirectTo.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user?.id)
-      .single()
+  // Role check based on login type
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .single()
 
+  if (isAdminLogin) {
     if (profile?.role !== 'admin') {
       await (supabase.auth as any).signOut()
       return { error: 'Unauthorized access. Admin credentials required.' }
+    }
+  } else {
+    if (profile?.role !== 'customer') {
+      await (supabase.auth as any).signOut()
+      return { error: 'Unauthorized access. Customer credentials required.' }
     }
   }
 

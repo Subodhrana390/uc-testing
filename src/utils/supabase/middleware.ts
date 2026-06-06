@@ -51,6 +51,17 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await (supabase.auth as any).getUser();
 
+  // Fetch user role if user is authenticated
+  let userRole: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    userRole = profile?.role || null;
+  }
+
   // Handle protected admin routes
   if (pathname.startsWith("/admin")) {
     if (!user) {
@@ -60,14 +71,7 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
     } else {
-      // User is logged in, check role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (profile?.role !== "admin") {
+      if (userRole !== "admin") {
         const url = request.nextUrl.clone();
         url.pathname = "/";
         return NextResponse.redirect(url);
@@ -80,18 +84,29 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Handle customer account and checkout routes
-  if (!user && (pathname.startsWith("/account") || pathname === "/checkout")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("returnTo", pathname);
-    return NextResponse.redirect(url);
+  if (pathname.startsWith("/account") || pathname === "/checkout") {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("returnTo", pathname);
+      return NextResponse.redirect(url);
+    } else if (userRole !== "customer") {
+      // Prevent admins from accessing customer-only account/checkout pages
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
+    }
   }
 
   // Handle login/register redirects for already logged in users
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password";
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/account/profile";
+    if (userRole === "admin") {
+      url.pathname = "/admin";
+    } else {
+      url.pathname = "/account/profile";
+    }
     return NextResponse.redirect(url);
   }
 
