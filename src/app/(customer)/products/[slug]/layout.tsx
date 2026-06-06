@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { createClient } from "@/utils/supabase/server";
+import { createStaticClient } from "@/utils/supabase/static";
 import JsonLd from "@/components/seo/JsonLd";
 import { productSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 import { productMetadata, SITE_URL } from "@/lib/seo";
@@ -9,7 +9,7 @@ export const revalidate = 3600;
 
 // ─── Pre-render popular products at build time ────────────────────────────────
 export async function generateStaticParams() {
-  const supabase = await createClient();
+  const supabase = createStaticClient();
   const { data } = await supabase
     .from("products")
     .select("slug")
@@ -26,7 +26,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createStaticClient();
   const { data: p } = await supabase
     .from("products")
     .select(
@@ -65,7 +65,7 @@ export default async function ProductDetailLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createStaticClient();
 
   const { data: p } = await supabase
     .from("products")

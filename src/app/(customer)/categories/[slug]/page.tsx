@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { createClient } from "@/utils/supabase/server";
+import { createStaticClient } from "@/utils/supabase/static";
 import ProductCard from "@/components/storefront/ProductCard";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
@@ -12,7 +12,7 @@ export const revalidate = 3600; // ISR — revalidate every hour
 
 // ─── Static params for build-time pre-rendering ────────────────────────────
 export async function generateStaticParams() {
-  const supabase = await createClient();
+  const supabase = createStaticClient();
   const { data: categories } = await supabase
     .from("categories")
     .select("slug")
@@ -26,7 +26,7 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const supabase = await createClient();
+  const supabase = createStaticClient();
   const { data: category } = await supabase
     .from("categories")
     .select("name, slug, description, image_url")
@@ -58,7 +58,7 @@ export default async function CategoryPage({
 }: {
   params: { slug: string };
 }) {
-  const supabase = await createClient();
+  const supabase = createStaticClient();
 
   const { data: category } = await supabase
     .from("categories")
