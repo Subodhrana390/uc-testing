@@ -518,7 +518,7 @@ export default function OrdersPage() {
       {/* Charts Grid */}
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Order Status Distribution Donut Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
+        <Card className="min-w-0 bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
           <div>
             <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Order Status Distribution</h3>
             <p className="text-xs font-semibold text-zinc-400 mt-1">Percentage and count of orders by status</p>
@@ -596,7 +596,7 @@ export default function OrdersPage() {
         </Card>
 
         {/* Daily Order Volume Bar Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
+        <Card className="min-w-0 bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
           <div>
             <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Daily Order Volume</h3>
             <p className="text-xs font-semibold text-zinc-400 mt-1">Daily order frequency (7 days)</p>
@@ -709,9 +709,9 @@ export default function OrdersPage() {
         </div>
 
         {/* Orders Table */}
-        <div className="overflow-x-auto w-full border-t border-zinc-200">
-          <ScrollArea className="h-[500px] min-w-[800px]">
-            <Table>
+        <div className="border-t border-zinc-200">
+          <ScrollArea className="h-[500px] w-full">
+            <Table className="min-w-[800px]">
             <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
               <TableRow>
                 <TableHead className="w-[120px] text-zinc-500 font-bold">Order ID</TableHead>

@@ -45,6 +45,7 @@ export default function AdminLayout({
   const supabase = useMemo(() => createClient(), []);
   const [adminProfile, setAdminProfile] = useState<{ full_name: string; email: string; avatar_url?: string } | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState<number>(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("admin-sidebar-collapsed");
@@ -92,6 +93,19 @@ export default function AdminLayout({
       }
     }
     fetchAdminProfile();
+
+    async function fetchCounts() {
+      try {
+        const { count } = await supabase
+          .from("orders")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "Pending");
+        if (count) setNewOrdersCount(count);
+      } catch (error) {
+        console.error("Error fetching order counts:", error);
+      }
+    }
+    fetchCounts();
   }, [supabase]);
 
   const getInitials = (name: string) => {
@@ -377,9 +391,9 @@ export default function AdminLayout({
                                   {item.icon}
                                 </span>
                                 <span className="flex-1 truncate">{item.label}</span>
-                                {item.label === "Orders" && (
+                                {item.label === "Orders" && newOrdersCount > 0 && (
                                   <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm shadow-emerald-500/20 animate-pulse">
-                                    12
+                                    {newOrdersCount} New
                                   </span>
                                 )}
                               </Link>
@@ -443,24 +457,23 @@ export default function AdminLayout({
         isSidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
       )}>
         {/* Mobile Header */}
-        <header className="lg:hidden h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
+        <header className="lg:hidden h-16 bg-white border-b border-slate-200/80 flex items-center justify-start gap-4 px-4 sm:px-6 sticky top-0 z-20 shadow-sm py-8">
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="w-10 h-10 flex items-center justify-center bg-slate-50 border border-slate-200/50 rounded-xl"
+            className="w-9 h-9 flex items-center justify-center bg-slate-50 rounded-lg shrink-0 hover:bg-slate-100 transition-colors"
           >
-            <Menu className="w-6 h-6 text-slate-700" />
+            <Menu className="w-5 h-5 text-slate-700" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 overflow-hidden flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 overflow-hidden flex items-center justify-center shrink-0">
               <img src="/logo.png" alt="UC" className="w-full h-full object-contain" />
             </div>
             <span className="text-xs font-black uppercase tracking-widest text-slate-800">Admin Panel</span>
           </div>
-          <div className="w-10 h-10" />
         </header>
 
         {/* Dynamic Page Content */}
-        <main className={cn("admin-dashboard-main flex-1 p-2 sm:p-4 lg:p-10 max-w-[1500px] mx-auto w-full", getThemeClass(pathname))}>
+        <main className={cn("admin-dashboard-main flex-1 p-2 pt-6 sm:p-4 sm:pt-8 lg:p-10 max-w-[1500px] mx-auto w-full", getThemeClass(pathname))}>
           <Suspense fallback={
             <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
               <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
