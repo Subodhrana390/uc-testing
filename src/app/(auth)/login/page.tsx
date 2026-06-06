@@ -42,7 +42,11 @@ function AuthContainer() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        toast.error("Email not confirmed. Please check your email to verify your account.");
+      } else {
+        toast.error(error.message);
+      }
       setLoading(false);
     } else {
       // Verify user has customer role

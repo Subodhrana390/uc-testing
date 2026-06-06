@@ -21,6 +21,9 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      return { error: "Email not confirmed. Please check your email to verify your account." }
+    }
     return { error: error.message }
   }
 
