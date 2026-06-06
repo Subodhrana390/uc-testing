@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Plus, Image as ImageIcon, Loader2, Upload, Star, ArrowLeft, ArrowRight, Maximize2 } from "lucide-react";
+import { X, Plus, Image as ImageIcon, Loader2, Upload, Star, Maximize2 } from "lucide-react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -74,16 +74,6 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
     toast.success("Primary asset updated");
   };
 
-  const moveImage = (index: number, direction: "left" | "right") => {
-    const newIndex = direction === "left" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= images.length) return;
-    const newImages = [...images];
-    const temp = newImages[index];
-    newImages[index] = newImages[newIndex];
-    newImages[newIndex] = temp;
-    onChange(newImages);
-  };
-
   const handlePrev = () => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex(prev => prev !== null ? (prev - 1 + images.length) % images.length : null);
@@ -94,107 +84,152 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
     setSelectedImageIndex(prev => prev !== null ? (prev + 1) % images.length : null);
   };
 
+  const uploadInputId = "multi-image-upload-file";
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {images.map((url, index) => (
-          <div key={index} className="relative aspect-square border border-zinc-150 overflow-hidden bg-zinc-50 group/item shadow-sm rounded-xl flex items-center justify-center p-2 hover:border-zinc-350 hover:shadow-md transition-all duration-200">
-            <div 
-              onClick={() => setSelectedImageIndex(index)}
-              className="w-full h-full cursor-pointer flex items-center justify-center relative"
-              title="Click to view large preview"
-            >
-              <img src={url} alt="" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
-              
-              {/* Click to expand overlay */}
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-                <Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
+      {images.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Primary Image Card (Big) */}
+          <div className="md:col-span-1 flex flex-col gap-2">
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Primary Image</span>
+            <div className="relative aspect-square border border-zinc-200 overflow-hidden bg-zinc-50 group/item shadow-sm rounded-xl flex items-center justify-center p-4 hover:border-zinc-350 hover:shadow-md transition-all duration-200">
+              <div 
+                onClick={() => setSelectedImageIndex(0)}
+                className="w-full h-full cursor-pointer flex items-center justify-center relative"
+                title="Click to view large preview"
+              >
+                <img src={images[0]} alt="Primary" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
+                
+                {/* Click to expand overlay */}
+                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                  <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
+                </div>
               </div>
-            </div>
-            
-            {/* Top Bar Actions */}
-            <div className="absolute top-2 left-2 right-2 flex justify-between items-center opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
-              {index > 0 ? (
+              
+              {/* Actions */}
+              <div className="absolute top-3 left-3 right-3 flex justify-between items-center opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
+                <div className="p-1.5 bg-teal-50 border border-teal-100 text-teal-650 rounded-lg shadow-sm">
+                  <Star className="w-4 h-4 fill-teal-650 text-teal-650" />
+                </div>
+                
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); makePrimary(index); }}
-                  className="p-1.5 bg-white hover:bg-teal-50 border border-zinc-150 text-zinc-500 hover:text-teal-600 rounded-lg shadow-sm transition-all hover:scale-105"
-                  title="Make Primary Asset"
+                  onClick={(e) => { e.stopPropagation(); removeImage(0); }}
+                  className="p-1.5 bg-white hover:bg-red-50 border border-zinc-150 text-zinc-500 hover:text-red-650 rounded-lg shadow-sm transition-all hover:scale-105"
+                  title="Remove Asset"
                 >
-                  <Star className="w-3.5 h-3.5 text-zinc-400 hover:text-teal-600" />
+                  <X className="w-4 h-4" />
                 </button>
-              ) : (
-                <div className="p-1.5 bg-teal-50 border border-teal-100 text-teal-650 rounded-lg shadow-sm">
-                  <Star className="w-3.5 h-3.5 fill-teal-650 text-teal-650" />
-                </div>
-              )}
-              
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); removeImage(index); }}
-                className="p-1.5 bg-white hover:bg-red-50 border border-zinc-150 text-zinc-500 hover:text-red-650 rounded-lg shadow-sm transition-all hover:scale-105"
-                title="Remove Asset"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Bottom Re-ordering Actions */}
-            {images.length > 1 && (
-              <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-1.5 opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
-                {index > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); moveImage(index, "left"); }}
-                    className="p-1 bg-white hover:bg-zinc-50 border border-zinc-150 text-zinc-500 hover:text-zinc-800 rounded-md shadow-sm transition-all"
-                    title="Move Left"
-                  >
-                    <ArrowLeft className="w-3 h-3" />
-                  </button>
-                )}
-                {index < images.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); moveImage(index, "right"); }}
-                    className="p-1 bg-white hover:bg-zinc-50 border border-zinc-150 text-zinc-500 hover:text-zinc-800 rounded-md shadow-sm transition-all"
-                    title="Move Right"
-                  >
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                )}
               </div>
-            )}
 
-            {/* Primary Asset Footer Badge */}
-            {index === 0 && (
-              <div className="absolute bottom-0 left-0 right-0 bg-teal-600 text-white text-[8px] font-black text-center py-1 uppercase tracking-[0.2em] z-0 pointer-events-none group-hover/item:opacity-0 transition-opacity">
+              {/* Primary Asset Badge */}
+              <div className="absolute bottom-0 left-0 right-0 bg-teal-600 text-white text-[9px] font-black text-center py-1.5 uppercase tracking-[0.2em] z-0 pointer-events-none group-hover/item:opacity-0 transition-opacity">
                 Primary Asset
               </div>
-            )}
+            </div>
           </div>
-        ))}
-        
-        <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-zinc-200 rounded-xl hover:border-zinc-950 hover:bg-zinc-50 transition-all cursor-pointer group">
-          <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-950 transition-colors">
-            {uploading ? (
-              <Loader2 className="w-6 h-6 animate-spin text-zinc-950" />
-            ) : (
-              <>
-                <Upload className="w-6 h-6" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Add Asset</span>
-              </>
-            )}
+          
+          {/* Other Images Section */}
+          <div className="md:col-span-2 flex flex-col gap-2">
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Other Assets</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {images.slice(1).map((url, index) => {
+                const actualIndex = index + 1;
+                return (
+                  <div key={actualIndex} className="relative aspect-square border border-zinc-150 overflow-hidden bg-zinc-50 group/item shadow-sm rounded-xl flex items-center justify-center p-2 hover:border-zinc-350 hover:shadow-md transition-all duration-200">
+                    <div 
+                      onClick={() => setSelectedImageIndex(actualIndex)}
+                      className="w-full h-full cursor-pointer flex items-center justify-center relative"
+                      title="Click to view large preview"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
+                      
+                      {/* Click to expand overlay */}
+                      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                        <Maximize2 className="w-4 h-4 text-white drop-shadow-md" />
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="absolute top-2 left-2 right-2 flex justify-between items-center opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); makePrimary(actualIndex); }}
+                        className="p-1.5 bg-white hover:bg-teal-50 border border-zinc-150 text-zinc-500 hover:text-teal-600 rounded-lg shadow-sm transition-all hover:scale-105"
+                        title="Make Primary Asset"
+                      >
+                        <Star className="w-3.5 h-3.5 text-zinc-400 hover:text-teal-600" />
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeImage(actualIndex); }}
+                        className="p-1.5 bg-white hover:bg-red-50 border border-zinc-150 text-zinc-500 hover:text-red-650 rounded-lg shadow-sm transition-all hover:scale-105"
+                        title="Remove Asset"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Add Asset Card inside the grid */}
+              <label htmlFor={uploadInputId} className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-zinc-200 rounded-xl hover:border-zinc-950 hover:bg-zinc-50 transition-all cursor-pointer group">
+                <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-950 transition-colors">
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-zinc-950" />
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Add Asset</span>
+                    </>
+                  )}
+                </div>
+                <input
+                  id={uploadInputId}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
           </div>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-        </label>
-      </div>
+        </div>
+      ) : (
+        /* Empty State with Upload Button */
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 rounded-xl py-12 px-4 hover:border-zinc-950 hover:bg-zinc-50 transition-all">
+          <label htmlFor={uploadInputId} className="flex flex-col items-center gap-3 cursor-pointer group">
+            <div className="p-4 bg-zinc-50 rounded-full border group-hover:bg-white group-hover:scale-105 transition-all">
+              {uploading ? (
+                <Loader2 className="w-8 h-8 animate-spin text-zinc-950" />
+              ) : (
+                <Upload className="w-8 h-8 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
+              )}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-zinc-800">Upload Product Images</p>
+              <p className="text-xs text-zinc-450 mt-1">PNG, JPG, JPEG or WebP up to 5MB</p>
+            </div>
+            <span className="mt-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-sm">
+              Select Files
+            </span>
+            <input
+              id={uploadInputId}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Input
@@ -242,28 +277,6 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                 alt={`Asset ${selectedImageIndex + 1}`}
                 className="max-w-full max-h-[55vh] object-contain rounded-lg shadow-sm"
               />
-
-              {/* Navigation Arrows */}
-              {images.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handlePrev}
-                    className="absolute left-4 p-2 bg-white/95 hover:bg-white border border-zinc-150 text-zinc-700 rounded-full shadow-lg transition opacity-80 hover:opacity-100 hover:scale-105"
-                    title="Previous Image"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="absolute right-4 p-2 bg-white/95 hover:bg-white border border-zinc-150 text-zinc-700 rounded-full shadow-lg transition opacity-80 hover:opacity-100 hover:scale-105"
-                    title="Next Image"
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
             </div>
 
             {/* Modal Footer */}
@@ -288,37 +301,6 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                     <Star className="w-3.5 h-3.5 text-zinc-400" />
                     Set as Primary
                   </Button>
-                )}
-                
-                {images.length > 1 && (
-                  <div className="flex gap-1 ml-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={selectedImageIndex === 0}
-                      onClick={() => {
-                        moveImage(selectedImageIndex, "left");
-                        setSelectedImageIndex(selectedImageIndex - 1);
-                      }}
-                      className="px-2"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={selectedImageIndex === images.length - 1}
-                      onClick={() => {
-                        moveImage(selectedImageIndex, "right");
-                        setSelectedImageIndex(selectedImageIndex + 1);
-                      }}
-                      className="px-2"
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </div>
                 )}
               </div>
 
@@ -361,3 +343,4 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
     </div>
   );
 }
+

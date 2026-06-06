@@ -301,46 +301,7 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={labelClass} htmlFor="price">Base Price (₹) *</label>
-                  <input
-                    id="price"
-                    type="number"
-                    className={inputClass}
-                    placeholder="0.00"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="sale_price">Sale Price (₹)</label>
-                  <input
-                    id="sale_price"
-                    type="number"
-                    className={inputClass}
-                    placeholder="0.00"
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="tax_rate">Tax Rate (%)</label>
-                  <div className="relative">
-                    <input
-                      id="tax_rate"
-                      type="number"
-                      className={inputClass}
-                      value={formData.tax_rate}
-                      onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="category">Category *</label>
                   <select
@@ -386,6 +347,67 @@ export default function AddProductPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <label className={labelClass} htmlFor="short_description">Short Description</label>
+                <textarea
+                  id="short_description"
+                  className={`${inputClass} min-h-[100px] resize-none`}
+                  placeholder="e.g. A brief overview for search results and previews..."
+                  value={formData.short_description}
+                  onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing & Inventory Section */}
+          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b bg-gray-50/50">
+              <h2 className="text-lg font-semibold">Pricing & Inventory</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={labelClass} htmlFor="price">Base Price (₹) *</label>
+                  <input
+                    id="price"
+                    type="number"
+                    className={inputClass}
+                    placeholder="0.00"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="sale_price">Sale Price (₹)</label>
+                  <input
+                    id="sale_price"
+                    type="number"
+                    className={inputClass}
+                    placeholder="0.00"
+                    value={formData.sale_price}
+                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="tax_rate">Tax Rate (%)</label>
+                  <div className="relative">
+                    <input
+                      id="tax_rate"
+                      type="number"
+                      className={inputClass}
+                      value={formData.tax_rate}
+                      onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="stock">Stock Quantity</label>
                   <input
@@ -397,9 +419,6 @@ export default function AddProductPage() {
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="unit">Unit (e.g. pcs, kg, ltr)</label>
                   <input
@@ -421,17 +440,6 @@ export default function AddProductPage() {
                     onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <label className={labelClass} htmlFor="short_description">Short Description</label>
-                <textarea
-                  id="short_description"
-                  className={`${inputClass} min-h-[100px] resize-none`}
-                  placeholder="e.g. A brief overview for search results and previews..."
-                  value={formData.short_description}
-                  onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
-                />
               </div>
             </div>
           </section>
@@ -680,10 +688,8 @@ export default function AddProductPage() {
               )}
             </div>
           </section>
-        </div>
 
-        {/* Sidebar Column */}
-        <div className="space-y-8">
+          {/* Product Images Section */}
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
               <h2 className="text-lg font-semibold">Product Images</h2>
@@ -695,7 +701,10 @@ export default function AddProductPage() {
               />
             </div>
           </section>
+        </div>
 
+        {/* Sidebar Column */}
+        <div className="space-y-8">
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
               <h2 className="text-lg font-semibold">Product Documents</h2>

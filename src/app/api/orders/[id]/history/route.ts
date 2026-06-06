@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient as createAdminServerClient } from "@/utils/supabase/admin-server";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -8,11 +9,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    let supabase = await createClient();
 
     // Authenticate the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    // If not authenticated, check if the admin cookie is present
     if (authError || !user) {
+      const adminSupabase = await createAdminServerClient();
+      const { data: { user: adminUser }, error: adminAuthError } = await adminSupabase.auth.getUser();
+      if (!adminAuthError && adminUser) {
+        user = adminUser;
+        supabase = adminSupabase;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

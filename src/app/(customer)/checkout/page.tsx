@@ -388,12 +388,14 @@ export default function CheckoutPage() {
               if (confirmRes.ok) {
                 toast.success("Payment successful! Order placed.");
                 clearCart();
-                router.push("/account/orders");
+                router.push(`/checkout/success?orderId=${supabaseOrderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
               } else {
                 toast.error("Payment received but order registration failed. Please contact support.");
+                router.push(`/checkout/failed?error=${encodeURIComponent("Payment registered, but order database state sync failed. Please contact support.")}`);
               }
             } catch (err: any) {
               toast.error("An unexpected error occurred during order verification.");
+              router.push(`/checkout/failed?error=${encodeURIComponent(err.message || "An unexpected error occurred during payment verification.")}`);
             }
           },
           prefill: {
@@ -410,6 +412,12 @@ export default function CheckoutPage() {
         };
 
         const rzp = new (window as any).Razorpay(options);
+        
+        // Handle Razorpay payment failure
+        rzp.on("payment.failed", function (response: any) {
+          router.push(`/checkout/failed?error=${encodeURIComponent(response.error.description || "Razorpay payment processing failed")}`);
+        });
+
         rzp.open();
       } else {
         // COD logic
@@ -424,9 +432,10 @@ export default function CheckoutPage() {
         if (res?.success) {
           toast.success("Order placed successfully! (COD)");
           clearCart();
-          router.push("/account/orders");
+          router.push(`/checkout/success?orderId=${res.orderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
         } else {
           toast.error(res?.error || "Failed to place order");
+          router.push(`/checkout/failed?error=${encodeURIComponent(res?.error || "Failed to place order")}`);
         }
       }
     } catch (error: any) {
@@ -434,6 +443,7 @@ export default function CheckoutPage() {
         error.message ||
         "Failed to place order"
       );
+      router.push(`/checkout/failed?error=${encodeURIComponent(error.message || "Failed to place order")}`);
     } finally {
       setSubmitting(false);
       setIsPlacingOrder(false);

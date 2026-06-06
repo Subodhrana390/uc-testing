@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient as createAdminServerClient } from "@/utils/supabase/admin-server";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { sendInvoiceEmail, sendStatusUpdateEmail } from "@/lib/email";
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
@@ -24,11 +25,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    let supabase = await createClient();
 
     // Authenticate the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    // If not authenticated, check if the admin cookie is present
     if (authError || !user) {
+      const adminSupabase = await createAdminServerClient();
+      const { data: { user: adminUser }, error: adminAuthError } = await adminSupabase.auth.getUser();
+      if (!adminAuthError && adminUser) {
+        user = adminUser;
+        supabase = adminSupabase;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

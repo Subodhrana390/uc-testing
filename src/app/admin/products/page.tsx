@@ -57,6 +57,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type StatusType = "All" | "Active" | "Draft";
 
@@ -65,7 +73,6 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [productToDelete, setProductToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
@@ -684,7 +691,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Context Grid Actions Trigger Dropdown */}
-                    <td className="px-6 py-4 text-right pr-8 relative">
+                    <td className="px-6 py-4 text-right pr-8">
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/admin/products/${product.id}`} passHref legacyBehavior>
                           <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-[#f97316] hover:bg-zinc-100">
@@ -692,43 +699,40 @@ export default function ProductsPage() {
                           </Button>
                         </Link>
 
-                        <div className="relative inline-block text-left">
-                          <button
-                            onClick={() => setActiveDropdown(activeDropdown === product.id ? null : product.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-50 border border-zinc-200 bg-white text-zinc-400 hover:text-zinc-800"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-
-                          {activeDropdown === product.id && (
-                            <div className="absolute right-0 top-10 w-52 bg-white border border-zinc-200 shadow-lg rounded-xl z-50 p-1.5 text-left">
-                              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Product Actions</div>
-                              <Link href={`/admin/products/${product.id}`} passHref legacyBehavior>
-                                <a className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg">
-                                  <Edit className="w-4 h-4 text-zinc-400" /> Full Editor
-                                </a>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg border border-zinc-200 bg-white text-zinc-400 hover:text-zinc-800">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl z-50 p-1.5">
+                            <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">
+                              Product Actions
+                            </DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/products/${product.id}`} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer">
+                                <Edit className="w-4 h-4 text-zinc-400" /> Full Editor
                               </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
                               <a
                                 href={`/products/${product.slug}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg"
+                                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                               >
                                 <ExternalLink className="w-4 h-4 text-zinc-400" /> Live Store view
                               </a>
-                              <div className="h-px bg-zinc-100 my-1 mx-1" />
-                              <button
-                                onClick={() => {
-                                  setProductToDelete(product);
-                                  setActiveDropdown(null);
-                                }}
-                                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-400" /> Delete Asset
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-zinc-100 my-1" />
+                            <DropdownMenuItem
+                              onClick={() => setProductToDelete(product)}
+                              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all rounded-lg cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" /> Delete Asset
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -757,11 +761,6 @@ export default function ProductsPage() {
           </p>
         </div>
       </Card>
-
-      {/* Global Click Shield Backdrop Layer */}
-      {activeDropdown && (
-        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
-      )}
 
       {/* Delete Confirmation Alert Dialog */}
       <Dialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
