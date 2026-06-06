@@ -18,6 +18,7 @@ import {
   TrendingDown
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ import {
 type StatusType = "All" | "Active" | "Draft";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -700,29 +702,26 @@ export default function ProductsPage() {
                         </Link>
 
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger render={
                             <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg border border-zinc-200 bg-white text-zinc-400 hover:text-zinc-800">
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
-                          </DropdownMenuTrigger>
+                          } />
                           <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl z-50 p-1.5">
                             <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">
                               Product Actions
                             </DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/products/${product.id}`} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer">
-                                <Edit className="w-4 h-4 text-zinc-400" /> Full Editor
-                              </Link>
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/admin/products/${product.id}`)}
+                              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
+                            >
+                              <Edit className="w-4 h-4 text-zinc-400" /> Full Editor
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a
-                                href={`/products/${product.slug}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
-                              >
-                                <ExternalLink className="w-4 h-4 text-zinc-400" /> Live Store view
-                              </a>
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+                              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
+                            >
+                              <ExternalLink className="w-4 h-4 text-zinc-400" /> Live Store view
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-zinc-100 my-1" />
                             <DropdownMenuItem

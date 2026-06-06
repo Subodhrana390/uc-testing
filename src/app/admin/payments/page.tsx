@@ -98,7 +98,7 @@ export default function PaymentsPage() {
     try {
       const { data, error } = await supabase
         .from("payments")
-        .select("*, orders(customer_name, customer_email, shipping_address, phone, items, delivery_estimate)")
+        .select("*, orders(customer_name, customer_email, shipping_address, phone, delivery_estimate)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
