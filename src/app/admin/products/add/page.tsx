@@ -143,6 +143,14 @@ export default function AddProductPage() {
       return;
     }
 
+    const price = parseFloat(formData.price);
+    const salePrice = formData.sale_price ? parseFloat(formData.sale_price) : null;
+
+    if (salePrice !== null && salePrice >= price) {
+      toast.error("Sale price must be less than the regular price.");
+      return;
+    }
+
     setLoading(true);
     try {
       const slug = generateSlug(formData.name);

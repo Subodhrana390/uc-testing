@@ -428,11 +428,11 @@ export default function ProductDetailPage() {
               {/* Price Block */}
               <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
                 <span className="text-4xl sm:text-5xl font-black text-zinc-950 tracking-tighter">
-                  {formatCurrency(product.price)}
+                  {formatCurrency(product.sale_price || product.price)}
                 </span>
                 {product.sale_price && (
                   <span className="text-xl sm:text-2xl font-bold text-zinc-300 line-through tracking-tighter">
-                    {formatCurrency(product.sale_price)}
+                    {formatCurrency(product.price)}
                   </span>
                 )}
                 <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded">

@@ -21,6 +21,7 @@ type Props = {
     slug: string;
     name: string;
     price: number | string;
+    sale_price?: number | string | null;
     image_url?: string | null;
   };
 
@@ -79,7 +80,7 @@ export default function AddToCartButton({
         }
 
         const price =
-          Number(product.price) || 0;
+          Number(product.sale_price || product.price) || 0;
 
         addCartItem(
           {

@@ -174,8 +174,8 @@ function SearchInput() {
                   <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">
                     {item.sale_price ? (
                       <span className="flex items-center gap-1.5">
-                        <span className="text-zinc-950 font-black">₹{parseFloat(item.price).toLocaleString('en-IN')}</span>
-                        <span className="line-through text-zinc-300">₹{parseFloat(item.sale_price).toLocaleString('en-IN')}</span>
+                        <span className="text-zinc-950 font-black">₹{parseFloat(item.sale_price).toLocaleString('en-IN')}</span>
+                        <span className="line-through text-zinc-300">₹{parseFloat(item.price).toLocaleString('en-IN')}</span>
                       </span>
                     ) : (
                       <span className="text-zinc-950 font-black">₹{parseFloat(item.price).toLocaleString('en-IN')}</span>
