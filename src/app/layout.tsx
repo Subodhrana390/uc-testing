@@ -20,13 +20,7 @@ const robotoMono = Roboto_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = baseMetadata({
-  icons: {
-    icon: [{ url: "/favicon.png", type: "image/png" }],
-    apple: "/favicon.png",
-    shortcut: "/favicon.png",
-  },
-});
+export const metadata: Metadata = baseMetadata();
 
 export default function RootLayout({
   children,
