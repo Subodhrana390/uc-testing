@@ -327,40 +327,92 @@ export default function CheckoutPage() {
       const { createOrder } = await import("@/app/actions/orders");
 
       if (paymentMethod === "ONLINE") {
+        // 1. Create order in Supabase as Unpaid
+        const res = await createOrder({
+          ...form,
+          items,
+          total: grandTotal,
+          paymentMethod: "ONLINE",
+          deliveryEstimate: deliveryEstimate?.date,
+          paymentStatus: "Unpaid"
+        });
+
+        if (!res?.success || !res?.orderId) {
+          throw new Error(res?.error || "Failed to create order in database");
+        }
+
+        const supabaseOrderId = res.orderId;
+
+        // 2. Fetch Razorpay Order from server api
+        const orderRes = await fetch("/api/razorpay/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: grandTotal,
+            idempotencyKey: supabaseOrderId
+          })
+        });
+
+        if (!orderRes.ok) {
+          const errData = await orderRes.json();
+          throw new Error(errData.error || "Failed to initialize Razorpay order");
+        }
+
+        const razorpayOrder = await orderRes.json();
+
+        // 3. Update Supabase order with Razorpay Order ID
+        const { error: updateOrderError } = await supabase
+          .from("orders")
+          .update({ razorpay_order_id: razorpayOrder.id })
+          .eq("id", supabaseOrderId);
+
+        if (updateOrderError) {
+          console.error("Failed to associate Razorpay Order ID:", updateOrderError);
+          // Continue anyway, webhook or frontend can fall back
+        }
+
         // Razorpay Integration
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
-          amount: Math.round(grandTotal * 100), // in paise
-          currency: "INR",
+          amount: razorpayOrder.amount, // from Razorpay Order object
+          currency: razorpayOrder.currency || "INR",
           name: "UC Enterprises",
           description: "Purchase Payment",
           image: "/logo.jpg",
+          order_id: razorpayOrder.id,
           handler: async function (response: any) {
             // Payment success callback
             try {
-              const res = await createOrder({
-                ...form,
-                items,
-                total: grandTotal,
-                paymentMethod: "ONLINE",
-                deliveryEstimate: deliveryEstimate?.date
+              const confirmRes = await fetch("/api/orders/status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderId: supabaseOrderId,
+                  paymentStatus: "Paid",
+                  paymentMethod: "ONLINE",
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature
+                })
               });
 
-              if (res?.success) {
+              if (confirmRes.ok) {
                 toast.success("Payment successful! Order placed.");
                 clearCart();
                 router.push("/account/orders");
               } else {
-                toast.error(res?.error || "Payment received but order registration failed. Please contact support.");
+                toast.error("Payment received but order registration failed. Please contact support.");
               }
             } catch (err: any) {
-              toast.error("An unexpected error occurred during order creation.");
+              toast.error("An unexpected error occurred during order verification.");
             }
           },
           prefill: {
             name: form.fullName,
             email: form.email,
             contact: form.phone,
+          },
+          notes: {
+            orderId: supabaseOrderId
           },
           theme: {
             color: "#f97316",

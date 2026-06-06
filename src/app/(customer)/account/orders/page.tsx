@@ -15,13 +15,116 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"current" | "archived">("current");
   const [searchQuery, setSearchQuery] = useState("");
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const supabase = createClient();
+
+  const handlePayOnline = async (order: any) => {
+    if (typeof window === "undefined") return;
+    setPayingOrderId(order.id);
+
+    try {
+      // 1. Ensure Razorpay script is loaded
+      if (!window.Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load Razorpay SDK"));
+          document.body.appendChild(script);
+        });
+      }
+
+      // 2. Fetch Razorpay Order from server api
+      const orderRes = await fetch("/api/razorpay/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(order.total_amount),
+          idempotencyKey: order.id
+        })
+      });
+
+      if (!orderRes.ok) {
+        const errData = await orderRes.json();
+        throw new Error(errData.error || "Failed to initialize Razorpay order");
+      }
+
+      const razorpayOrder = await orderRes.json();
+
+      // 3. Update Supabase order with Razorpay Order ID
+      const { error: updateOrderError } = await supabase
+        .from("orders")
+        .update({ razorpay_order_id: razorpayOrder.id })
+        .eq("id", order.id);
+
+      if (updateOrderError) {
+        console.error("Failed to associate Razorpay Order ID:", updateOrderError);
+      }
+
+      // 4. Open Razorpay checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency || "INR",
+        name: "UC Enterprises",
+        description: `Payment for Order #${getDisplayOrderId(order.id, order.created_at)}`,
+        image: "/logo.jpg",
+        order_id: razorpayOrder.id,
+        handler: async function (response: any) {
+          try {
+            // Update order status/payment in Supabase
+            const res = await fetch("/api/orders/status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: order.id,
+                paymentStatus: "Paid",
+                paymentMethod: "ONLINE",
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature
+              })
+            });
+
+            if (res.ok) {
+              toast.success("Payment successful!");
+              // Update local state
+              setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Paid", payment_method: "ONLINE" } : o));
+            } else {
+              toast.error("Failed to register payment. Please contact support.");
+            }
+          } catch (err) {
+            toast.error("Error processing payment verification.");
+          }
+        },
+        prefill: {
+          name: order.customer_name || "",
+          email: order.customer_email || "",
+          contact: order.phone || "",
+        },
+        notes: {
+          orderId: order.id
+        },
+        theme: {
+          color: "#f97316",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error(err.message || "Error initiating payment.");
+    } finally {
+      setPayingOrderId(null);
+    }
+  };
 
   useEffect(() => {
     async function fetchOrders() {
@@ -143,6 +246,9 @@ export default function OrderHistoryPage() {
                 <div>
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Total</span>
                   <span className="text-xs font-semibold text-zinc-900">{formatCurrency(order.total_amount)}</span>
+                  <span className="text-[9px] text-zinc-500 block uppercase tracking-tight mt-0.5">
+                    {order.payment_method} • <span className={cn(order.payment_status?.toLowerCase() === "paid" ? "text-emerald-600 font-bold" : "text-amber-600 font-bold")}>{order.payment_status || "Unpaid"}</span>
+                  </span>
                 </div>
                 {order.delivery_estimate && order.status !== "Delivered" && (
                   <div>
@@ -155,6 +261,21 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && (
+                  <Button
+                    onClick={() => handlePayOnline(order)}
+                    disabled={payingOrderId === order.id}
+                    className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                  >
+                    {payingOrderId === order.id ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" /> Processing
+                      </>
+                    ) : (
+                      "Pay Online"
+                    )}
+                  </Button>
+                )}
                 <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
                   {order.status}
                 </Badge>

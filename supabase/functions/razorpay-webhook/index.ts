@@ -1,20 +1,27 @@
-import { NextResponse } from "next/server";
-import crypto from "crypto";
-import { createServiceRoleClient } from "@/utils/supabase/service-role";
+// @ts-nocheck
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import crypto from "node:crypto";
 
-export async function POST(req: Request) {
+Deno.serve(async (req: Request) => {
   try {
+    // 1. Signature verification
     const body = await req.text();
     const signature = req.headers.get("x-razorpay-signature");
 
     if (!signature) {
-      return NextResponse.json({ error: "No signature provided" }, { status: 400 });
+      return new Response(JSON.stringify({ error: "No signature provided" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const secret = Deno.env.get("RAZORPAY_WEBHOOK_SECRET");
     if (!secret) {
-      console.error("RAZORPAY_WEBHOOK_SECRET is not defined");
-      return NextResponse.json({ error: "Configuration error" }, { status: 500 });
+      console.error("RAZORPAY_WEBHOOK_SECRET is not defined in Supabase Edge Function environment");
+      return new Response(JSON.stringify({ error: "Configuration error" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     const expectedSignature = crypto
@@ -23,7 +30,10 @@ export async function POST(req: Request) {
       .digest("hex");
 
     if (expectedSignature !== signature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     const event = JSON.parse(body);
@@ -45,25 +55,36 @@ export async function POST(req: Request) {
     }
 
     if (!razorpayOrderId && !supabaseOrderId) {
-      return NextResponse.json({ status: "ignored: no order identifiers found" });
+      return new Response(JSON.stringify({ status: "ignored: no order identifiers found" }), {
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
-    const supabase = createServiceRoleClient();
+    // Initialize Supabase Client using local env variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      }
+    });
 
     let query = supabase.from("orders").select("*");
     if (supabaseOrderId) {
       query = query.eq("id", supabaseOrderId);
     } else if (razorpayOrderId) {
       query = query.eq("razorpay_order_id", razorpayOrderId);
-    } else {
-      return NextResponse.json({ error: "No order identifiers found" }, { status: 400 });
     }
 
     const { data: order, error: fetchError } = await query.maybeSingle();
 
     if (fetchError || !order) {
       console.error("Webhook Order Fetch Error:", fetchError, "IDs:", { supabaseOrderId, razorpayOrderId });
-      return NextResponse.json({ error: "Order not found in database" }, { status: 404 });
+      return new Response(JSON.stringify({ error: "Order not found in database" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     // Update order status/payment info
@@ -83,7 +104,10 @@ export async function POST(req: Request) {
 
     if (updateError) {
       console.error("Webhook Database Update Error:", updateError);
-      return NextResponse.json({ error: "Database update failed" }, { status: 500 });
+      return new Response(JSON.stringify({ error: "Database update failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     // Insert payment record if not exists
@@ -112,9 +136,14 @@ export async function POST(req: Request) {
     }
 
     console.log(`Webhook: Order ${order.id} verified and marked as Paid`);
-    return NextResponse.json({ status: "ok" });
+    return new Response(JSON.stringify({ status: "ok" }), {
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (error: any) {
     console.error("Razorpay Webhook Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
-}
+});

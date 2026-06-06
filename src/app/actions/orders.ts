@@ -16,6 +16,7 @@ export async function createOrder(orderData: {
   total: number
   paymentMethod: string
   deliveryEstimate?: string
+  paymentStatus?: string
 }) {
   try {
     const supabase = await createClient()
@@ -53,7 +54,7 @@ export async function createOrder(orderData: {
         p_shipping_address: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
         p_total_amount: orderData.total,
         p_payment_method: orderData.paymentMethod,
-        p_payment_status: orderData.paymentMethod === 'COD' ? 'Unpaid' : 'Paid',
+        p_payment_status: orderData.paymentStatus || (orderData.paymentMethod === 'COD' ? 'Unpaid' : 'Paid'),
         p_delivery_estimate: orderData.deliveryEstimate || null,
         p_items: orderData.items.map(item => ({
           id: item.id,

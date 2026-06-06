@@ -57,7 +57,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -75,7 +77,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type StatusType = "All" | "Pending" | "Shipped" | "Delivered" | "Cancelled";
+type StatusType = "All" | "Placed" | "Confirmed" | "Processing" | "Pending" | "Shipped" | "Delivered" | "Cancelled" | "Return";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -156,6 +158,23 @@ export default function OrdersPage() {
     }
   };
 
+  const updatePaymentStatus = async (orderId: string, paymentStatus: string, paymentMethod?: string) => {
+    try {
+      const response = await fetch("/api/orders/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, paymentStatus, paymentMethod })
+      });
+
+      if (!response.ok) throw new Error("Payment update failed");
+
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
+      toast.success(`Payment marked as ${paymentStatus}`);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const updateTracking = async (id: string) => {
     try {
       const response = await fetch("/api/orders/status", {
@@ -192,6 +211,12 @@ export default function OrdersPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
+      case "placed":
+        return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Placed</Badge>;
+      case "confirmed":
+        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50">Confirmed</Badge>;
+      case "processing":
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-50">Processing</Badge>;
       case "pending":
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">Pending</Badge>;
       case "shipped":
@@ -200,6 +225,9 @@ export default function OrdersPage() {
         return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50">Delivered</Badge>;
       case "cancelled":
         return <Badge variant="destructive">Cancelled</Badge>;
+      case "return":
+      case "returned":
+        return <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50">Returned</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -243,17 +271,25 @@ export default function OrdersPage() {
   }, [orders]);
 
   const statusData = useMemo(() => {
+    const placed = orders.filter(o => o.status.toLowerCase() === "placed").length;
+    const confirmed = orders.filter(o => o.status.toLowerCase() === "confirmed").length;
+    const processing = orders.filter(o => o.status.toLowerCase() === "processing").length;
     const pending = orders.filter(o => o.status.toLowerCase() === "pending").length;
     const shipped = orders.filter(o => o.status.toLowerCase() === "shipped").length;
     const delivered = orders.filter(o => o.status.toLowerCase() === "delivered").length;
     const cancelled = orders.filter(o => o.status.toLowerCase() === "cancelled").length;
+    const returned = orders.filter(o => o.status.toLowerCase() === "return" || o.status.toLowerCase() === "returned").length;
 
     return [
+      { name: "Placed", value: placed, color: "#38bdf8" },
+      { name: "Confirmed", value: confirmed, color: "#6366f1" },
+      { name: "Processing", value: processing, color: "#a855f7" },
       { name: "Pending", value: pending, color: "#f59e0b" },
       { name: "Shipped", value: shipped, color: "#3b82f6" },
       { name: "Delivered", value: delivered, color: "#10b981" },
-      { name: "Cancelled", value: cancelled, color: "#ef4444" }
-    ];
+      { name: "Cancelled", value: cancelled, color: "#ef4444" },
+      { name: "Returned", value: returned, color: "#f43f5e" }
+    ].filter(item => item.value > 0);
   }, [orders]);
 
   const dailyTrends = useMemo(() => {
@@ -493,10 +529,14 @@ export default function OrdersPage() {
           {/* Custom Legends */}
           <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
             {[
+              { label: "Placed", color: "#38bdf8" },
+              { label: "Confirmed", color: "#6366f1" },
+              { label: "Processing", color: "#a855f7" },
               { label: "Pending", color: "#f59e0b" },
               { label: "Shipped", color: "#3b82f6" },
               { label: "Delivered", color: "#10b981" },
-              { label: "Cancelled", color: "#ef4444" }
+              { label: "Cancelled", color: "#ef4444" },
+              { label: "Returned", color: "#f43f5e" }
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -606,10 +646,14 @@ export default function OrdersPage() {
               </SelectTrigger>
               <SelectContent className="bg-white border-zinc-200">
                 <SelectItem value="All">All Orders</SelectItem>
+                <SelectItem value="Placed">Placed</SelectItem>
+                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                <SelectItem value="Processing">Processing</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Shipped">Shipped</SelectItem>
                 <SelectItem value="Delivered">Delivered</SelectItem>
                 <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="Return">Returned</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -674,8 +718,11 @@ export default function OrdersPage() {
                     <TableCell className="text-sm text-zinc-600">
                       {new Date(order.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
                     </TableCell>
-                    <TableCell className="text-sm font-bold text-[#18181b]">
-                      ₹{parseFloat(order.total_amount).toLocaleString('en-IN')}
+                    <TableCell className="text-sm text-[#18181b]">
+                      <div className="font-bold">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</div>
+                      <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
+                        {order.payment_method} • <span className={cn(order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold')}>{order.payment_status || 'Unpaid'}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(order.status)}
@@ -688,15 +735,40 @@ export default function OrdersPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         } />
-                        <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl">
                           <DropdownMenuGroup>
                             <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem onClick={() => updateStatus(order.id, "Delivered")}>
-                              <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                              Mark Delivered
-                            </DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
+                                <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                Change Status
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="w-40 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Placed")}>
+                                  Placed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Confirmed")}>
+                                  Confirmed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Processing")}>
+                                  Processing
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Shipped")}>
+                                  Shipped
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Delivered")}>
+                                  Delivered
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Cancelled")}>
+                                  Cancelled
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updateStatus(order.id, "Return")}>
+                                  Return
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
 
                             <DropdownMenuItem onClick={() => {
                               setSelectedOrder(order);
@@ -707,6 +779,18 @@ export default function OrdersPage() {
                               <Truck className="w-4 h-4 mr-2 text-blue-600" />
                               Update Shipping
                             </DropdownMenuItem>
+
+                            {order.payment_status?.toLowerCase() !== 'paid' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
+                                  Mark Paid (Cash)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "ONLINE")}>
+                                  Mark Paid (Online)
+                                </DropdownMenuItem>
+                              </>
+                            )}
 
                             <DropdownMenuSeparator />
 
@@ -789,7 +873,7 @@ export default function OrdersPage() {
           <ScrollArea className="max-h-[60vh]">
             {selectedOrder && (
               <div className="p-6 space-y-6 text-[#18181b]">
-                <div className="grid grid-cols-2 gap-6 text-sm">
+                <div className="grid grid-cols-3 gap-6 text-sm">
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Customer Information</h4>
                     <p className="text-zinc-600">{selectedOrder.customer_name}</p>
@@ -800,6 +884,13 @@ export default function OrdersPage() {
                     <h4 className="font-bold text-zinc-900">Shipping Address</h4>
                     <p className="text-zinc-600 text-xs leading-relaxed whitespace-pre-wrap">
                       {selectedOrder.shipping_address || "No shipping record details"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-zinc-900">Payment Details</h4>
+                    <p className="text-zinc-600 text-xs font-semibold uppercase">{selectedOrder.payment_method || 'N/A'}</p>
+                    <p className={cn("text-xs font-bold", selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-amber-600')}>
+                      {selectedOrder.payment_status || 'Unpaid'}
                     </p>
                   </div>
                 </div>

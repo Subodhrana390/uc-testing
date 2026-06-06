@@ -2,38 +2,49 @@
 
 ![UC Enterprises Logo](/public/logo.jpg)
 
-A premium, high-performance ecommerce platform built for **UC Enterprises**, a leading supplier of hardware welding materials, electronic goods, lab chemicals, powders, and general industrial requirements across India.
+A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterprises**, a leading supplier of hardware welding materials, electronic goods, lab chemicals, powders, and general industrial requirements across India.
 
 ## 🚀 Tech Stack
 
-- **Framework**: [Next.js 16.2.4](https://nextjs.org/) (App Router & Turbopack)
-- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL & GoTrue)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **UI Components**: [Shadcn UI](https://ui.shadcn.com/) & [Base UI](https://base-ui.com/)
+- **Framework**: [Next.js 14.1.0](https://nextjs.org/) (App Router)
+- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL database, GoTrue Auth & Storage)
+- **Styling**: [Tailwind CSS 3.4.1](https://tailwindcss.com/) (with tailwindcss-animate)
+- **UI Components**: [Shadcn UI](https://ui.shadcn.com/) & [Base UI](https://base-ui.com/) (Radix UI primitives)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **Rich Text**: [CKEditor 5](https://ckeditor.com/ckeditor-5/)
+- **Rich Text Editor**: [Tiptap Editor](https://tiptap.dev/)
+- **Payment Gateway**: [Razorpay](https://razorpay.com/)
+- **Email Delivery**: [Brevo (Sendinblue)](https://www.brevo.com/)
+- **Testing**: [Vitest](https://vitest.dev/)
 
 ## ✨ Key Features
 
 ### 🛒 Storefront
 - **Dynamic Catalog**: Browse products across Hardware, Electronics, Chemicals, and General Supplies.
-- **Advanced Search**: Instant product discovery via `HeaderSearch`.
-- **Inquiry System**: "Bulk Enquiry / Get Quote" functionality for industrial orders.
-- **User Accounts**: Profile management, wishlist, and order tracking.
-- **Responsive Design**: Optimized for Desktop, Tablet, and Mobile with a premium "Glassmorphism" aesthetic.
+- **Advanced Search**: Instant product discovery via `HeaderSearch` component.
+- **Inquiry System**: "Bulk Enquiry / Get Quote" functionality for bulk/B2B industrial orders.
+- **User Accounts**: Profile management, order tracking, and dynamic wishlists.
+- **Payment Gateway**: Secure online checkout integrated with Razorpay (payment creation, client verification, and secure webhooks).
+- **Responsive Design**: Optimized for Desktop, Tablet, and Mobile devices with a premium glassmorphic aesthetic.
 
 ### 🛠 Admin Console
-- **Dashboard**: Real-time business metrics and order notifications.
+- **Dashboard**: Real-time business metrics (revenue, sales, orders, average order value) and notifications.
 - **Product Management**: 
   - Multi-image support with Supabase Storage integration.
-  - Rich text descriptions via CKEditor.
+  - Rich text description and specification inputs via custom Tiptap Editor.
   - Inventory tracking and status management.
-- **Category Management**: Customizable category icons and departmental mapping.
+- **Category Management**: Customizable category metadata and department mapping.
 - **Order Operations**: 
-  - Export orders as **PDF** or **XLS**.
-  - Detailed tracking and status updates.
-- **Payment & Tax**: Downloadable CSV reports and tax documentation.
+  - Manage orders and status tracking.
+  - Export orders as **PDF** or **CSV** reports.
+- **Security & Logs**: Admin security tracking and activity logging.
+
+### 📈 Marketing & Analytics Attribution
+- **UTM Tracking**: Automatic capturing of standard marketing parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`).
+- **Click Identifiers**: Capture ad-click parameters including Google (`gclid`), Meta (`fbclid`), Microsoft (`msclkid`), and TikTok (`ttclid`).
+- **Attribution Logic**: Retain first-touch attribution (original source) and track latest-touch attribution in local storage and cookies.
+- **URL Decoration**: Outbound relative and same-origin links are automatically appended with active tracking parameters.
+- **Analytics Integration**: Simulated and real analytics tracking with Google Analytics (`gtag`) and Meta Pixel (`fbq`).
 
 ## 🛠 Setup & Installation
 
@@ -49,32 +60,62 @@ A premium, high-performance ecommerce platform built for **UC Enterprises**, a l
    ```
 
 3. **Environment Variables**:
-   Create a `.env` file in the root directory:
+   Create a `.env` file in the root directory and configure the variables:
    ```env
+   # Supabase Configuration
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+   # Razorpay Gateway
+   NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+   RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
+
+   # Brevo Email SMTP/API
+   BREVO_API_KEY=your_brevo_api_key
+   BREVO_SENDER_EMAIL=your_sender_email
+   BREVO_SENDER_NAME=your_sender_name
    ```
 
-4. **Run development server**:
+4. **Initialize Database Schema (Supabase)**:
+   - Run the schema definitions found in `supabase/customer-commerce.sql` to set up wishlist constraints and review schemas.
+   - Run the queries in `supabase/seed.sql` to populate category lists and default products.
+
+5. **Run development server**:
    ```bash
    npm run dev
    ```
 
-5. **Build for production**:
+6. **Build for production**:
    ```bash
    npm run build
+   ```
+
+7. **Start production server**:
+   ```bash
    npm run start
    ```
 
+## 🧪 Testing
+
+The codebase uses **Vitest** for unit testing. To run the tests:
+
+```bash
+npx vitest
+```
+
 ## 📁 Project Structure
 
-- `src/app/(customer)`: Customer-facing routes (Storefront, Account).
-- `src/app/admin`: Comprehensive administrative dashboard.
-- `src/components`: Reusable UI components (Admin, Storefront, UI).
-- `src/lib`: Shared utilities, constants, and design tokens.
-- `src/utils/supabase`: Database client configurations (Client, Server, Middleware).
-- `public`: Static assets including the official brand logo and favicon.
+- `src/app/(auth)`: Authentication routes (login, registration, password recovery).
+- `src/app/(customer)`: Customer storefront pages (Storefront, Catalog, Cart, Checkout, Profile).
+- `src/app/admin`: Comprehensive administrative dashboard and metrics console.
+- `src/components`: Reusable UI components (Admin modules, Customer catalog components, shared UI elements).
+- `src/lib`: Shared helper utilities, tracking scripts, and design configurations.
+- `src/utils/supabase`: Client, server, and middleware initialization helpers for Supabase database.
+- `supabase`: Database schemas, policy creation scripts, and SQL seed files.
+- `public`: Static assets including favicons, product placeholders, and icons.
 
 ## 📄 License
 

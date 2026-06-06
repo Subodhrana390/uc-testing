@@ -254,7 +254,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           image_url: formData.images[0] || null,
           images: formData.images,
           datasheet_url: formData.datasheet_url || null,
-          status: "Active",
+          status: formData.visibility ? "Active" : "Draft",
           tax_rate: parseFloat(formData.tax_rate || "0"),
           visibility: formData.visibility,
           is_featured: formData.is_featured,
