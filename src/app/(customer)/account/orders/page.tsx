@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { loadRazorpayScript } from "@/lib/razorpay";
+import { cancelOrder, returnOrder } from "@/app/actions/orders";
 import {
   Dialog,
   DialogContent,
@@ -33,13 +33,19 @@ export default function OrderHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
-  
+
   // Review Modal State
   const [reviewProduct, setReviewProduct] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+  // Return Modal State
+  const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   // Accordion Expand State
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
@@ -154,7 +160,6 @@ export default function OrderHistoryPage() {
     setCancellingOrderId(orderId);
 
     try {
-      const { cancelOrder } = await import("@/app/actions/orders");
       const res = await cancelOrder(orderId);
 
       if (res.success) {
@@ -167,6 +172,36 @@ export default function OrderHistoryPage() {
       toast.error(err.message || "An unexpected error occurred");
     } finally {
       setCancellingOrderId(null);
+    }
+  };
+
+  const handleOpenReturnDialog = (orderId: string) => {
+    setReturnOrderId(orderId);
+    setReturnReason("");
+    setIsReturnOpen(true);
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!returnReason.trim()) {
+      toast.error("Please enter a reason for your return.");
+      return;
+    }
+    if (!returnOrderId) return;
+
+    setReturnSubmitting(true);
+    try {
+      const res = await returnOrder(returnOrderId, returnReason);
+      if (res.success) {
+        toast.success("Return requested successfully!");
+        setOrders(prev => prev.map(o => o.id === returnOrderId ? { ...o, status: "RETURN_REQUESTED", payment_status: "Refund Pending" } : o));
+        setIsReturnOpen(false);
+      } else {
+        toast.error(res.error || "Failed to process return.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An unexpected error occurred");
+    } finally {
+      setReturnSubmitting(false);
     }
   };
 
@@ -204,7 +239,7 @@ export default function OrderHistoryPage() {
       toast.error("Please enter your review comments.");
       return;
     }
-    
+
     setReviewSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -213,7 +248,7 @@ export default function OrderHistoryPage() {
         setIsReviewOpen(false);
         return;
       }
-      
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -306,7 +341,7 @@ export default function OrderHistoryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-red-600" />
       </div>
     );
   }
@@ -351,7 +386,7 @@ export default function OrderHistoryPage() {
           <Card key={order.id} className="border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
 
             {/* Order Meta Info Row */}
-            <div 
+            <div
               onClick={() => toggleOrderExpand(order.id)}
               className="bg-gray-50 hover:bg-gray-100 cursor-pointer px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 transition-colors"
             >
@@ -420,11 +455,23 @@ export default function OrderHistoryPage() {
                       )}
                     </Button>
                   )}
+                  {order.status?.toLowerCase() === "delivered" && (
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenReturnDialog(order.id);
+                      }}
+                      variant="outline"
+                      className="border-pink-100 text-pink-600 hover:bg-pink-50 hover:text-pink-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                    >
+                      Return
+                    </Button>
+                  )}
                   <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
                     {order.status}
                   </Badge>
                   {order.status?.toLowerCase() === "delivered" ? (
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDownloadInvoice(order);
@@ -435,7 +482,7 @@ export default function OrderHistoryPage() {
                       <Download className="w-3.5 h-3.5" />
                     </button>
                   ) : (
-                    <button 
+                    <button
                       disabled
                       title="Invoice will generate after delivery"
                       onClick={(e) => e.stopPropagation()}
@@ -634,6 +681,52 @@ export default function OrderHistoryPage() {
                 </>
               ) : (
                 "Submit Review"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReturnOpen} onOpenChange={setIsReturnOpen}>
+        <DialogContent className="sm:max-w-md bg-white border border-zinc-150 p-6 rounded-3xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-zinc-900">Return Order</DialogTitle>
+            <DialogDescription className="text-xs text-zinc-500">
+              Please let us know why you are returning this order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Reason for Return</label>
+              <textarea
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="E.g., Defective product, not as described, etc."
+                rows={4}
+                className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsReturnOpen(false)}
+              className="w-full sm:w-auto rounded-xl border-zinc-200"
+              disabled={returnSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitReturn}
+              className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl"
+              disabled={returnSubmitting}
+            >
+              {returnSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting
+                </>
+              ) : (
+                "Request Return"
               )}
             </Button>
           </DialogFooter>

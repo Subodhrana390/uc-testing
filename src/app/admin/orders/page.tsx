@@ -13,6 +13,7 @@ import {
   Download,
   Package,
   X,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -80,8 +81,24 @@ import {
 type StatusType = "All" | "Placed" | "Confirmed" | "Processing" | "Pending" | "Shipped" | "Delivered" | "Cancelled" | "Return";
 
 const getPossibleNextStatuses = (currentStatus: string): string[] => {
-  const statuses = ["Pending", "Placed", "Confirmed", "Processing", "Shipped", "Delivered", "Cancelled", "Returned", "Failed"];
-  return statuses.filter(s => s.toUpperCase() !== (currentStatus || "").toUpperCase());
+  const status = (currentStatus || "").toUpperCase();
+  const transitions: Record<string, string[]> = {
+    PENDING: ["Placed", "Confirmed", "Cancelled"],
+    PLACED: ["Confirmed", "Cancelled"],
+    CONFIRMED: ["Processing", "Cancelled"],
+    PROCESSING: ["Shipped", "Cancelled"],
+    PACKED: ["Shipped", "Cancelled"],
+    SHIPPED: ["Delivered", "Cancelled"],
+    OUT_FOR_DELIVERY: ["Delivered", "Cancelled"],
+    DELIVERED: ["Return_Requested"],
+    RETURN_REQUESTED: ["Return_Approved"],
+    RETURN_APPROVED: ["Returned"],
+    FAILED: ["Pending", "Cancelled"],
+    CANCELLED: [],
+    RETURNED: [],
+  };
+
+  return transitions[status] || [];
 };
 
 export default function OrdersPage() {
@@ -97,6 +114,7 @@ export default function OrdersPage() {
   // Form states
   const [trackingId, setTrackingId] = useState("");
   const [carrier, setCarrier] = useState("");
+  const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
   const [carriers, setCarriers] = useState<any[]>([]);
@@ -187,6 +205,7 @@ export default function OrdersPage() {
   };
 
   const updateTracking = async (id: string) => {
+    setIsUpdatingTracking(true);
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -205,6 +224,8 @@ export default function OrdersPage() {
       setSelectedOrder(null);
     } catch (error: any) {
       toast.error(error.message);
+    } finally {
+      setIsUpdatingTracking(false);
     }
   };
 
@@ -362,8 +383,8 @@ export default function OrdersPage() {
         {/* Header System */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Order Management</h1>
-            <p className="text-sm font-medium text-sky-100 mt-1">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Order Management</h1>
+            <p className="text-xs md:text-sm font-medium text-sky-100 mt-1">
               Manage logistics, track delivery status, and view customer purchase reports.
             </p>
           </div>
@@ -545,7 +566,7 @@ export default function OrdersPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest">No order status data available</p>
               </div>
             )}
-            
+
             {/* Center Text inside Donut Hole */}
             {isMounted && orders.length > 0 && (
               <div className="absolute flex flex-col items-center justify-center">
@@ -751,9 +772,9 @@ export default function OrdersPage() {
                       <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
                         {order.payment_method} • <span className={cn(
                           order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' :
-                          order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
-                          order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
-                          'text-amber-600 font-bold'
+                            order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
+                              order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
+                                'text-amber-600 font-bold'
                         )}>{order.payment_status || 'Unpaid'}</span>
                       </div>
                     </TableCell>
@@ -789,15 +810,17 @@ export default function OrdersPage() {
                               </DropdownMenuSub>
                             )}
 
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedOrder(order);
-                              setTrackingId(order.tracking_id || "");
-                              setCarrier(order.carrier || "");
-                              setTimeout(() => setIsTrackingOpen(true), 50);
-                            }}>
-                              <Truck className="w-4 h-4 mr-2 text-blue-600" />
-                              Update Shipping
-                            </DropdownMenuItem>
+                            {['PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(order.status?.toUpperCase()) && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setTrackingId(order.tracking_id || "");
+                                setCarrier(order.carrier || "");
+                                setTimeout(() => setIsTrackingOpen(true), 50);
+                              }}>
+                                <Truck className="w-4 h-4 mr-2 text-blue-600" />
+                                Update Shipping
+                              </DropdownMenuItem>
+                            )}
 
                             {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && (
                               <>
@@ -882,8 +905,10 @@ export default function OrdersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTrackingOpen(false)} className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-xl">Cancel</Button>
-            <Button onClick={() => updateTracking(selectedOrder?.id)} className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold border-0 rounded-xl">Update Shipment</Button>
+            <Button variant="outline" onClick={() => setIsTrackingOpen(false)} className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-xl" disabled={isUpdatingTracking}>Cancel</Button>
+            <Button onClick={() => updateTracking(selectedOrder?.id)} className="bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold border-0 rounded-xl" disabled={isUpdatingTracking}>
+              {isUpdatingTracking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</> : 'Update Shipment'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -953,9 +978,9 @@ export default function OrdersPage() {
                     <p className={cn(
                       "text-xs font-bold",
                       selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' :
-                      selectedOrder.payment_status === 'Refund Pending' ? 'text-orange-600' :
-                      selectedOrder.payment_status === 'Refunded' ? 'text-indigo-650 font-bold' :
-                      'text-amber-600'
+                        selectedOrder.payment_status === 'Refund Pending' ? 'text-orange-600' :
+                          selectedOrder.payment_status === 'Refunded' ? 'text-indigo-650 font-bold' :
+                            'text-amber-600'
                     )}>
                       {selectedOrder.payment_status || 'Unpaid'}
                     </p>

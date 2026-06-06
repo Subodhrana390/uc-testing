@@ -1,5 +1,6 @@
 import Header from "@/components/storefront/Header";
 import Footer from "@/components/storefront/Footer";
+import BackToTop from "@/components/storefront/BackToTop";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function CustomerLayout({
@@ -26,6 +27,7 @@ export default async function CustomerLayout({
       <main className="flex-1">{children}</main>
 
       <Footer />
+      <BackToTop />
     </div>
   );
 }

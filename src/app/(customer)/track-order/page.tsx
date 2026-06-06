@@ -804,7 +804,7 @@ export default function TrackOrderPage() {
     <Suspense
       fallback={
         <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-zinc-50">
-          <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-red-600" />
         </div>
       }
     >

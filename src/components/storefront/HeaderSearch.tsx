@@ -12,7 +12,7 @@ function SearchInput() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -122,10 +122,10 @@ function SearchInput() {
   };
 
   return (
-    <div ref={containerRef} className="relative hidden flex-1 md:block max-w-lg">
+    <div ref={containerRef} className="relative w-full">
       <form onSubmit={handleFormSubmit} className="relative w-full">
         {loading ? (
-          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 animate-spin" />
+          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-red-600 animate-spin" />
         ) : (
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         )}
@@ -139,7 +139,7 @@ function SearchInput() {
             setShowSuggestions(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search products, brands, and business essentials"
+          placeholder="Search produxcts, brands, and business essentials"
           className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 pl-11 pr-4 text-sm outline-none transition focus:border-primary focus:bg-white"
         />
       </form>
@@ -156,9 +156,8 @@ function SearchInput() {
                   setShowSuggestions(false);
                   router.push(`/products/${item.slug}`);
                 }}
-                className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
-                  index === activeIndex ? "bg-zinc-50 border-l-2 border-primary pl-[14px]" : "pl-4"
-                }`}
+                className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${index === activeIndex ? "bg-zinc-50 border-l-2 border-primary pl-[14px]" : "pl-4"
+                  }`}
               >
                 <div className="relative w-10 h-10 overflow-hidden bg-zinc-50 rounded-lg shrink-0 border border-zinc-150 flex items-center justify-center">
                   <img

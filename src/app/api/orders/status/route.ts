@@ -181,12 +181,22 @@ export async function POST(req: Request) {
         if (existingOrder.status.toUpperCase() === "PENDING") {
           try {
             const { sendOrderConfirmationEmail } = await import('@/lib/email');
-            await sendOrderConfirmationEmail(
-              order.customer_email,
-              order.customer_name,
-              order.id,
-              order.total_amount
-            );
+            const { data: items } = await serviceRoleSupabase
+              .from("order_items")
+              .select("*, products(name)")
+              .eq("order_id", orderId);
+
+            await sendOrderConfirmationEmail({
+              orderId: order.id,
+              orderDate: order.created_at,
+              customerName: order.customer_name,
+              customerEmail: order.customer_email,
+              shippingAddress: order.shipping_address,
+              totalAmount: order.total_amount,
+              items: items || [],
+              trackingId: order.tracking_id,
+              carrier: order.carrier
+            });
           } catch (emailErr) {
             console.error("Failed to send verification order confirmation email:", emailErr);
           }
@@ -246,10 +256,22 @@ export async function POST(req: Request) {
     // 4. Trigger Email Notification for Status Change
     if (status !== undefined && order) {
       try {
-        await sendStatusUpdateEmail(
-          order.customer_email,
-          order.customer_name,
-          order.id,
+        const { data: items } = await serviceRoleSupabase
+          .from("order_items")
+          .select("*, products(name)")
+          .eq("order_id", orderId);
+
+        await sendStatusUpdateEmail({
+            orderId: order.id,
+            orderDate: order.created_at,
+            customerName: order.customer_name,
+            customerEmail: order.customer_email,
+            shippingAddress: order.shipping_address,
+            totalAmount: order.total_amount,
+            items: items || [],
+            trackingId: order.tracking_id,
+            carrier: order.carrier
+          },
           status.toUpperCase(),
           remarks
         );

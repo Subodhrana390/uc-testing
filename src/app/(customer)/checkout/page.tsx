@@ -72,16 +72,9 @@ export default function CheckoutPage() {
 
   const subtotal = getCartTotal();
 
-  const taxTotal = items.reduce((acc, item) => {
-    const rate = item.tax_rate || 0;
+  const deliveryCharge = 50; // Fixed delivery charge
 
-    return (
-      acc +
-      item.price * item.quantity * (rate / 100)
-    );
-  }, 0);
-
-  const grandTotal = subtotal + taxTotal;
+  const grandTotal = subtotal + deliveryCharge;
 
   useEffect(() => {
     const cartItems = getCartItems();
@@ -762,10 +755,10 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                  <span>GST Total</span>
+                  <span>Delivery Charge</span>
 
                   <span>
-                    {formatCurrency(taxTotal)}
+                    {formatCurrency(deliveryCharge)}
                   </span>
                 </div>
 

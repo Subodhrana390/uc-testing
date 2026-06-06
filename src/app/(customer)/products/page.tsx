@@ -7,6 +7,8 @@ import { createClient } from "@/utils/supabase/server";
 import ProductCard from "@/components/storefront/ProductCard";
 import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
+import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
+import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
 import JsonLd from "@/components/seo/JsonLd";
 import { itemListSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 import { productsListingMetadata, SITE_URL } from "@/lib/seo";
@@ -111,6 +113,7 @@ export default async function ProductsPage({
           </div>
 
           <div className="flex items-center gap-3 self-end md:self-auto">
+            <MobileFilterToggle />
             <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 py-2 rounded-lg shadow-2xs">
               Total SKU: <span className="font-semibold text-zinc-900">{count || 0} Items</span>
             </span>
@@ -121,10 +124,11 @@ export default async function ProductsPage({
         </div>
 
         {/* Content Structure */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8 items-start">
 
           {/* Refined Filters Sidebar */}
-          <aside className="hidden lg:flex flex-col gap-6 sticky top-6">
+          <MobileFilterWrapper>
+            <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
 
             {/* Categories Context */}
             <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
@@ -192,12 +196,13 @@ export default async function ProductsPage({
                 )}
               </Link>
             ))}
-          </aside>
+            </aside>
+          </MobileFilterWrapper>
 
           {/* Dynamic Interactive Products Module */}
           <div className="lg:col-span-3 space-y-10">
             {sortedProducts.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {sortedProducts.map((product) => (
                   <ProductCard key={product.id} product={product as any} />
                 ))}

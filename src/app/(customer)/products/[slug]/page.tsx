@@ -612,11 +612,6 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
 
-        {/* Recommended Products — personalised based on browsing history */}
-        <div className="border-t border-zinc-100 pt-4">
-          <RecommendedProducts excludeId={product.id} categoryId={product.category_id} />
-        </div>
-
         {/* Recently Viewed Products */}
         <div className="border-t border-zinc-100 pt-4">
           <RecentlyViewedProducts excludeId={product.id} />

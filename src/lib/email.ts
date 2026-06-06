@@ -1,5 +1,6 @@
 import 'server-only'
 import { env } from '@/env'
+import { getDisplayOrderId } from './order'
 
 export const sendInvoiceEmail = async (
   email: string,
@@ -64,17 +65,118 @@ export const sendInvoiceEmail = async (
   return await response.json();
 };
 
-export const sendOrderConfirmationEmail = async (
-  email: string,
-  customerName: string,
-  orderId: string,
-  totalAmount: string | number
-) => {
+export interface OrderEmailData {
+  orderId: string;
+  orderDate?: string;
+  customerName: string;
+  customerEmail: string;
+  shippingAddress?: string;
+  totalAmount: string | number;
+  items?: Array<any>; // Allow flexibility for item structure
+  trackingId?: string;
+  carrier?: string;
+}
+
+const generateOrderItemsHtml = (data: OrderEmailData) => {
+  let html = `
+    <h3 style="color: #333; margin-top: 20px;">Order Details</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px;">
+      <thead>
+        <tr style="background-color: #f3f4f6; text-align: left;">
+          <th style="padding: 10px; border: 1px solid #e5e7eb;">Item</th>
+          <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Qty</th>
+          <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  if (data.items && data.items.length > 0) {
+    data.items.forEach(item => {
+      const itemName = item.name || item.products?.name || "Product";
+      const itemPrice = item.price || item.unit_price || 0;
+      const itemQty = item.quantity || 1;
+      
+      html += `
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb;">${itemName}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">${itemQty}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">₹${parseFloat(itemPrice).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  } else {
+    html += `<tr><td colspan="3" style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Items not specified</td></tr>`;
+  }
+
+  html += `
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">Total Amount</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #f97316;">₹${parseFloat(data.totalAmount as string).toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+
+  html += `<h3 style="color: #333;">Customer Information</h3>
+    <p><strong>Name:</strong> ${data.customerName}</p>
+  `;
+
+  if (data.shippingAddress) {
+    html += `<p><strong>Shipping Address:</strong><br/>${data.shippingAddress}</p>`;
+  }
+
+  if (data.trackingId || data.carrier) {
+    html += `
+      <h3 style="color: #333; margin-top: 20px;">Tracking Information</h3>
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px;">
+        ${data.carrier ? `<p style="margin: 0 0 5px 0;"><strong>Carrier:</strong> ${data.carrier}</p>` : ''}
+        ${data.trackingId ? `<p style="margin: 0;"><strong>Tracking ID:</strong> <span style="font-family: monospace; font-size: 1.1em;">${data.trackingId}</span></p>` : ''}
+      </div>
+    `;
+  }
+
+  return html;
+};
+
+const generateStatusTimelineHtml = (currentStatus: string) => {
+  const statusFlow = ["PLACED", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"];
+  const currentIdx = statusFlow.indexOf((currentStatus || "").toUpperCase());
+  
+  if (currentIdx === -1) {
+    return '';
+  }
+
+  let html = `<table style="width: 100%; text-align: center; margin: 25px 0; font-size: 12px; font-family: sans-serif; border-collapse: collapse;"><tr>`;
+  
+  statusFlow.forEach((s, idx) => {
+    const isCompleted = idx <= currentIdx;
+    const isCurrent = idx === currentIdx;
+    const color = isCurrent ? '#f97316' : (isCompleted ? '#10b981' : '#9ca3af');
+    const fontWeight = isCurrent ? 'bold' : 'normal';
+    
+    html += `<td style="color: ${color}; font-weight: ${fontWeight}; padding: 5px; width: 15%;">${s}</td>`;
+    
+    if (idx < statusFlow.length - 1) {
+      const arrowColor = isCompleted && idx < currentIdx ? '#10b981' : '#d1d5db';
+      html += `<td style="color: ${arrowColor}; font-weight: bold; width: 5%; font-size: 16px;">&rarr;</td>`;
+    }
+  });
+
+  html += `</tr></table>`;
+  return html;
+};
+
+export const sendOrderConfirmationEmail = async (data: OrderEmailData) => {
   const apiKey = env.BREVO_API_KEY;
   if (!apiKey) {
     console.error("BREVO_API_KEY is not defined in environment variables");
     return;
   }
+
+  const displayOrderId = data.orderDate ? getDisplayOrderId(data.orderId, data.orderDate) : data.orderId.slice(0, 8).toUpperCase();
 
   const payload = {
     sender: {
@@ -83,20 +185,24 @@ export const sendOrderConfirmationEmail = async (
     },
     to: [
       {
-        email: email,
-        name: customerName
+        email: data.customerEmail,
+        name: data.customerName
       }
     ],
-    subject: `Order Confirmation - #${orderId.slice(0, 8).toUpperCase()}`,
+    subject: `Order Confirmation - #${displayOrderId}`,
     htmlContent: `
       <html>
         <head></head>
-        <body style="font-family: sans-serif; color: #333; line-height: 1.6;">
-          <h2 style="color: #f97316;">Order Confirmation</h2>
-          <p>Dear ${customerName},</p>
-          <p>Thank you for your order!</p>
-          <p>We have successfully received your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> for a total amount of <strong>₹${totalAmount}</strong>.</p>
-          <p>We will notify you once your order is processed and shipped.</p>
+        <body style="font-family: sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #f97316; border-bottom: 2px solid #f97316; padding-bottom: 10px;">Order Confirmation</h2>
+          <p>Dear ${data.customerName},</p>
+          <p>Thank you for your order! We have successfully received your order <strong>#${displayOrderId}</strong>.</p>
+          
+          ${generateStatusTimelineHtml('PLACED')}
+          
+          ${generateOrderItemsHtml(data)}
+          
+          <p style="margin-top: 20px;">We will notify you once your order is processed and shipped.</p>
           <br/>
           <p>Best regards,</p>
           <p><strong>${env.BREVO_SENDER_NAME}</strong></p>
@@ -126,9 +232,7 @@ export const sendOrderConfirmationEmail = async (
 };
 
 export const sendStatusUpdateEmail = async (
-  email: string,
-  customerName: string,
-  orderId: string,
+  data: OrderEmailData,
   status: string,
   remarks?: string
 ) => {
@@ -138,6 +242,8 @@ export const sendStatusUpdateEmail = async (
     return;
   }
 
+  const displayOrderId = data.orderDate ? getDisplayOrderId(data.orderId, data.orderDate) : data.orderId.slice(0, 8).toUpperCase();
+
   const payload = {
     sender: {
       name: env.BREVO_SENDER_NAME,
@@ -145,23 +251,28 @@ export const sendStatusUpdateEmail = async (
     },
     to: [
       {
-        email: email,
-        name: customerName
+        email: data.customerEmail,
+        name: data.customerName
       }
     ],
-    subject: `Order Status Updated: ${status} (#${orderId.slice(0, 8).toUpperCase()})`,
+    subject: `Order Status Updated: ${status} (#${displayOrderId})`,
     htmlContent: `
       <html>
         <head></head>
-        <body style="font-family: sans-serif; color: #333; line-height: 1.6;">
-          <h2 style="color: #f97316;">Order Update</h2>
-          <p>Dear ${customerName},</p>
-          <p>The status of your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> has been updated to:</p>
-          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; font-size: 1.1em; font-weight: bold; display: inline-block; margin: 10px 0;">
+        <body style="font-family: sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #f97316; border-bottom: 2px solid #f97316; padding-bottom: 10px;">Order Update</h2>
+          <p>Dear ${data.customerName},</p>
+          <p>The status of your order <strong>#${displayOrderId}</strong> has been updated to:</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; font-size: 1.1em; font-weight: bold; display: inline-block; margin: 10px 0; border-left: 4px solid #f97316;">
             ${status}
           </div>
           ${remarks ? `<p><strong>Update notes:</strong> ${remarks}</p>` : ""}
-          <p>You can view and track your order details on your dashboard.</p>
+          
+          ${generateStatusTimelineHtml(status)}
+          
+          ${generateOrderItemsHtml(data)}
+          
+          <p style="margin-top: 20px;">You can view and track your order details on your dashboard.</p>
           <br/>
           <p>Best regards,</p>
           <p><strong>${env.BREVO_SENDER_NAME}</strong></p>

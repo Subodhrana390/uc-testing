@@ -43,6 +43,11 @@ export async function createOrder(orderData: {
 
     const attribution = { first_touch, latest_touch }
 
+    // Recalculate total on the backend to prevent frontend spoofing
+    const calculatedSubtotal = orderData.items.reduce((acc, item) => acc + (item.price * item.quantity), 0)
+    const deliveryCharge = 50 // Fixed delivery charge
+    const calculatedTotal = calculatedSubtotal + deliveryCharge
+
     // Call Postgres RPC for transactional atomic order & inventory updates
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
       'place_order_with_inventory',
@@ -52,7 +57,7 @@ export async function createOrder(orderData: {
         p_customer_email: orderData.email,
         p_phone: orderData.phone,
         p_shipping_address: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
-        p_total_amount: orderData.total,
+        p_total_amount: calculatedTotal,
         p_payment_method: orderData.paymentMethod,
         p_payment_status: orderData.paymentStatus || (orderData.paymentMethod === 'COD' ? 'Unpaid' : 'Paid'),
         p_delivery_estimate: orderData.deliveryEstimate || null,
@@ -80,12 +85,15 @@ export async function createOrder(orderData: {
     if (orderData.paymentMethod === 'COD') {
       try {
         const { sendOrderConfirmationEmail } = await import('@/lib/email')
-        await sendOrderConfirmationEmail(
-          orderData.email,
-          orderData.fullName,
-          result.order_id,
-          orderData.total
-        )
+        await sendOrderConfirmationEmail({
+          orderId: result.order_id,
+          orderDate: new Date().toISOString(),
+          customerName: orderData.fullName,
+          customerEmail: orderData.email,
+          shippingAddress: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
+          totalAmount: calculatedTotal,
+          items: orderData.items
+        })
       } catch (emailErr) {
         console.error('Failed to send COD order confirmation email:', emailErr)
       }
@@ -138,6 +146,61 @@ export async function cancelOrder(orderId: string) {
     return { success: false, error: error.message || 'An unexpected error occurred' }
   }
 }
+
+export async function returnOrder(orderId: string, reason: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized: Please ensure you are logged in.' }
+    }
+
+    // Call PostgreSQL RPC transition_order_status to set status to RETURN_REQUESTED
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'transition_order_status',
+      {
+        p_order_id: orderId,
+        p_new_status: 'RETURN_REQUESTED',
+        p_actor_type: 'customer',
+        p_actor_id: user.id,
+        p_remarks: `Return Requested: ${reason}`
+      }
+    )
+
+    if (rpcError) {
+      console.error('Order return RPC error:', rpcError)
+      return { success: false, error: 'Failed to return order due to server error' }
+    }
+
+    const result = rpcResult as any;
+    if (!result.success) {
+      console.error('Order return business logic error:', result.error)
+      return { success: false, error: result.error || 'Failed to return order' }
+    }
+
+    // Update payment status to Refund Pending
+    // We only want to set it to Refund Pending if it was paid, but setting it universally 
+    // for returned items lets the admin know they need to verify if a refund is due.
+    const { error: paymentUpdateError } = await supabase
+      .from('orders')
+      .update({ payment_status: 'Refund Pending' })
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+
+    if (paymentUpdateError) {
+      console.error('Failed to update payment status for return:', paymentUpdateError)
+      // Non-fatal, admin can see it's a return request anyway
+    }
+
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('returnOrder unexpected error:', error)
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
+}
+
 
 /**
  * deleteFailedOrder — Hard-deletes an order that failed at payment stage.

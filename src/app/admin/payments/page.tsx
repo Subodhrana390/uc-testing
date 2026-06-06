@@ -116,30 +116,46 @@ export default function PaymentsPage() {
     fetchPayments();
   }, [fetchPayments]);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (paymentId: string, orderId: string, status: string) => {
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: id, status })
+        body: JSON.stringify({ orderId, status })
       });
       if (!response.ok) throw new Error("Update failed");
-      setPayments(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, status } : o));
       toast.success(`Order marked as ${status}`);
     } catch (error: any) {
       toast.error(error.message);
     }
   };
 
-  const updateTracking = async (id: string) => {
+  const issueRefund = async (paymentId: string, orderId: string) => {
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: id, status: "Shipped", trackingId, carrier })
+        body: JSON.stringify({ orderId, paymentStatus: "Refunded" })
+      });
+      if (!response.ok) throw new Error("Refund failed");
+      
+      setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
+      toast.success(`Refund issued successfully`);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const updateTracking = async (orderId: string, paymentId: string) => {
+    try {
+      const response = await fetch("/api/orders/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status: "Shipped", trackingId, carrier })
       });
       if (!response.ok) throw new Error("Tracking update failed");
-      setPayments(prev => prev.map(o => o.id === id ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
+      setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       toast.success("Logistics updated");
       setIsTrackingOpen(false);
     } catch (error: any) {
@@ -740,16 +756,8 @@ export default function PaymentsPage() {
                           }} className="cursor-pointer font-semibold text-zinc-700 hover:bg-zinc-50">
                             <Receipt className="w-4 h-4 mr-2 text-zinc-400" /> View Receipt
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(payment);
-                            setTrackingId(payment.orders?.tracking_id || "");
-                            setCarrier(payment.orders?.carrier || "");
-                            setIsTrackingOpen(true);
-                          }} className="cursor-pointer font-semibold text-zinc-700 hover:bg-zinc-50">
-                            <Truck className="w-4 h-4 mr-2 text-zinc-400" /> Manage Shipping
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-zinc-100" />
-                          <DropdownMenuItem onClick={() => updateStatus(payment.id, "Refunded")} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
+                          <DropdownMenuItem onClick={() => issueRefund(payment.id, payment.order_id)} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
                             <ArrowDownRight className="w-4 h-4 mr-2" /> Issue Refund
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -797,7 +805,7 @@ export default function PaymentsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsTrackingOpen(false)} className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-xl">Cancel</Button>
-            <Button onClick={() => updateTracking(selectedOrder?.id)} className="bg-[#f59e0b] hover:bg-[#d97706] text-white font-bold border-0 rounded-xl">Save Record</Button>
+            <Button onClick={() => updateTracking(selectedOrder?.order_id, selectedOrder?.id)} className="bg-[#f59e0b] hover:bg-[#d97706] text-white font-bold border-0 rounded-xl">Save Record</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

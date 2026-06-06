@@ -98,7 +98,7 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
       4: { cellWidth: 30, halign: 'right' },
     },
     foot: [[
-      { content: 'Total (Incl. Taxes)', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: 'Total (Incl. Delivery)', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
       { content: `INR ${data.totalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
     ]]
   });

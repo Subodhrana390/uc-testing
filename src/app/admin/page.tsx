@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
 
         {/* Dashboard Title Header inside banner */}
         <div className="mb-8 relative z-10">
-          <div className="text-3xl font-extrabold text-white tracking-tight">Good morning, Admin</div>
+          <div className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Good morning, Admin</div>
           <p className="text-sm font-medium text-indigo-100 mt-1">
             Welcome back. Here's what's happening with <span className="font-bold text-white">UC Enterprises</span> today.
           </p>
@@ -264,8 +264,8 @@ export default function AdminDashboardPage() {
             >
               <div className="px-1 pt-1 flex items-start justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider">{card.title}</span>
-                  <h2 className="text-2xl font-black text-white mt-1 tracking-tight">{card.value}</h2>
+                  <span className="text-[10px] md:text-[11px] font-bold text-white/70 uppercase tracking-wider">{card.title}</span>
+                  <h2 className="text-xl md:text-2xl font-black text-white mt-1 tracking-tight">{card.value}</h2>
 
                   {/* Trend indicator */}
                   <div className="flex items-center gap-1 mt-2">
@@ -573,14 +573,14 @@ export default function AdminDashboardPage() {
 
             <div className="space-y-6 mt-8">
               <div>
-                <p className="text-3xl font-extrabold tracking-tight !text-white">
+                <p className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white">
                   ₹{(stats.totalRevenue / (stats.totalSales || 1)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                 </p>
                 <p className="text-[11px] font-bold !text-slate-400 uppercase tracking-wider mt-1">Average Order Value</p>
               </div>
               <div className="h-px bg-slate-800/60" />
               <div>
-                <p className="text-3xl font-extrabold tracking-tight !text-white">
+                <p className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white">
                   {(stats.totalSales / (stats.activeUsers || 1)).toFixed(1)}x
                 </p>
                 <p className="text-[11px] font-bold !text-slate-400 uppercase tracking-wider mt-1">Purchase Frequency</p>
