@@ -460,7 +460,7 @@ export default function AdminLayout({
         </header>
 
         {/* Dynamic Page Content */}
-        <main className={cn("admin-dashboard-main flex-1 p-4 lg:p-10 max-w-[1500px] mx-auto w-full", getThemeClass(pathname))}>
+        <main className={cn("admin-dashboard-main flex-1 p-2 sm:p-4 lg:p-10 max-w-[1500px] mx-auto w-full", getThemeClass(pathname))}>
           <Suspense fallback={
             <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
               <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />

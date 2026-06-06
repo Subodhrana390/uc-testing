@@ -374,9 +374,9 @@ export default function OrdersPage() {
   if (loading) return <LogoLoader text="Loading orders..." />;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto w-full px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Blue Gradient Banner */}
-      <div className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-500 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
         {/* Subtle decorative glows */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
 
@@ -395,7 +395,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Stats Cards Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 relative z-10">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10">
           {/* Total Orders Card */}
           <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden relative group">
             <div className="p-4 pb-0">
@@ -516,9 +516,9 @@ export default function OrdersPage() {
 
 
       {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Order Status Distribution Donut Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
+        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
           <div>
             <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Order Status Distribution</h3>
             <p className="text-xs font-semibold text-zinc-400 mt-1">Percentage and count of orders by status</p>
@@ -596,7 +596,7 @@ export default function OrdersPage() {
         </Card>
 
         {/* Daily Order Volume Bar Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
+        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
           <div>
             <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Daily Order Volume</h3>
             <p className="text-xs font-semibold text-zinc-400 mt-1">Daily order frequency (7 days)</p>
@@ -709,8 +709,9 @@ export default function OrdersPage() {
         </div>
 
         {/* Orders Table */}
-        <ScrollArea className="h-[500px]">
-          <Table>
+        <div className="overflow-x-auto w-full border-t border-zinc-200">
+          <ScrollArea className="h-[500px] min-w-[800px]">
+            <Table>
             <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
               <TableRow>
                 <TableHead className="w-[120px] text-zinc-500 font-bold">Order ID</TableHead>
@@ -862,7 +863,8 @@ export default function OrdersPage() {
             </TableBody>
           </Table>
         </ScrollArea>
-      </Card>
+      </div>
+    </Card>
 
       {/* Tracking Dialog */}
       <Dialog open={isTrackingOpen} onOpenChange={setIsTrackingOpen}>

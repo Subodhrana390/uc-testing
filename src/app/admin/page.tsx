@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto w-full px-2 lg:px-4">
       {/* Flux-style Hero Banner Container */}
-      <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-500 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
         {/* Decorative glows */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full -ml-20 -mb-20 blur-2xl pointer-events-none" />
@@ -255,7 +255,7 @@ export default function AdminDashboardPage() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 relative z-10"
+          className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10"
         >
           {metricCards.map((card, idx) => (
             <div
@@ -320,9 +320,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
         {/* Financial Performance Area Chart */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-zinc-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Overview</h3>
@@ -436,7 +436,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Order Volume Bar Chart */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-zinc-200 shadow-sm p-4 sm:p-6 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Order Volume</h3>
             <p className="text-xs font-semibold text-zinc-400 mt-1">Daily order frequency</p>
@@ -503,9 +503,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
         {/* Recent Orders Table (Takes 8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 flex flex-col">
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-zinc-200 shadow-sm p-4 sm:p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Recent Orders</h3>
@@ -520,7 +520,8 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse min-w-[500px]">
+            <div className="min-w-[600px]">
+              <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-200 pb-3">
                   <th className="pb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider text-left">Customer</th>
@@ -559,11 +560,12 @@ export default function AdminDashboardPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
         {/* Pro Insights (Takes 4 cols) */}
-        <div className="lg:col-span-4 bg-gradient-to-br from-slate-900 to-indigo-950 border border-slate-800 hover:border-[#06b6d4]/50 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden flex flex-col justify-between min-h-[360px] transition-colors duration-300">
+        <div className="lg:col-span-4 bg-gradient-to-br from-slate-900 to-indigo-950 border border-slate-800 hover:border-[#06b6d4]/50 rounded-2xl shadow-xl p-4 sm:p-6 text-white relative overflow-hidden flex flex-col justify-between min-h-[360px] transition-colors duration-300">
           {/* Subtle glow background */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-[#06b6d4]/10 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none" />
 
