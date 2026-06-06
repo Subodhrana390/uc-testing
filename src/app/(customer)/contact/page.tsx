@@ -7,7 +7,6 @@ import { staticPageMetadata, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = staticPageMetadata.contact;
 
-
 export default function ContactPage() {
   return (
     <div className="bg-white min-h-[calc(100vh-80px)]">
@@ -39,7 +38,7 @@ export default function ContactPage() {
             <h2 className="text-lg font-black text-zinc-950 mb-3">Headquarters</h2>
             <p className="text-sm text-zinc-600 leading-relaxed">{companyAddress}</p>
           </div>
-          
+
           <div className="border border-orange-100 bg-white p-8 rounded-3xl shadow-sm transition-transform hover:-translate-y-1">
             <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-primary mb-6">
               <Phone className="w-6 h-6" />
@@ -48,7 +47,7 @@ export default function ContactPage() {
             <p className="text-sm font-bold text-zinc-600">{supportPhone}</p>
             <p className="text-xs text-zinc-400 mt-2">Mon-Sat from 9am to 6pm.</p>
           </div>
-          
+
           <div className="border border-orange-100 bg-white p-8 rounded-3xl shadow-sm transition-transform hover:-translate-y-1">
             <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-primary mb-6">
               <Mail className="w-6 h-6" />
