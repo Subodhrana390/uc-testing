@@ -309,10 +309,6 @@ function TrackOrderContent() {
       {/* Header System */}
       <section className="border-b border-zinc-100 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-12 md:py-16 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-emerald-700 text-[10px] font-black uppercase tracking-wider mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Real-time Tracker
-          </div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-950">
             Track your order
           </h1>
@@ -326,7 +322,7 @@ function TrackOrderContent() {
         <div className="grid gap-8 lg:grid-cols-12 items-start">
 
           {/* Form Box Column */}
-          <div className="lg:col-span-4 sticky top-8">
+          <div className="lg:col-span-4 lg:sticky lg:top-8">
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-zinc-50 border border-zinc-200/60 rounded-xl flex items-center justify-center text-zinc-500 shadow-sm">
@@ -663,9 +659,9 @@ function TrackOrderContent() {
                       {order.order_items?.map((item: any) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between gap-4 p-3 rounded-2xl border border-zinc-150/70 hover:bg-zinc-50 hover:border-zinc-250 transition-all duration-300 w-full"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-2xl border border-zinc-150/70 hover:bg-zinc-50 hover:border-zinc-250 transition-all duration-300 w-full"
                         >
-                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                          <div className="flex items-center gap-4 min-w-0 w-full sm:flex-1">
                             <div className="w-14 h-14 rounded-xl bg-zinc-50 border border-zinc-200 overflow-hidden flex-shrink-0 relative">
                               {item.products?.image_url ? (
                                 <Image
@@ -693,7 +689,7 @@ function TrackOrderContent() {
                           {order.status?.toLowerCase() === "delivered" && item.products && (
                             <button
                               onClick={() => handleOpenReviewDialog(item.products)}
-                              className="shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95"
+                              className="shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95 w-full sm:w-auto text-center"
                             >
                               Give Review
                             </button>

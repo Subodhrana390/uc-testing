@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2, Star } from "lucide-react";
+import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2, Star, ChevronDown } from "lucide-react";
 
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
@@ -40,6 +40,16 @@ export default function OrderHistoryPage() {
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+  // Accordion Expand State
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrders(prev => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
 
   const supabase = createClient();
 
@@ -340,12 +350,15 @@ export default function OrderHistoryPage() {
         {filteredOrders.map((order) => (
           <Card key={order.id} className="border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
 
-            {/* Order Meta Info */}
-            <div className="bg-gray-50 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100">
+            {/* Order Meta Info Row */}
+            <div 
+              onClick={() => toggleOrderExpand(order.id)}
+              className="bg-gray-50 hover:bg-gray-100 cursor-pointer px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 transition-colors"
+            >
               <div className="flex flex-wrap gap-4 sm:gap-6">
                 <div>
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Order ID</span>
-                  <span className="text-xs font-medium text-zinc-900">{getDisplayOrderId(order.id, order.created_at)}</span>
+                  <span className="text-xs font-semibold text-zinc-900">{getDisplayOrderId(order.id, order.created_at)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Placed On</span>
@@ -368,122 +381,168 @@ export default function OrderHistoryPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
-                  <Button
-                    onClick={() => handlePayOnline(order)}
-                    disabled={payingOrderId === order.id}
-                    className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                  >
-                    {payingOrderId === order.id ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin mr-1" /> Processing
-                      </>
-                    ) : (
-                      "Pay Online"
-                    )}
-                  </Button>
-                )}
-                {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
-                  <Button
-                    onClick={() => handleCancelOrder(order.id)}
-                    disabled={cancellingOrderId === order.id}
-                    variant="outline"
-                    className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                  >
-                    {cancellingOrderId === order.id ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin mr-1" /> Cancelling
-                      </>
-                    ) : (
-                      "Cancel"
-                    )}
-                  </Button>
-                )}
-                <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
-                  {order.status}
-                </Badge>
-                {order.status?.toLowerCase() === "delivered" ? (
-                  <button 
-                    onClick={() => handleDownloadInvoice(order)}
-                    title="Download Invoice"
-                    className="h-7 w-7 rounded-md hover:bg-zinc-200 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-900"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button 
-                    disabled
-                    title="Invoice will generate after delivery"
-                    className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-300 cursor-not-allowed"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                )}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePayOnline(order);
+                      }}
+                      disabled={payingOrderId === order.id}
+                      className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                    >
+                      {payingOrderId === order.id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin mr-1" /> Processing
+                        </>
+                      ) : (
+                        "Pay Online"
+                      )}
+                    </Button>
+                  )}
+                  {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCancelOrder(order.id);
+                      }}
+                      disabled={cancellingOrderId === order.id}
+                      variant="outline"
+                      className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                    >
+                      {cancellingOrderId === order.id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin mr-1" /> Cancelling
+                        </>
+                      ) : (
+                        "Cancel"
+                      )}
+                    </Button>
+                  )}
+                  <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
+                    {order.status}
+                  </Badge>
+                  {order.status?.toLowerCase() === "delivered" ? (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadInvoice(order);
+                      }}
+                      title="Download Invoice"
+                      className="h-7 w-7 rounded-md hover:bg-zinc-200 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-900"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <button 
+                      disabled
+                      title="Invoice will generate after delivery"
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-300 cursor-not-allowed"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <ChevronDown className={cn("w-4.5 h-4.5 text-zinc-400 transition-transform duration-200 shrink-0", expandedOrders[order.id] && "rotate-180")} />
               </div>
             </div>
 
-            {/* Items List */}
-            <CardContent className="py-4 space-y-4">
-              {order.order_items?.map((item: any) => (
-                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                  <div className="flex flex-1 items-center gap-3 sm:gap-4 min-w-0">
-                    <div className="w-14 h-14 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
-                      <Image
-                        src={item.products?.image_url || "/images/placeholder.png"}
-                        alt={item.products?.name}
-                        fill
-                        className="object-contain p-2"
-                        unoptimized
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-zinc-900 line-clamp-1">{item.products?.name}</h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <Badge variant="secondary" className="text-[10px] h-5">Qty: {item.quantity}</Badge>
-                        <span className="text-xs text-zinc-500">{formatCurrency(item.unit_price)} per unit</span>
-                      </div>
-                    </div>
+            {/* Accordion content */}
+            {expandedOrders[order.id] && (
+              <div className="border-t border-zinc-100 bg-zinc-50/10 animate-in fade-in slide-in-from-top-1 duration-200">
+                {/* Shipping Details Sub-Panel */}
+                <div className="px-4 sm:px-6 py-5 bg-zinc-50/50 border-b border-zinc-150/70 grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Shipping Address</h4>
+                    <p className="font-bold text-zinc-800 text-sm mt-1">{order.customer_name}</p>
+                    <p className="text-zinc-650 mt-1 leading-relaxed">{order.shipping_address}</p>
+                    <p className="text-zinc-650 mt-2 font-semibold">Phone: <span className="font-medium text-zinc-800">{order.phone || "N/A"}</span></p>
+                    <p className="text-zinc-650 mt-0.5 font-semibold">Email: <span className="font-medium text-zinc-800">{order.customer_email}</span></p>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
-                    <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="w-full sm:w-auto">
-                      <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                        View Progress <ChevronRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </Link>
-                    {order.status?.toLowerCase() === "delivered" && item.products && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleOpenReviewDialog(item.products)}
-                        className="w-full sm:w-auto text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-                      >
-                        Give Review
-                      </Button>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Fulfillment Details</h4>
+                    <p className="text-zinc-650 font-semibold mt-1">Fulfillment Status: <span className={cn("font-bold", order.status?.toLowerCase() === "delivered" ? "text-emerald-700" : "text-zinc-700")}>{order.status}</span></p>
+                    <p className="text-zinc-650 font-semibold mt-1">Payment Method: <span className="font-bold text-zinc-700">{order.payment_method}</span></p>
+                    <p className="text-zinc-650 font-semibold mt-0.5">Payment Status: <span className="font-bold text-zinc-700">{order.payment_status}</span></p>
+                    {order.tracking_id && (
+                      <div className="mt-3 p-3 bg-white rounded-2xl border border-zinc-200/50">
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tracking Reference</p>
+                        <p className="font-mono text-zinc-850 font-bold mt-0.5">{order.tracking_id} ({order.carrier || "Standard"})</p>
+                      </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </CardContent>
 
-            {/* Shipping Live Banner */}
-            {order.status === "Shipped" && (
-              <div className="px-4 sm:px-6 py-4 bg-indigo-600 text-white flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-700 rounded-lg">
-                    <Truck className="w-4 h-4 text-zinc-300" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-zinc-350 uppercase tracking-wider">In Transit</p>
-                    <p className="text-sm font-medium">{order.carrier || "Standard"} — <span className="font-mono text-zinc-200">{order.tracking_id || "UPDATING"}</span></p>
-                  </div>
+                <div className="px-4 sm:px-6 py-3 border-b border-zinc-100 bg-white">
+                  <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Items in Order</h4>
                 </div>
-                <div className="flex items-center gap-2 bg-indigo-750 px-3 py-1.5 rounded-md">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-200">Live</span>
-                </div>
+
+                {/* Items List */}
+                <CardContent className="py-4 space-y-4 bg-white">
+                  {order.order_items?.map((item: any) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                      <div className="flex flex-1 items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="w-14 h-14 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
+                          <Image
+                            src={item.products?.image_url || "/images/placeholder.png"}
+                            alt={item.products?.name}
+                            fill
+                            className="object-contain p-2"
+                            unoptimized
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-zinc-900 line-clamp-1">{item.products?.name}</h3>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge variant="secondary" className="text-[10px] h-5">Qty: {item.quantity}</Badge>
+                            <span className="text-xs text-zinc-500">{formatCurrency(item.unit_price)} per unit</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+                        <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="w-full sm:w-auto">
+                          <Button variant="outline" size="sm" className="w-full text-xs h-8">
+                            View Progress <ChevronRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        </Link>
+                        {order.status?.toLowerCase() === "delivered" && item.products && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleOpenReviewDialog(item.products)}
+                            className="w-full sm:w-auto text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+                          >
+                            Give Review
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+
+                {/* Shipping Live Banner */}
+                {order.status === "Shipped" && (
+                  <div className="px-4 sm:px-6 py-4 bg-indigo-600 text-white flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-700 rounded-lg">
+                        <Truck className="w-4 h-4 text-zinc-300" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-medium text-zinc-350 uppercase tracking-wider">In Transit</p>
+                        <p className="text-sm font-medium">{order.carrier || "Standard"} — <span className="font-mono text-zinc-200">{order.tracking_id || "UPDATING"}</span></p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-indigo-750 px-3 py-1.5 rounded-md">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-200">Live</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Card>

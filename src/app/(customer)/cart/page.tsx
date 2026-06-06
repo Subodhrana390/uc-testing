@@ -73,10 +73,10 @@ export default function CartPage() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex flex-col gap-4 border border-orange-100 bg-white p-5 shadow-sm rounded-2xl md:flex-row md:items-center"
+                  className="flex gap-4 border border-orange-100 bg-white p-4 sm:p-5 shadow-sm rounded-2xl"
                 >
                   {/* Product Image */}
-                  <div className="relative h-28 w-28 shrink-0 rounded-xl overflow-hidden">
+                  <div className="relative h-20 w-20 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50/30">
                     <Image
                       src={
                         item.image_url ||
@@ -84,63 +84,68 @@ export default function CartPage() {
                       }
                       alt={item.name}
                       fill
-                      className="object-contain p-4"
+                      className="object-contain p-2"
+                      unoptimized
                     />
                   </div>
 
-                  {/* Product Info */}
-                  <div className="flex-1 space-y-2">
-                    <Link
-                      href={`/products/${item.slug}`}
-                      className="text-lg font-bold text-zinc-950 hover:text-primary transition-colors"
-                    >
-                      {item.name}
-                    </Link>
+                  {/* Product Info & Actions */}
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
+                    <div className="space-y-1">
+                      <Link
+                        href={`/products/${item.slug}`}
+                        className="text-sm sm:text-base font-bold text-zinc-950 hover:text-primary transition-colors line-clamp-2 leading-snug"
+                      >
+                        {item.name}
+                      </Link>
 
-                    <p className="text-sm font-semibold text-zinc-600">
-                      {formatCurrency(item.price)}
-                    </p>
+                      <p className="text-xs sm:text-sm font-bold text-zinc-500">
+                        {formatCurrency(item.price)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 mt-4">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200/60 rounded-xl p-0.5 shrink-0">
+                        <button
+                          className="rounded-lg p-1 hover:bg-white hover:shadow-xs active:scale-95 transition"
+                          onClick={() =>
+                            updateCartItemQuantity(
+                              item.id,
+                              item.quantity - 1
+                            )
+                          }
+                        >
+                          <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </button>
+
+                        <span className="min-w-6 text-center font-bold text-xs sm:text-sm">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          className="rounded-lg p-1 hover:bg-white hover:shadow-xs active:scale-95 transition"
+                          onClick={() =>
+                            updateCartItemQuantity(
+                              item.id,
+                              item.quantity + 1
+                            )
+                          }
+                        >
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </button>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-red-650 hover:text-red-700 transition active:scale-95"
+                        onClick={() => removeCartItem(item.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Remove</span>
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="rounded-lg border border-zinc-200 p-2 hover:bg-zinc-100 transition"
-                      onClick={() =>
-                        updateCartItemQuantity(
-                          item.id,
-                          item.quantity - 1
-                        )
-                      }
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-
-                    <span className="min-w-8 text-center font-bold">
-                      {item.quantity}
-                    </span>
-
-                    <button
-                      className="rounded-lg border border-zinc-200 p-2 hover:bg-zinc-100 transition"
-                      onClick={() =>
-                        updateCartItemQuantity(
-                          item.id,
-                          item.quantity + 1
-                        )
-                      }
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Remove Button */}
-                  <button
-                    className="inline-flex items-center gap-2 text-sm font-bold text-red-600 hover:text-red-700 transition"
-                    onClick={() => removeCartItem(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Remove
-                  </button>
                 </div>
               ))}
             </div>
