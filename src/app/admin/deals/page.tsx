@@ -194,7 +194,13 @@ export default function DealsAdminPage() {
     if (!formData.title) { toast.error("Title is required"); return; }
     setSaving(true);
     try {
-      const payload = { ...formData, discount_percentage: formData.discount_percentage ? parseInt(formData.discount_percentage) : null };
+      const payload = { 
+        ...formData, 
+        discount_percentage: formData.discount_percentage ? parseInt(formData.discount_percentage) : null,
+        product_id: formData.product_id || null,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null
+      };
       if (editingDeal) {
         const { error } = await supabase.from("deals").update(payload).eq("id", editingDeal.id);
         if (error) throw error;

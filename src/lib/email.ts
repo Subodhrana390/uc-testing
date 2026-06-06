@@ -60,3 +60,68 @@ export const sendInvoiceEmail = async (
 
   return await response.json();
 };
+
+export const sendStatusUpdateEmail = async (
+  email: string,
+  customerName: string,
+  orderId: string,
+  status: string,
+  remarks?: string
+) => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error("BREVO_API_KEY is not defined in environment variables");
+    return;
+  }
+
+  const payload = {
+    sender: {
+      name: process.env.BREVO_SENDER_NAME || "UC Enterprises",
+      email: process.env.BREVO_SENDER_EMAIL || "info@ucenterprises.com"
+    },
+    to: [
+      {
+        email: email,
+        name: customerName
+      }
+    ],
+    subject: `Order Status Updated: ${status} (#${orderId.slice(0, 8).toUpperCase()})`,
+    htmlContent: `
+      <html>
+        <head></head>
+        <body style="font-family: sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #f97316;">Order Update</h2>
+          <p>Dear ${customerName},</p>
+          <p>The status of your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> has been updated to:</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; font-size: 1.1em; font-weight: bold; display: inline-block; margin: 10px 0;">
+            ${status}
+          </div>
+          ${remarks ? `<p><strong>Update notes:</strong> ${remarks}</p>` : ""}
+          <p>You can view and track your order details on your dashboard.</p>
+          <br/>
+          <p>Best regards,</p>
+          <p><strong>${process.env.BREVO_SENDER_NAME || "UC Enterprises"}</strong></p>
+        </body>
+      </html>
+    `
+  };
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "api-key": apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Brevo Email Notification failed:", err);
+    }
+  } catch (err) {
+    console.error("Error sending email notification:", err);
+  }
+};

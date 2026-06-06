@@ -149,7 +149,10 @@ export default function OrdersPage() {
         body: JSON.stringify({ orderId: id, status })
       });
 
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        throw new Error(resData.error || "Update failed");
+      }
 
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       toast.success(`Order marked as ${status}`);
@@ -166,7 +169,10 @@ export default function OrdersPage() {
         body: JSON.stringify({ orderId, paymentStatus, paymentMethod })
       });
 
-      if (!response.ok) throw new Error("Payment update failed");
+      if (!response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        throw new Error(resData.error || "Payment update failed");
+      }
 
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
       toast.success(`Payment marked as ${paymentStatus}`);
@@ -183,7 +189,10 @@ export default function OrdersPage() {
         body: JSON.stringify({ orderId: id, status: "Shipped", trackingId, carrier })
       });
 
-      if (!response.ok) throw new Error("Tracking update failed");
+      if (!response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        throw new Error(resData.error || "Tracking update failed");
+      }
 
       setOrders(prev => prev.map(o => o.id === id ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       toast.success("Logistics updated");
@@ -210,25 +219,39 @@ export default function OrdersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "placed":
-        return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Placed</Badge>;
-      case "confirmed":
-        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50">Confirmed</Badge>;
-      case "processing":
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-50">Processing</Badge>;
-      case "pending":
+    if (!status) return null;
+    switch (status.toUpperCase()) {
+      case "PENDING":
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">Pending</Badge>;
-      case "shipped":
+      case "CONFIRMED":
+        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50">Confirmed</Badge>;
+      case "PROCESSING":
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-50">Processing</Badge>;
+      case "PACKED":
+        return <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-50">Packed</Badge>;
+      case "SHIPPED":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50">Shipped</Badge>;
-      case "delivered":
+      case "OUT_FOR_DELIVERY":
+        return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Out for Delivery</Badge>;
+      case "DELIVERED":
         return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50">Delivered</Badge>;
-      case "cancelled":
+      case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>;
-      case "return":
-      case "returned":
-        return <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50">Returned</Badge>;
+      case "RETURN_REQUESTED":
+        return <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-50">Return Requested</Badge>;
+      case "RETURN_APPROVED":
+        return <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50">Return Approved</Badge>;
+      case "RETURNED":
+        return <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-100">Returned</Badge>;
+      case "REFUND_PENDING":
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-50">Refund Pending</Badge>;
+      case "REFUNDED":
+        return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100">Refunded</Badge>;
+      case "FAILED":
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-50">Failed</Badge>;
       default:
+        const lower = status.toLowerCase();
+        if (lower === "placed") return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Placed</Badge>;
         return <Badge variant="secondary">{status}</Badge>;
     }
   };

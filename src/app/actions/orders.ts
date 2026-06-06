@@ -83,3 +83,43 @@ export async function createOrder(orderData: {
     return { success: false, error: error.message || 'An unexpected error occurred' }
   }
 }
+
+export async function cancelOrder(orderId: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized: Please ensure you are logged in.' }
+    }
+
+    // Call PostgreSQL RPC transition_order_status
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'transition_order_status',
+      {
+        p_order_id: orderId,
+        p_new_status: 'CANCELLED',
+        p_actor_type: 'customer',
+        p_actor_id: user.id,
+        p_remarks: 'Cancelled by customer'
+      }
+    )
+
+    if (rpcError) {
+      console.error('Order cancellation RPC error:', rpcError)
+      return { success: false, error: 'Failed to cancel order due to server error' }
+    }
+
+    const result = rpcResult as any;
+    if (!result.success) {
+      console.error('Order cancellation business logic error:', result.error)
+      return { success: false, error: result.error || 'Failed to cancel order' }
+    }
+
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('cancelOrder unexpected error:', error)
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
+}

@@ -23,6 +23,7 @@ export default function OrderHistoryPage() {
   const [activeTab, setActiveTab] = useState<"current" | "archived">("current");
   const [searchQuery, setSearchQuery] = useState("");
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const supabase = createClient();
 
   const handlePayOnline = async (order: any) => {
@@ -123,6 +124,27 @@ export default function OrderHistoryPage() {
       toast.error(err.message || "Error initiating payment.");
     } finally {
       setPayingOrderId(null);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    setCancellingOrderId(orderId);
+
+    try {
+      const { cancelOrder } = await import("@/app/actions/orders");
+      const res = await cancelOrder(orderId);
+
+      if (res.success) {
+        toast.success("Order cancelled successfully!");
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "Cancelled", payment_status: "Cancelled" } : o));
+      } else {
+        toast.error(res.error || "Failed to cancel order");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An unexpected error occurred");
+    } finally {
+      setCancellingOrderId(null);
     }
   };
 
@@ -261,7 +283,7 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && (
+                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
                   <Button
                     onClick={() => handlePayOnline(order)}
                     disabled={payingOrderId === order.id}
@@ -273,6 +295,22 @@ export default function OrderHistoryPage() {
                       </>
                     ) : (
                       "Pay Online"
+                    )}
+                  </Button>
+                )}
+                {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                  <Button
+                    onClick={() => handleCancelOrder(order.id)}
+                    disabled={cancellingOrderId === order.id}
+                    variant="outline"
+                    className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                  >
+                    {cancellingOrderId === order.id ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" /> Cancelling
+                      </>
+                    ) : (
+                      "Cancel"
                     )}
                   </Button>
                 )}
