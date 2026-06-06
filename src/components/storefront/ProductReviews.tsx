@@ -130,7 +130,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
             <div className="border border-zinc-200 bg-white p-6 text-sm text-zinc-500">Loading reviews...</div>
           ) : reviews.length > 0 ? (
             <>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 {reviews.map((item) => (
                   <div key={item.id} className="border border-zinc-200 bg-white p-6">
                     <div className="flex items-center justify-between gap-4">
