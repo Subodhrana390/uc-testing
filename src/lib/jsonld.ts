@@ -89,6 +89,7 @@ export function websiteSchema() {
     "@id": `${SITE_URL}/#website`,
     url: SITE_URL,
     name: SITE_NAME,
+    alternateName: ["UCEnterprises", "UC Enterprises India"],
     description:
       "Laboratory chemicals, glassware, safety equipment and industrial supplies — pan-India delivery.",
     publisher: { "@id": `${SITE_URL}/#organization` },

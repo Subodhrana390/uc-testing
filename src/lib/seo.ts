@@ -18,6 +18,11 @@ export function canonicalUrl(path: string): string {
 export function baseMetadata(overrides: Partial<Metadata> = {}): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
+    applicationName: SITE_NAME,
+    appleWebApp: {
+      title: SITE_NAME,
+      statusBarStyle: "default",
+    },
     title: {
       default: SITE_NAME,
       template: `%s | ${SITE_NAME}`,
