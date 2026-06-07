@@ -87,10 +87,8 @@ const getPossibleNextStatuses = (currentStatus: string): string[] => {
     PLACED: ["Confirmed", "Cancelled"],
     CONFIRMED: ["Processing", "Cancelled"],
     PROCESSING: ["Shipped", "Cancelled"],
-    PACKED: ["Shipped", "Cancelled"],
     SHIPPED: ["Delivered", "Cancelled"],
-    OUT_FOR_DELIVERY: ["Delivered", "Cancelled"],
-    DELIVERED: ["Return_Requested"],
+    DELIVERED: [],
     RETURN_REQUESTED: ["Return_Approved"],
     RETURN_APPROVED: ["Returned"],
     FAILED: ["Pending", "Cancelled"],
@@ -163,6 +161,38 @@ export default function OrdersPage() {
     fetchOrders();
     fetchCarriers();
   }, [fetchOrders, fetchCarriers]);
+
+  // Realtime subscription — picks up customer payments and any order field changes instantly
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-orders-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        (payload) => {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === payload.new.id
+                ? { ...o, ...payload.new, items: o.items } // preserve joined items
+                : o
+            )
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        () => {
+          // Refetch to get the full joined order on new inserts
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, fetchOrders]);
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -253,12 +283,8 @@ export default function OrdersPage() {
         return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50">Confirmed</Badge>;
       case "PROCESSING":
         return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-50">Processing</Badge>;
-      case "PACKED":
-        return <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-50">Packed</Badge>;
       case "SHIPPED":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50">Shipped</Badge>;
-      case "OUT_FOR_DELIVERY":
-        return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Out for Delivery</Badge>;
       case "DELIVERED":
         return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50">Delivered</Badge>;
       case "CANCELLED":
@@ -712,159 +738,156 @@ export default function OrdersPage() {
         <div className="border-t border-zinc-200">
           <ScrollArea className="h-[500px] w-full">
             <Table className="min-w-[800px]">
-            <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
-              <TableRow>
-                <TableHead className="w-[120px] text-zinc-500 font-bold">Order ID</TableHead>
-                <TableHead className="text-zinc-500 font-bold">Customer</TableHead>
-                <TableHead className="text-zinc-500 font-bold">Date</TableHead>
-                <TableHead className="text-zinc-500 font-bold">Total Amount</TableHead>
-                <TableHead className="text-zinc-500 font-bold">Status</TableHead>
-                <TableHead className="text-right pr-6 text-zinc-500 font-bold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-zinc-100">
-              {filteredOrders.length === 0 ? (
+              <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
                 <TableRow>
-                  <TableCell colSpan={6} className="h-60 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 py-8">
-                      <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
-                        <Search className="w-5 h-5" />
-                      </div>
-                      <p className="text-sm font-bold text-zinc-800 mt-2">No results found</p>
-                      <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any orders matching "{searchQuery}" or status "{statusFilter}".</p>
-                      {(searchQuery || statusFilter !== "All") && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchQuery("");
-                            setStatusFilter("All");
-                          }}
-                          className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
-                        >
-                          Clear Filters
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-[120px] text-zinc-500 font-bold">Order ID</TableHead>
+                  <TableHead className="text-zinc-500 font-bold">Customer</TableHead>
+                  <TableHead className="text-zinc-500 font-bold">Date</TableHead>
+                  <TableHead className="text-zinc-500 font-bold">Total Amount</TableHead>
+                  <TableHead className="text-zinc-500 font-bold">Status</TableHead>
+                  <TableHead className="text-right pr-6 text-zinc-500 font-bold">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm">
-                    <TableCell className="font-mono text-xs font-bold text-zinc-500">
-                      {getDisplayOrderId(order.id, order.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-8 h-8 rounded-full border border-white/50 flex items-center justify-center text-xs font-bold shadow-sm", getAvatarBg(order.customer_name))}>
-                          {getInitials(order.customer_name)}
+              </TableHeader>
+              <TableBody className="divide-y divide-zinc-100">
+                {filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-60 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8">
+                        <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
+                          <Search className="w-5 h-5" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-[#18181b]">{order.customer_name}</span>
-                          <span className="text-xs text-zinc-500">{order.customer_email}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-600">
-                      {new Date(order.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </TableCell>
-                    <TableCell className="text-sm text-[#18181b]">
-                      <div className="font-bold">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</div>
-                      <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
-                        {order.payment_method} • <span className={cn(
-                          order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' :
-                            order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
-                              order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
-                                'text-amber-600 font-bold'
-                        )}>{order.payment_status || 'Unpaid'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(order.status)}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                        <p className="text-sm font-bold text-zinc-800 mt-2">No results found</p>
+                        <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any orders matching "{searchQuery}" or status "{statusFilter}".</p>
+                        {(searchQuery || statusFilter !== "All") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setStatusFilter("All");
+                            }}
+                            className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
+                          >
+                            Clear Filters
                           </Button>
-                        } />
-                        <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl">
-                          <DropdownMenuGroup>
-                            <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-
-                            {getPossibleNextStatuses(order.status).length > 0 && (
-                              <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
-                                  <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                  Change Status
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent className="w-48 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
-                                  {getPossibleNextStatuses(order.status).map((s) => (
-                                    <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>
-                                      {s}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuSub>
-                            )}
-
-                            {['PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(order.status?.toUpperCase()) && (
-                              <DropdownMenuItem onClick={() => {
-                                setSelectedOrder(order);
-                                setTrackingId(order.tracking_id || "");
-                                setCarrier(order.carrier || "");
-                                setTimeout(() => setIsTrackingOpen(true), 50);
-                              }}>
-                                <Truck className="w-4 h-4 mr-2 text-blue-600" />
-                                Update Shipping
-                              </DropdownMenuItem>
-                            )}
-
-                            {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
-                                  Mark Paid (Cash)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "ONLINE")}>
-                                  Mark Paid (Online)
-                                </DropdownMenuItem>
-                              </>
-                            )}
-
-                            {order.payment_status === 'Refund Pending' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Refunded")}>
-                                  Mark Refunded
-                                </DropdownMenuItem>
-                              </>
-                            )}
-
-                            <DropdownMenuSeparator />
-
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedOrder(order);
-                              setTimeout(() => setIsDetailsOpen(true), 50);
-                            }}>
-                              <Eye className="w-4 h-4 mr-2 text-zinc-600" />
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </div>
-    </Card>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm">
+                      <TableCell className="font-mono text-xs font-bold text-zinc-500">
+                        {getDisplayOrderId(order.id, order.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className={cn("w-8 h-8 rounded-full border border-white/50 flex items-center justify-center text-xs font-bold shadow-sm", getAvatarBg(order.customer_name))}>
+                            {getInitials(order.customer_name)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-[#18181b]">{order.customer_name}</span>
+                            <span className="text-xs text-zinc-500">{order.customer_email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-zinc-600">
+                        {new Date(order.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </TableCell>
+                      <TableCell className="text-sm text-[#18181b]">
+                        <div className="font-bold">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</div>
+                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
+                          {order.payment_method} • <span className={cn(
+                            order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' :
+                              order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
+                                order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
+                                  'text-amber-600 font-bold'
+                          )}>{order.payment_status || 'Unpaid'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(order.status)}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl">
+                            <DropdownMenuGroup>
+                              <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+
+                              {getPossibleNextStatuses(order.status).length > 0 && (
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
+                                    <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                    Change Status
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent className="w-48 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
+                                    {getPossibleNextStatuses(order.status).map((s) => (
+                                      <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>
+                                        {s}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              )}
+
+                              {order.status?.toUpperCase() === 'PROCESSING' && (
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedOrder(order);
+                                  setTrackingId(order.tracking_id || "");
+                                  setCarrier(order.carrier || "");
+                                  setTimeout(() => setIsTrackingOpen(true), 50);
+                                }}>
+                                  <Truck className="w-4 h-4 mr-2 text-blue-600" />
+                                  Update Shipping
+                                </DropdownMenuItem>
+                              )}
+
+                              {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && order.payment_method?.toUpperCase() === 'COD' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
+                                    Mark Paid (Cash)
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {order.payment_status === 'Refund Pending' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Refunded")}>
+                                    Mark Refunded
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              <DropdownMenuSeparator />
+
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setTimeout(() => setIsDetailsOpen(true), 50);
+                              }}>
+                                <Eye className="w-4 h-4 mr-2 text-zinc-600" />
+                                View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </div>
+      </Card>
 
       {/* Tracking Dialog */}
       <Dialog open={isTrackingOpen} onOpenChange={setIsTrackingOpen}>

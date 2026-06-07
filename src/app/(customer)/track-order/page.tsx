@@ -44,6 +44,7 @@ function TrackOrderContent() {
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
   const [error, setError] = useState("");
+  const [isLive, setIsLive] = useState(false);
 
   // Review Modal State
   const [reviewProduct, setReviewProduct] = useState<any>(null);
@@ -197,6 +198,40 @@ function TrackOrderContent() {
     }
   };
 
+  // Subscribe to realtime updates once we have an order
+  useEffect(() => {
+    if (!order?.id) return;
+
+    const channel = supabase
+      .channel(`order-status-${order.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `id=eq.${order.id}`,
+        },
+        (payload) => {
+          setOrder((prev: any) => ({
+            ...prev,
+            ...payload.new,
+            // Preserve joined relations from initial fetch
+            order_items: prev?.order_items,
+            payments: prev?.payments,
+          }));
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsLive(false);
+    };
+  }, [order?.id, supabase]);
+
   useEffect(() => {
     const urlOrderId = searchParams.get("orderId");
 
@@ -217,7 +252,7 @@ function TrackOrderContent() {
     if (s === "processing") return 1;
     if (s === "shipped") return 2;
     if (s === "delivered") return 3;
-    return -1; // Terminal / Special status (Cancelled, Returned, Failed)
+    return -1; // Terminal / Special status (Cancelled, Returned, Return_Requested, Return_Approved, Failed)
   };
 
   const formatMilestoneDate = (baseDateStr: string, hoursToAdd: number) => {
@@ -235,6 +270,7 @@ function TrackOrderContent() {
   const milestones = useMemo(() => {
     if (!order) return [];
     const baseDate = order.created_at;
+    const updatedDate = order.updated_at || baseDate;
     const statusStep = getStatusStep(order.status);
     const carrierName = order.carrier || "Delivery Partner";
     const statusLower = order.status.toLowerCase();
@@ -253,21 +289,35 @@ function TrackOrderContent() {
       list.push({
         title: "Cancelled",
         description: "This order has been cancelled and will not be processed further.",
-        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        time: formatMilestoneDate(updatedDate, 0),
         status: "cancelled"
+      });
+    } else if (statusLower === "return_requested") {
+      list.push({
+        title: "Return Requested",
+        description: "A return has been requested. Our team will review it shortly.",
+        time: formatMilestoneDate(updatedDate, 0),
+        status: "returned"
+      });
+    } else if (statusLower === "return_approved") {
+      list.push({
+        title: "Return Approved",
+        description: "Your return request has been approved. Please ship the item back.",
+        time: formatMilestoneDate(updatedDate, 0),
+        status: "returned"
       });
     } else if (statusLower === "returned") {
       list.push({
         title: "Returned",
         description: "This order has been returned to our hub.",
-        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        time: formatMilestoneDate(updatedDate, 0),
         status: "returned"
       });
     } else if (statusLower === "failed") {
       list.push({
         title: "Failed",
         description: "The order transaction or processing has failed.",
-        time: order.updated_at ? formatMilestoneDate(order.updated_at, 0) : formatMilestoneDate(baseDate, 1),
+        time: formatMilestoneDate(updatedDate, 0),
         status: "failed"
       });
     } else {
@@ -275,7 +325,8 @@ function TrackOrderContent() {
         list.push({
           title: "Under Processing",
           description: "Items picked and undergoing quality inspection at Zirakpur hub.",
-          time: formatMilestoneDate(baseDate, 4),
+          // Use updated_at only if status IS processing (i.e., this is the current step)
+          time: statusStep === 1 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 4),
           status: "processing"
         });
       }
@@ -283,7 +334,7 @@ function TrackOrderContent() {
         list.push({
           title: "Dispatched",
           description: `Handed over to ${carrierName}. Tracking details generated.`,
-          time: formatMilestoneDate(baseDate, 12),
+          time: statusStep === 2 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 12),
           status: "shipped"
         });
       }
@@ -291,7 +342,7 @@ function TrackOrderContent() {
         list.push({
           title: "Delivered",
           description: "Package received and signed. Transaction complete.",
-          time: formatMilestoneDate(baseDate, 32),
+          time: formatMilestoneDate(updatedDate, 0),
           status: "delivered"
         });
       }
@@ -419,6 +470,13 @@ function TrackOrderContent() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {/* Live indicator - shown when realtime is active */}
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Live
+                          </span>
+                        )}
                         <span className={cn(
                           "text-[10px] font-black px-3 py-1.5 border uppercase tracking-wider rounded-lg flex items-center gap-1.5",
                           order.status.toLowerCase() === "delivered"
@@ -429,12 +487,12 @@ function TrackOrderContent() {
                                 ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
                                 : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
                                   ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
-                                  : order.status.toLowerCase() === "returned"
+                                  : order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved"
                                     ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
                                     : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
                         )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                          {order.status}
+                          {order.status.replace(/_/g, " ")}
                         </span>
 
                         <button
@@ -455,15 +513,17 @@ function TrackOrderContent() {
                       <div className={cn(
                         "p-4 mb-6 rounded-2xl border flex items-center gap-3",
                         order.status.toLowerCase() === "cancelled" && "bg-red-50 border-red-200 text-red-800",
-                        order.status.toLowerCase() === "returned" && "bg-amber-50 border-amber-200 text-amber-800",
+                        (order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved") && "bg-amber-50 border-amber-200 text-amber-800",
                         order.status.toLowerCase() === "failed" && "bg-rose-50 border-rose-200 text-rose-800"
                       )}>
                         <AlertCircle className="w-5 h-5 shrink-0" />
                         <div>
-                          <p className="text-xs font-bold uppercase tracking-wider">Order {order.status}</p>
+                          <p className="text-xs font-bold uppercase tracking-wider">Order {order.status.replace(/_/g, " ")}</p>
                           <p className="text-[11px] font-medium opacity-90 mt-0.5">
                             {order.status.toLowerCase() === "cancelled" && "This order has been cancelled and cannot be tracked further."}
                             {order.status.toLowerCase() === "returned" && "This order has been returned to our warehouse."}
+                            {order.status.toLowerCase() === "return_requested" && "Your return request has been received. Our team will review it shortly."}
+                            {order.status.toLowerCase() === "return_approved" && "Your return has been approved. Please ship the item back to us."}
                             {order.status.toLowerCase() === "failed" && "This order payment or transaction has failed."}
                           </p>
                         </div>

@@ -432,82 +432,84 @@ export default function OrderHistoryPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePayOnline(order);
-                      }}
-                      disabled={payingOrderId === order.id}
-                      className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                    >
-                      {payingOrderId === order.id ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin mr-1" /> Processing
-                        </>
-                      ) : (
-                        "Pay Online"
-                      )}
-                    </Button>
-                  )}
-                  {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCancelOrder(order.id);
-                      }}
-                      disabled={cancellingOrderId === order.id}
-                      variant="outline"
-                      className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                    >
-                      {cancellingOrderId === order.id ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin mr-1" /> Cancelling
-                        </>
-                      ) : (
-                        "Cancel"
-                      )}
-                    </Button>
-                  )}
-                  {order.status?.toLowerCase() === "delivered" && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenReturnDialog(order);
-                      }}
-                      variant="outline"
-                      className="border-pink-100 text-pink-600 hover:bg-pink-50 hover:text-pink-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                    >
-                      Return
-                    </Button>
-                  )}
-                  <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
-                    {order.status}
-                  </Badge>
-                  {order.status?.toLowerCase() === "delivered" ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadInvoice(order);
-                      }}
-                      title="Download Invoice"
-                      className="h-7 w-7 rounded-md hover:bg-zinc-200 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-900"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      title="Invoice will generate after delivery"
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-300 cursor-not-allowed"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+              <div className="flex items-center gap-2">
+                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePayOnline(order);
+                    }}
+                    disabled={payingOrderId === order.id}
+                    className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                  >
+                    {payingOrderId === order.id ? (
+                      <><Loader2 className="w-3 h-3 animate-spin mr-1" />Processing</>
+                    ) : "Pay Online"}
+                  </Button>
+                )}
+                {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelOrder(order.id);
+                    }}
+                    disabled={cancellingOrderId === order.id}
+                    variant="outline"
+                    className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                  >
+                    {cancellingOrderId === order.id ? (
+                      <><Loader2 className="w-3 h-3 animate-spin mr-1" />Cancelling</>
+                    ) : "Cancel"}
+                  </Button>
+                )}
+                {order.status?.toLowerCase() === "delivered" && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenReturnDialog(order);
+                    }}
+                    variant="outline"
+                    className="border-pink-100 text-pink-600 hover:bg-pink-50 hover:text-pink-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
+                  >
+                    Return
+                  </Button>
+                )}
+
+                {/* Single View Progress per order */}
+                <Link
+                  href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hidden sm:flex"
+                >
+                  <Button variant="outline" size="sm" className="text-[10px] h-7 px-3 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-semibold uppercase tracking-wider">
+                    Track <ChevronRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </Link>
+
+                <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
+                  {order.status}
+                </Badge>
+                {order.status?.toLowerCase() === "delivered" ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownloadInvoice(order);
+                    }}
+                    title="Download Invoice"
+                    className="h-7 w-7 rounded-md hover:bg-zinc-200 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-900"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    title="Invoice will generate after delivery"
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-300 cursor-not-allowed"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                )}
 
                 <ChevronDown className={cn("w-4.5 h-4.5 text-zinc-400 transition-transform duration-200 shrink-0", expandedOrders[order.id] && "rotate-180")} />
               </div>
@@ -515,95 +517,104 @@ export default function OrderHistoryPage() {
 
             {/* Accordion content */}
             {expandedOrders[order.id] && (
-              <div className="border-t border-zinc-100 bg-zinc-50/10 animate-in fade-in slide-in-from-top-1 duration-200">
-                {/* Shipping Details Sub-Panel */}
-                <div className="px-4 sm:px-6 py-5 bg-zinc-50/50 border-b border-zinc-150/70 grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
-                  <div className="space-y-1">
+              <div className="border-t border-zinc-100 animate-in fade-in slide-in-from-top-1 duration-200">
+
+                {/* Info grid: Shipping + Fulfillment */}
+                <div className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs bg-zinc-50/60 border-b border-zinc-100">
+                  <div className="space-y-1.5">
                     <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Shipping Address</h4>
-                    <p className="font-bold text-zinc-800 text-sm mt-1">{order.customer_name}</p>
-                    <p className="text-zinc-650 mt-1 leading-relaxed">{order.shipping_address}</p>
-                    <p className="text-zinc-650 mt-2 font-semibold">Phone: <span className="font-medium text-zinc-800">{order.phone || "N/A"}</span></p>
-                    <p className="text-zinc-650 mt-0.5 font-semibold">Email: <span className="font-medium text-zinc-800">{order.customer_email}</span></p>
+                    <p className="font-bold text-zinc-800 text-sm">{order.customer_name}</p>
+                    <p className="text-zinc-500 leading-relaxed">{order.shipping_address}</p>
+                    <p className="text-zinc-500">📞 {order.phone || "N/A"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Fulfillment Details</h4>
-                    <p className="text-zinc-650 font-semibold mt-1">Fulfillment Status: <span className={cn("font-bold", order.status?.toLowerCase() === "delivered" ? "text-emerald-700" : "text-zinc-700")}>{order.status}</span></p>
-                    <p className="text-zinc-650 font-semibold mt-1">Payment Method: <span className="font-bold text-zinc-700">{order.payment_method}</span></p>
-                    <p className="text-zinc-650 font-semibold mt-0.5">Payment Status: <span className="font-bold text-zinc-700">{order.payment_status}</span></p>
-                    {order.tracking_id && (
-                      <div className="mt-3 p-3 bg-white rounded-2xl border border-zinc-200/50">
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tracking Reference</p>
-                        <p className="font-mono text-zinc-850 font-bold mt-0.5">{order.tracking_id} ({order.carrier || "Standard"})</p>
-                      </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Payment</h4>
+                    <p className="font-semibold text-zinc-700">{order.payment_method || "—"}</p>
+                    <span className={cn(
+                      "inline-block text-[10px] font-bold px-2 py-0.5 rounded-full",
+                      order.payment_status?.toLowerCase() === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                    )}>
+                      {order.payment_status || "Unpaid"}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Tracking</h4>
+                    {order.tracking_id ? (
+                      <>
+                        <p className="font-mono font-bold text-zinc-800 text-xs">{order.tracking_id}</p>
+                        <p className="text-zinc-500">{order.carrier || "Standard Delivery"}</p>
+                      </>
+                    ) : (
+                      <p className="text-zinc-400 italic text-[11px]">Not yet dispatched</p>
                     )}
+                    {/* Mobile track button */}
+                    <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="sm:hidden inline-block mt-1">
+                      <Button variant="outline" size="sm" className="text-[10px] h-7 px-3 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-semibold uppercase tracking-wider">
+                        Track Order <ChevronRight className="w-3 h-3 ml-1" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
 
-                <div className="px-4 sm:px-6 py-3 border-b border-zinc-100 bg-white">
-                  <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Items in Order</h4>
-                </div>
-
-                {/* Items List */}
-                <CardContent className="py-4 space-y-4 bg-white">
-                  {order.order_items?.map((item: any) => (
-                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                      <div className="flex flex-1 items-center gap-3 sm:gap-4 min-w-0">
-                        <div className="w-14 h-14 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
+                {/* Items List — clean, compact */}
+                <div className="px-4 sm:px-6 pt-4 pb-2 bg-white">
+                  <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px] mb-3">
+                    Items ({order.order_items?.length || 0})
+                  </h4>
+                  <div className="space-y-3">
+                    {order.order_items?.map((item: any) => (
+                      <div key={item.id} className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-12 h-12 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
                           <Image
                             src={item.products?.image_url || "/images/placeholder.png"}
                             alt={item.products?.name}
                             fill
-                            sizes="56px"
-                            className="object-contain p-2"
+                            sizes="48px"
+                            className="object-contain p-1.5"
                           />
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-medium text-zinc-900 line-clamp-1">{item.products?.name}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <Badge variant="secondary" className="text-[10px] h-5">Qty: {item.quantity}</Badge>
-                            <span className="text-xs text-zinc-500">{formatCurrency(item.unit_price)} per unit</span>
-                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Qty: <span className="font-semibold text-zinc-700">{item.quantity}</span>
+                            <span className="mx-1.5 text-zinc-300">·</span>
+                            <span className="font-semibold text-zinc-700">{formatCurrency(item.unit_price)}</span> each
+                          </p>
                         </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
-                        <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="w-full sm:w-auto">
-                          <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                            View Progress <ChevronRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        </Link>
                         {order.status?.toLowerCase() === "delivered" && item.products && (
                           <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleOpenReviewDialog(item.products)}
-                            className="w-full sm:w-auto text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+                            className="shrink-0 text-[10px] h-7 px-3 border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold uppercase tracking-wider"
                           >
-                            Give Review
+                            <Star className="w-3 h-3 mr-1" /> Review
                           </Button>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
+                    ))}
+                  </div>
+                </div>
 
-                {/* Shipping Live Banner */}
+                {/* Shipped banner */}
                 {order.status === "Shipped" && (
-                  <div className="px-4 sm:px-6 py-4 bg-indigo-600 text-white flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="mx-4 sm:mx-6 mb-4 mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-700 rounded-lg">
-                        <Truck className="w-4 h-4 text-zinc-300" />
+                      <div className="p-2 bg-indigo-600 rounded-lg shrink-0">
+                        <Truck className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-medium text-zinc-350 uppercase tracking-wider">In Transit</p>
-                        <p className="text-sm font-medium">{order.carrier || "Standard"} — <span className="font-mono text-zinc-200">{order.tracking_id || "UPDATING"}</span></p>
+                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">In Transit</p>
+                        <p className="text-sm font-semibold text-indigo-900 mt-0.5">
+                          {order.carrier || "Standard"} — <span className="font-mono">{order.tracking_id || "Updating..."}</span>
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-indigo-750 px-3 py-1.5 rounded-md">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-200">Live</span>
-                    </div>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />Live
+                    </span>
                   </div>
                 )}
               </div>

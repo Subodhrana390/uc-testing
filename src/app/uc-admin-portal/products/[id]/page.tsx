@@ -80,6 +80,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [relationType, setRelationType] = useState("related");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+
+  // Map main category name keywords → brand category text values
+  const getBrandCategoryKeywords = (mainCatName: string): string[] => {
+    const n = mainCatName.toLowerCase();
+    if (n.includes("chemical")) return ["chemical", "plasticware", "glassware"];
+    if (n.includes("glassware") || n.includes("plasticware")) return ["glassware", "plasticware", "chemical"];
+    if (n.includes("safety") || n.includes("ppe")) return ["safety", "ppe"];
+    if (n.includes("tool") || n.includes("hardware")) return ["tool", "hardware"];
+    if (n.includes("industrial") || n.includes("electrical")) return ["instrument", "equipment", "electrical"];
+    return [];
+  };
+
+  const filteredBrands = (() => {
+    if (!selectedMainCategoryId) return brands;
+    const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
+    if (!mainCat) return brands;
+    const keywords = getBrandCategoryKeywords(mainCat.name);
+    if (keywords.length === 0) return brands;
+    return brands.filter((b: any) =>
+      keywords.some(kw => (b.category || "").toLowerCase().includes(kw))
+    );
+  })();
 
   useEffect(() => {
     async function fetchData() {
@@ -99,6 +122,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         ]);
 
         if (product) {
+          // Determine if the product's category is a sub-category
+          const productCatId = product.category_id || "";
+          const productCat = catsRes?.find((c: any) => c.id === productCatId);
+          if (productCat?.parent_id) {
+            // It's a sub-category — set main to parent
+            setSelectedMainCategoryId(productCat.parent_id);
+          } else if (productCatId) {
+            // It's a main category
+            setSelectedMainCategoryId(productCatId);
+          }
+
           setFormData({
             name: product.name,
             price: product.price.toString(),
@@ -225,8 +259,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.price) {
-      toast.error("Please fill in the required fields.");
+    if (!formData.name || !formData.price || !formData.category_id) {
+      toast.error("Please fill in all required fields (Name, Price, Category).");
       return;
     }
 
@@ -410,39 +444,82 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Main Category */}
                 <div>
-                  <label className={labelClass} htmlFor="category">Category *</label>
+                  <label className={labelClass} htmlFor="main_category">Main Category *</label>
                   <select
-                    id="category"
+                    id="main_category"
                     className={inputClass}
-                    value={formData.category_id}
+                    value={selectedMainCategoryId}
                     onChange={(e) => {
-                      const catId = e.target.value;
-                      const selectedCat = categories.find(c => c.id === catId);
+                      const mainId = e.target.value;
+                      setSelectedMainCategoryId(mainId);
+                      // Reset sub-category when main changes
+                      const mainCat = categories.find((c: any) => c.id === mainId);
                       setFormData({
                         ...formData,
-                        category_id: catId,
-                        tax_rate: selectedCat ? selectedCat.tax_rate.toString() : formData.tax_rate
+                        category_id: mainId,
+                        brand_id: "",
+                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate
                       });
                     }}
                     required
                   >
-                    <option value="">Select Category</option>
-                    {categories.map((cat) => (
+                    <option value="">Select Main Category</option>
+                    {categories.filter((c: any) => !c.parent_id).map((cat: any) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
-                  {formData.category_id && (
-                    <div className="mt-1.5 flex items-center gap-1.5 px-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">
-                        Auto-applied Category Tax: {categories.find(c => c.id === formData.category_id)?.tax_rate || 0}%
-                      </span>
-                    </div>
-                  )}
                 </div>
+
+                {/* Sub Category — only shown if main has children */}
+                {selectedMainCategoryId && categories.some((c: any) => c.parent_id === selectedMainCategoryId) && (
+                  <div>
+                    <label className={labelClass} htmlFor="sub_category">Sub Category</label>
+                    <select
+                      id="sub_category"
+                      className={inputClass}
+                      value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
+                      onChange={(e) => {
+                        const subId = e.target.value;
+                        if (!subId) {
+                          // Revert to main category
+                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
+                          setFormData({ ...formData, category_id: selectedMainCategoryId, tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate });
+                        } else {
+                          const subCat = categories.find((c: any) => c.id === subId);
+                          setFormData({ ...formData, category_id: subId, tax_rate: subCat ? subCat.tax_rate.toString() : formData.tax_rate });
+                        }
+                      }}
+                    >
+                      <option value="">(All of {categories.find((c: any) => c.id === selectedMainCategoryId)?.name})</option>
+                      {categories.filter((c: any) => c.parent_id === selectedMainCategoryId).map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Tax rate info */}
+                {formData.category_id && (
+                  <div className="md:col-span-2 flex items-center gap-1.5 px-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">
+                      Auto-applied Tax Rate: {categories.find((c: any) => c.id === formData.category_id)?.tax_rate || 0}%
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass} htmlFor="brand">Brand</label>
+                  <label className={labelClass} htmlFor="brand">
+                    Brand{selectedMainCategoryId && filteredBrands.length < brands.length && (
+                      <span className="ml-1.5 text-[10px] font-bold text-primary uppercase tracking-widest">
+                        ({filteredBrands.length} for this category)
+                      </span>
+                    )}
+                  </label>
                   <select
                     id="brand"
                     className={inputClass}
@@ -450,9 +527,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
                   >
                     <option value="">Select Brand</option>
-                    {brands.map((brand) => (
+                    {filteredBrands.map((brand: any) => (
                       <option key={brand.id} value={brand.id}>{brand.name}</option>
                     ))}
+                    {selectedMainCategoryId && filteredBrands.length < brands.length && (
+                      <>
+                        <option disabled>── Other Brands ──</option>
+                        {brands.filter((b: any) => !filteredBrands.find((fb: any) => fb.id === b.id)).map((brand: any) => (
+                          <option key={brand.id} value={brand.id}>{brand.name}</option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

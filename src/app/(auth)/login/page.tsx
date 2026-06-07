@@ -97,7 +97,7 @@ function AuthContainer() {
     const supabase = createClient();
 
     const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/account/reset-password`,
+      redirectTo: `${window.location.origin}/api/auth/callback?next=/account/change-password`,
     });
 
     if (error) {
