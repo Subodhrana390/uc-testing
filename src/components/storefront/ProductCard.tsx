@@ -155,8 +155,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={product.image_url || "/images/prod_main.png"}
             alt={product.name}
             fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             className="object-contain p-3.5 transition-transform duration-700 group-hover/prodcard:scale-105"
-            unoptimized
           />
         </Link>
 
@@ -178,6 +178,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <button
           onClick={toggleWishlist}
           disabled={loading}
+          aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
           className={`absolute top-2.5 right-2.5 z-20 p-1.5 rounded-full transition-all shadow-sm active:scale-95 ${inWishlist
             ? "bg-rose-500 text-white"
             : "bg-white/95 backdrop-blur-sm text-zinc-400 hover:text-rose-500 hover:bg-white"

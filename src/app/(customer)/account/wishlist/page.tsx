@@ -123,8 +123,8 @@ export default function WishlistPage() {
                   src={item.products?.image_url || "/images/placeholder.png"}
                   alt={item.products?.name || "Product"}
                   fill
+                  sizes="96px"
                   className="object-contain p-2"
-                  unoptimized
                 />
               </div>
 

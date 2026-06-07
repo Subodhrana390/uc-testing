@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Plus,
@@ -456,7 +457,7 @@ export default function BrandsPage() {
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200/60 flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
                          {brand.logo_url ? (
-                           <img src={brand.logo_url} alt="" className="w-full h-full object-contain" />
+                           <Image src={brand.logo_url} alt="" width={40} height={40} className="w-full h-full object-contain" />
                          ) : (
                            <Award className="w-4 h-4 text-blue-600" />
                          )}

@@ -126,7 +126,6 @@ function AuthContainer() {
                 width={40}
                 height={40}
                 className="object-cover"
-                unoptimized
               />
             </div>
             <span className="text-sm font-black tracking-widest uppercase text-zinc-800">

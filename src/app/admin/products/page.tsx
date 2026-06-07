@@ -18,6 +18,7 @@ import {
   TrendingDown
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
@@ -631,9 +632,11 @@ export default function ProductsPage() {
                     {/* Asset Image */}
                     <td className="px-6 py-4 pl-8">
                       <div className="w-12 h-12 bg-zinc-100 border border-zinc-200 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm transition-all duration-300">
-                        <img
+                        <Image
                           src={product.image_url || "/images/prod_main.png"}
                           alt={product.name}
+                          width={48}
+                          height={48}
                           className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
                         />
                       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import {
   Plus,
   MoreHorizontal,
@@ -246,7 +247,7 @@ export default function BannersPage() {
                   <td className="px-6 py-4 pl-8">
                     <div className="w-20 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden transition-all flex items-center justify-center shrink-0">
                       {banner.image_url ? (
-                        <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
+                        <Image src={banner.image_url} alt="" width={80} height={48} className="w-full h-full object-cover" />
                       ) : (
                         <ImageIcon className="w-5 h-5 text-yellow-600" />
                       )}

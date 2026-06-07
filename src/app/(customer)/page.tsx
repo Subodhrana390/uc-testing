@@ -12,8 +12,10 @@ import { faqItems } from "@/lib/storefront";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { homepageMetadata, SITE_URL } from "@/lib/seo";
-import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
-import RecommendedProducts from "@/components/storefront/RecommendedProducts";
+import dynamic from "next/dynamic";
+
+const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/RecentlyViewedProducts"));
+const RecommendedProducts = dynamic(() => import("@/components/storefront/RecommendedProducts"));
 
 
 export const metadata: Metadata = homepageMetadata();
@@ -378,8 +380,8 @@ export default async function HomePage() {
                   src={brand.logo}
                   alt={brand.name}
                   fill
+                  sizes="150px"
                   className="object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500"
-                  unoptimized
                 />
               </div>
             ))}

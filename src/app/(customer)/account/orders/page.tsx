@@ -537,8 +537,8 @@ export default function OrderHistoryPage() {
                             src={item.products?.image_url || "/images/placeholder.png"}
                             alt={item.products?.name}
                             fill
+                            sizes="56px"
                             className="object-contain p-2"
-                            unoptimized
                           />
                         </div>
 
@@ -632,8 +632,8 @@ export default function OrderHistoryPage() {
                     src={reviewProduct.image_url}
                     alt={reviewProduct.name}
                     fill
+                    sizes="64px"
                     className="object-contain p-2"
-                    unoptimized
                   />
                 </div>
               </div>

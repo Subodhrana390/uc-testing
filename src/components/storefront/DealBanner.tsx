@@ -30,7 +30,6 @@ export default function DealBanner({
             fill
             sizes="100vw"
             className="w-full h-full object-cover object-center"
-            unoptimized
           />
           {/* Advanced localized lighting protection overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/80 to-transparent md:from-zinc-950/90 md:via-zinc-950/60" />

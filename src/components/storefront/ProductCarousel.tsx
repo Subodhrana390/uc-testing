@@ -32,6 +32,7 @@ export default function ProductCarousel({ products }: ProductCarouselProps) {
       {/* Navigation Buttons */}
       <button
         onClick={() => scroll("left")}
+        aria-label="Scroll left"
         className="absolute -left-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
       >
         <ChevronLeft className="w-6 h-6" />
@@ -39,6 +40,7 @@ export default function ProductCarousel({ products }: ProductCarouselProps) {
 
       <button
         onClick={() => scroll("right")}
+        aria-label="Scroll right"
         className="absolute -right-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
       >
         <ChevronRight className="w-6 h-6" />

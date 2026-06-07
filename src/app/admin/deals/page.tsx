@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import {
   Plus,
   Search,
@@ -476,7 +477,7 @@ export default function DealsAdminPage() {
                     <td className="px-6 py-4 pl-8">
                       <div className="w-16 h-11 bg-zinc-100 rounded-xl border border-zinc-200/60 overflow-hidden transition-all flex items-center justify-center shrink-0">
                         {deal.image_url ? (
-                          <img src={deal.image_url} alt="" className="w-full h-full object-cover" />
+                          <Image src={deal.image_url} alt="" width={64} height={44} className="w-full h-full object-cover" />
                         ) : (
                           <BadgePercent className="w-5 h-5 text-pink-600" />
                         )}

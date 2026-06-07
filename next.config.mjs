@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
+  swcMinify: true,
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
@@ -51,6 +53,24 @@ const nextConfig = {
             value: 'camera=(), microphone=(), geolocation=()'
           }
         ]
+      },
+      {
+        source: '/_next/image(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/(.*).(webp|jpg|jpeg|png|gif|svg|ico|avif)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
       }
     ];
   },

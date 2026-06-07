@@ -668,8 +668,8 @@ function TrackOrderContent() {
                                   src={item.products.image_url}
                                   alt={item.products.name}
                                   fill
+                                  sizes="56px"
                                   className="object-cover"
-                                  unoptimized
                                 />
                               ) : (
                                 <Package className="w-5 h-5 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -741,8 +741,8 @@ function TrackOrderContent() {
                     src={reviewProduct.image_url}
                     alt={reviewProduct.name}
                     fill
+                    sizes="64px"
                     className="object-contain p-2"
-                    unoptimized
                   />
                 </div>
               </div>

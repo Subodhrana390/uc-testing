@@ -379,8 +379,8 @@ export default function ProductDetailPage() {
                       src={img}
                       alt={`${product.name} thumbnail ${idx + 1}`}
                       fill
+                      sizes="100px"
                       className="object-cover"
-                      unoptimized
                     />
                   </button>
                 ))}
@@ -405,11 +405,11 @@ export default function ProductDetailPage() {
                   src={activeImage || "/images/prod_main.png"}
                   alt={product.name}
                   fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-contain p-6 transition-transform duration-200 group-hover:scale-[2.5]"
                   style={{
                     transformOrigin: 'var(--x, 50%) var(--y, 50%)'
                   } as any}
-                  unoptimized
                 />
               </div>
             </div>

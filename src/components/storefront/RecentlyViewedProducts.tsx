@@ -130,8 +130,8 @@ export default function RecentlyViewedProducts({
                       src={item.image_url || "/images/prod_main.png"}
                       alt={item.name}
                       fill
+                      sizes="(max-width: 768px) 33vw, 20vw"
                       className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                      unoptimized
                     />
                     {/* Recently viewed badge */}
                     <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5 flex items-center gap-1">

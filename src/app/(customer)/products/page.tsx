@@ -191,7 +191,7 @@ export default async function ProductsPage({
                 </div>
                 {deal.image_url && (
                   <div className="absolute -right-2 -bottom-2 w-16 h-16 opacity-15 group-hover:opacity-30 transition-opacity">
-                    <Image src={deal.image_url} alt="" fill className="object-contain" unoptimized />
+                    <Image src={deal.image_url} alt="" fill sizes="64px" className="object-contain" />
                   </div>
                 )}
               </Link>
