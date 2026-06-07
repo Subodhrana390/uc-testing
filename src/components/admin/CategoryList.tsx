@@ -399,17 +399,16 @@ export default function CategoryList({ type }: CategoryListProps) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Switch
-                        checked={category.is_active}
-                        onCheckedChange={() => handleToggleStatus(category)}
-                        className="data-[state=checked]:bg-teal-600"
-                      />
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-medium border",
-                        category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                      )}>
+                      <button
+                        onClick={() => handleToggleStatus(category)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 hover:opacity-80",
+                          category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        )}
+                      >
+                        {category.is_active && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
                         {category.is_active ? "Active" : "Archived"}
-                      </span>
+                      </button>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right pr-8 relative">

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import ProductCard from "@/components/storefront/ProductCard";
 import ProductCarousel from "./ProductCarousel";
 
 interface Product {
