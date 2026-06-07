@@ -110,21 +110,21 @@ Deno.serve(async (req: Request) => {
     // Call transition_order_status to ensure DAG validation and side-effects
     // Only transition if order is not already in the target state
     if (order.status !== targetOrderStatus) {
-        const { data: transitionResult, error: transitionError } = await supabase.rpc(
-            'transition_order_status',
-            {
-                p_order_id: order.id,
-                p_new_status: targetOrderStatus,
-                p_actor_type: 'system',
-                p_actor_id: null,
-                p_remarks: `Razorpay webhook: ${eventName}`
-            }
-        );
-
-        if (transitionError || !transitionResult?.success) {
-            console.error("Webhook state transition failed:", transitionError || transitionResult);
-            // Don't fail the webhook completely, maybe it was a duplicate state or invalid transition based on current state
+      const { data: transitionResult, error: transitionError } = await supabase.rpc(
+        'transition_order_status',
+        {
+          p_order_id: order.id,
+          p_new_status: targetOrderStatus,
+          p_actor_type: 'system',
+          p_actor_id: null,
+          p_remarks: `Razorpay webhook: ${eventName}`
         }
+      );
+
+      if (transitionError || !transitionResult?.success) {
+        console.error("Webhook state transition failed:", transitionError || transitionResult);
+        // Don't fail the webhook completely, maybe it was a duplicate state or invalid transition based on current state
+      }
     }
 
     // Update razorpay specific tracking IDs
@@ -137,10 +137,10 @@ Deno.serve(async (req: Request) => {
     // Track Payments
     let targetTxId = razorpayPaymentId || `tx_${Math.random().toString(36).substring(2, 11)}`;
     if (eventName === "refund.processed") targetTxId = event.payload.refund.entity.id;
-    
-    const targetTransactionStatus = targetOrderStatus === 'PAYMENT_SUCCESS' ? 'completed' : 
-                                    targetOrderStatus === 'PAYMENT_FAILED' ? 'failed' : 
-                                    targetOrderStatus === 'REFUNDED' ? 'refunded' : 'pending';
+
+    const targetTransactionStatus = targetOrderStatus === 'PAYMENT_SUCCESS' ? 'completed' :
+      targetOrderStatus === 'PAYMENT_FAILED' ? 'failed' :
+        targetOrderStatus === 'REFUNDED' ? 'refunded' : 'pending';
 
     const { data: existingPayment } = await supabase
       .from("payments")
@@ -152,13 +152,13 @@ Deno.serve(async (req: Request) => {
 
     if (!existingPayment) {
       await supabase.from("payments").insert({
-          order_id: order.id,
-          amount: refundAmount !== null ? refundAmount : parseFloat(order.total_amount),
-          currency: "INR",
-          status: targetTransactionStatus,
-          payment_method: "ONLINE",
-          transaction_id: targetTxId
-        });
+        order_id: order.id,
+        amount: refundAmount !== null ? refundAmount : parseFloat(order.total_amount),
+        currency: "INR",
+        status: targetTransactionStatus,
+        payment_method: "ONLINE",
+        transaction_id: targetTxId
+      });
     }
 
     console.log(`Webhook: Order ${order.id} processed event ${eventName}`);
