@@ -3,10 +3,10 @@
 import { createAdminClient } from '@/utils/supabase/admin-server'
 import { revalidatePath } from 'next/cache'
 
-export async function toggleBrandStatus(brandId: string, currentStatus: string) {
+export async function toggleBrandStatus(brandId: string, currentStatus: boolean) {
   try {
     const supabase = await createAdminClient();
-    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    const newStatus = !currentStatus;
     
     // Validate admin using auth.getUser() or let RLS handle it
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -26,11 +26,10 @@ export async function toggleBrandStatus(brandId: string, currentStatus: string) 
   }
 }
 
-export async function toggleCategoryStatus(categoryId: string, currentStatus: string) {
+export async function toggleCategoryStatus(categoryId: string, currentStatus: boolean) {
   try {
     const supabase = await createAdminClient();
-    // In CategoryList, the status transitions between "Active" and "Archived"
-    const newStatus = currentStatus === "Active" ? "Archived" : "Active";
+    const newStatus = !currentStatus;
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {

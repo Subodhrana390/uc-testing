@@ -76,7 +76,7 @@ export default function BrandsPage() {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    status: "Active",
+    status: true,
     logo_url: "",
     is_featured: false
   });
@@ -107,7 +107,7 @@ export default function BrandsPage() {
         .order("name", { ascending: true });
 
       if (error) throw error;
-      const mainCats = (data || []).filter((c: any) => !c.parent_id && c.status === "Active");
+      const mainCats = (data || []).filter((c: any) => !c.parent_id && c.status === true);
       setCategories(mainCats);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -130,8 +130,8 @@ export default function BrandsPage() {
   }, [brands]);
 
   const statusChartData = useMemo(() => {
-    const active = brands.filter(b => b.status === "Active").length;
-    const inactive = brands.filter(b => b.status === "Inactive" || b.status === "Draft").length;
+    const active = brands.filter(b => b.status === true).length;
+    const inactive = brands.filter(b => b.status === false).length;
     return [
       { name: "Active", value: active, color: "#3b82f6" },
       { name: "Inactive", value: inactive, color: "#64748b" }
@@ -151,7 +151,7 @@ export default function BrandsPage() {
       setFormData({
         name: brand.name,
         category: brand.category || "",
-        status: brand.status || "Active",
+        status: brand.status ?? true,
         logo_url: brand.logo_url || "",
         is_featured: !!brand.is_featured
       });
@@ -160,7 +160,7 @@ export default function BrandsPage() {
       setFormData({
         name: "",
         category: "",
-        status: "Active",
+        status: true,
         logo_url: "",
         is_featured: false
       });
@@ -228,7 +228,7 @@ export default function BrandsPage() {
       setBrands(prev => prev.map(b => 
         b.id === brand.id ? { ...b, status: result.newStatus } : b
       ));
-      toast.success(`Brand is now ${result.newStatus}`, { id: toastId });
+      toast.success(`Brand is now ${result.newStatus ? "Active" : "Inactive"}`, { id: toastId });
     } catch (error: any) {
       toast.error(error.message || "Failed to update status", { id: toastId });
     }
@@ -277,7 +277,7 @@ export default function BrandsPage() {
             </CardHeader>
             <CardContent className="p-5 pt-0">
               <div className="text-2xl font-black tracking-tight text-white">
-                {brands.filter(b => b.status === "Active").length}
+                {brands.filter(b => b.status === true).length}
               </div>
               <p className="text-[11px] text-white/60 mt-1">Live storefront listings</p>
             </CardContent>
@@ -415,7 +415,7 @@ export default function BrandsPage() {
             {isMounted && brands.length > 0 && (
               <div className="absolute flex flex-col items-center justify-center">
                 <span className="text-2xl font-black text-[#18181b]">
-                  {brands.filter(b => b.status === "Active").length}
+                  {brands.filter(b => b.status === true).length}
                 </span>
                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active</span>
               </div>
@@ -497,16 +497,16 @@ export default function BrandsPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Switch
-                        checked={brand.status === "Active"}
+                        checked={brand.status === true}
                         onCheckedChange={() => handleToggleStatus(brand)}
                         className="data-[state=checked]:bg-blue-600"
                       />
                       <span className={cn(
                         "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5",
-                        brand.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        brand.status === true ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
                       )}>
-                        {brand.status === "Active" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-                        {brand.status}
+                        {brand.status === true && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                        {brand.status ? "Active" : "Inactive"}
                       </span>
                     </div>
                   </td>
@@ -614,8 +614,8 @@ export default function BrandsPage() {
               </div>
               <Switch
                 id="brand-status"
-                checked={formData.status === "Active"}
-                onCheckedChange={(checked) => setFormData({ ...formData, status: checked ? "Active" : "Inactive" })}
+                checked={formData.status === true}
+                onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
                 className="data-[state=checked]:bg-teal-600"
               />
             </div>

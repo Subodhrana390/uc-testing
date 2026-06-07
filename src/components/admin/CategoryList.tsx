@@ -96,7 +96,7 @@ export default function CategoryList({ type }: CategoryListProps) {
       
       const mappedData = (data || []).map((c: any) => ({
         ...c,
-        is_active: c.status === "Active"
+        is_active: c.status === true
       }));
 
       setAllCategories(mappedData);
@@ -182,7 +182,7 @@ export default function CategoryList({ type }: CategoryListProps) {
       const { is_active, ...rest } = formData;
       const submitData = {
         ...rest,
-        status: is_active ? "Active" : "Archived"
+        status: is_active
       };
 
       if (editingCategory) {
@@ -229,9 +229,9 @@ export default function CategoryList({ type }: CategoryListProps) {
       }
       
       setCategories(prev => prev.map(c => 
-        c.id === category.id ? { ...c, is_active: result.newStatus === "Active", status: result.newStatus } : c
+        c.id === category.id ? { ...c, is_active: result.newStatus, status: result.newStatus } : c
       ));
-      toast.success(`Category is now ${result.newStatus}`, { id: toastId });
+      toast.success(`Category is now ${result.newStatus ? "Active" : "Archived"}`, { id: toastId });
     } catch (error: any) {
       toast.error(error.message || "Failed to update status", { id: toastId });
     }

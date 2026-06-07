@@ -15,7 +15,7 @@ export default async function CustomerLayout({
     supabase
       .from("categories")
       .select("id, name, slug, parent_id")
-      .eq("status", "Active")
+      .eq("status", true)
       .order("name", { ascending: true }),
     (supabase.auth as any).getUser(),
   ]);
