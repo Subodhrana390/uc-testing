@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="text-center space-y-1">
-              <h1 className="text-lg font-bold tracking-tight text-gray-900 uppercase">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 uppercase">
                 Admin{" "}
                 <span className="text-indigo-600">
                   Portal
@@ -118,7 +118,7 @@ export default function AdminLoginPage() {
             <div className="space-y-4">
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400 ml-1">
+                <label className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500 ml-1">
                   Email
                 </label>
 
@@ -132,14 +132,14 @@ export default function AdminLoginPage() {
                     type="email"
                     placeholder="operator@ucenterprises.com"
                     required
-                    className="w-full bg-gray-50/50 border border-gray-200 px-10 py-3 text-[11px] font-medium text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all rounded-xl"
+                    className="w-full bg-gray-50/50 border border-gray-200 px-10 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all rounded-xl"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400 ml-1">
+                <label className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500 ml-1">
                   Password
                 </label>
 
@@ -153,7 +153,7 @@ export default function AdminLoginPage() {
                     type="password"
                     placeholder="••••••••••••"
                     required
-                    className="w-full bg-gray-50/50 border border-gray-200 px-10 py-3 text-[11px] font-medium text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all rounded-xl"
+                    className="w-full bg-gray-50/50 border border-gray-200 px-10 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all rounded-xl"
                   />
                 </div>
               </div>
@@ -163,7 +163,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-gray-900 hover:bg-indigo-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-gray-200 transition-all rounded-xl flex items-center justify-center group disabled:opacity-60"
+              className="w-full h-12 bg-gray-900 hover:bg-indigo-600 text-white font-bold uppercase tracking-widest text-sm shadow-lg shadow-gray-200 transition-all rounded-xl flex items-center justify-center group disabled:opacity-60"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -181,7 +181,7 @@ export default function AdminLoginPage() {
           <div className="pt-2 flex flex-col items-center gap-4">
             <Link
               href="/"
-              className="group flex items-center gap-2 text-[9px] font-bold text-gray-400 uppercase tracking-widest transition-colors hover:text-indigo-600"
+              className="group flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest transition-colors hover:text-indigo-600"
             >
               Back to Home
             </Link>
@@ -189,7 +189,7 @@ export default function AdminLoginPage() {
         </div>
 
         <div className="mt-8 text-center space-y-1">
-          <p className="text-[8px] text-gray-300 uppercase tracking-tighter">
+          <p className="text-xs text-gray-400 uppercase tracking-tighter">
             Authorized Use Only
           </p>
         </div>
