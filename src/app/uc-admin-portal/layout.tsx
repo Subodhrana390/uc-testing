@@ -124,40 +124,40 @@ export default function AdminLayout({
     {
       group: "Dashboard",
       items: [
-        { icon: <LayoutDashboard className="w-3.5 h-3.5" />, label: "Overview", href: "/admin" }
+        { icon: <LayoutDashboard className="w-3.5 h-3.5" />, label: "Overview", href: "/uc-admin-portal" }
       ]
     },
     {
       group: "Manage",
       items: [
-        { icon: <Clock className="w-3.5 h-3.5" />, label: "Orders", href: "/admin/orders" },
-        { icon: <IndianRupee className="w-3.5 h-3.5" />, label: "Payments", href: "/admin/payments" },
-        { icon: <Activity className="w-3.5 h-3.5" />, label: "Delivery", href: "/admin/delivery" },
+        { icon: <Clock className="w-3.5 h-3.5" />, label: "Orders", href: "/uc-admin-portal/orders" },
+        { icon: <IndianRupee className="w-3.5 h-3.5" />, label: "Payments", href: "/uc-admin-portal/payments" },
+        { icon: <Activity className="w-3.5 h-3.5" />, label: "Delivery", href: "/uc-admin-portal/delivery" },
       ]
     },
     {
       group: "Catalog",
       items: [
-        { icon: <Package className="w-3.5 h-3.5" />, label: "Products", href: "/admin/products" },
-        { icon: <Layers className="w-3.5 h-3.5" />, label: "Main Categories", href: "/admin/categories/main" },
-        { icon: <FolderTree className="w-3.5 h-3.5" />, label: "Sub Categories", href: "/admin/categories/sub" },
-        { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Brands", href: "/admin/brands" },
-        { icon: <Settings2 className="w-3.5 h-3.5" />, label: "Attributes", href: "/admin/attributes" },
-        { icon: <Activity className="w-3.5 h-3.5" />, label: "Inventory", href: "/admin/inventory" },
+        { icon: <Package className="w-3.5 h-3.5" />, label: "Products", href: "/uc-admin-portal/products" },
+        { icon: <Layers className="w-3.5 h-3.5" />, label: "Main Categories", href: "/uc-admin-portal/categories/main" },
+        { icon: <FolderTree className="w-3.5 h-3.5" />, label: "Sub Categories", href: "/uc-admin-portal/categories/sub" },
+        { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Brands", href: "/uc-admin-portal/brands" },
+        { icon: <Settings2 className="w-3.5 h-3.5" />, label: "Attributes", href: "/uc-admin-portal/attributes" },
+        { icon: <Activity className="w-3.5 h-3.5" />, label: "Inventory", href: "/uc-admin-portal/inventory" },
       ]
     },
     {
       group: "Marketing",
       items: [
-        { icon: <ImageIcon className="w-3.5 h-3.5" />, label: "Banners", href: "/admin/banners" },
-        { icon: <BadgePercent className="w-3.5 h-3.5" />, label: "Active Deals", href: "/admin/deals" },
+        { icon: <ImageIcon className="w-3.5 h-3.5" />, label: "Banners", href: "/uc-admin-portal/banners" },
+        { icon: <BadgePercent className="w-3.5 h-3.5" />, label: "Active Deals", href: "/uc-admin-portal/deals" },
       ]
     },
     {
       group: "System",
       items: [
-        { icon: <Users className="w-3.5 h-3.5" />, label: "Customers", href: "/admin/customers" },
-        { icon: <Shield className="w-3.5 h-3.5" />, label: "Security", href: "/admin/security" },
+        { icon: <Users className="w-3.5 h-3.5" />, label: "Customers", href: "/uc-admin-portal/customers" },
+        { icon: <Shield className="w-3.5 h-3.5" />, label: "Security", href: "/uc-admin-portal/security" },
       ]
     }
   ];
@@ -265,24 +265,24 @@ export default function AdminLayout({
   };
 
   const getThemeClass = (path: string) => {
-    if (path === "/admin") return "theme-overview";
-    if (path.startsWith("/admin/orders")) return "theme-orders";
-    if (path.startsWith("/admin/payments")) return "theme-payments";
-    if (path.startsWith("/admin/delivery")) return "theme-delivery";
-    if (path.startsWith("/admin/products")) return "theme-products";
-    if (path.startsWith("/admin/categories/main")) return "theme-categories-main";
-    if (path.startsWith("/admin/categories/sub")) return "theme-categories-sub";
-    if (path.startsWith("/admin/brands")) return "theme-brands";
-    if (path.startsWith("/admin/attributes")) return "theme-attributes";
-    if (path.startsWith("/admin/inventory")) return "theme-inventory";
-    if (path.startsWith("/admin/banners")) return "theme-banners";
-    if (path.startsWith("/admin/deals")) return "theme-deals";
-    if (path.startsWith("/admin/customers")) return "theme-customers";
-    if (path.startsWith("/admin/security")) return "theme-security";
+    if (path === "/uc-admin-portal") return "theme-overview";
+    if (path.startsWith("/uc-admin-portal/orders")) return "theme-orders";
+    if (path.startsWith("/uc-admin-portal/payments")) return "theme-payments";
+    if (path.startsWith("/uc-admin-portal/delivery")) return "theme-delivery";
+    if (path.startsWith("/uc-admin-portal/products")) return "theme-products";
+    if (path.startsWith("/uc-admin-portal/categories/main")) return "theme-categories-main";
+    if (path.startsWith("/uc-admin-portal/categories/sub")) return "theme-categories-sub";
+    if (path.startsWith("/uc-admin-portal/brands")) return "theme-brands";
+    if (path.startsWith("/uc-admin-portal/attributes")) return "theme-attributes";
+    if (path.startsWith("/uc-admin-portal/inventory")) return "theme-inventory";
+    if (path.startsWith("/uc-admin-portal/banners")) return "theme-banners";
+    if (path.startsWith("/uc-admin-portal/deals")) return "theme-deals";
+    if (path.startsWith("/uc-admin-portal/customers")) return "theme-customers";
+    if (path.startsWith("/uc-admin-portal/security")) return "theme-security";
     return "";
   };
 
-  if (pathname === "/admin/login") return <>{children}</>;
+  if (pathname === "/uc-admin-portal/login") return <>{children}</>;
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f6fa] text-slate-600 selection:bg-indigo-500 selection:text-white">
 
@@ -301,7 +301,7 @@ export default function AdminLayout({
         </button>
 
         <div className={cn("p-6 border-b border-slate-100 bg-white flex items-center", isSidebarCollapsed ? "justify-center" : "justify-between")}>
-          <Link href="/admin" className="flex items-center gap-3">
+          <Link href="/uc-admin-portal" className="flex items-center gap-3">
             {/* Logo Image */}
             <div className="w-9 h-9 overflow-hidden flex items-center justify-center select-none shrink-0 relative">
               <Image src="/logo.png" alt="UC Logo" fill sizes="36px" className="object-contain" />

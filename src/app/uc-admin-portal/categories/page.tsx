@@ -7,7 +7,7 @@ export default function CategoriesRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/admin/categories/main");
+    router.replace("/uc-admin-portal/categories/main");
   }, [router]);
 
   return null;

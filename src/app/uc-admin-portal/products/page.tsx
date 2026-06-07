@@ -234,7 +234,7 @@ export default function ProductsPage() {
               Manage your industrial catalog, track stock counts, and edit product specifications.
             </p>
           </div>
-          <Link href="/admin/products/add" passHref legacyBehavior>
+          <Link href="/uc-admin-portal/products/add" passHref legacyBehavior>
             <Button className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2">
               <Plus className="w-4 h-4" /> Add Product
             </Button>
@@ -698,7 +698,7 @@ export default function ProductsPage() {
                     {/* Context Grid Actions Trigger Dropdown */}
                     <td className="px-6 py-4 text-right pr-8">
                       <div className="flex items-center justify-end gap-1">
-                        <Link href={`/admin/products/${product.id}`} passHref legacyBehavior>
+                        <Link href={`/uc-admin-portal/products/${product.id}`} passHref legacyBehavior>
                           <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-[#f97316] hover:bg-zinc-100">
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -715,7 +715,7 @@ export default function ProductsPage() {
                               Product Actions
                             </DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => router.push(`/admin/products/${product.id}`)}
+                              onClick={() => router.push(`/uc-admin-portal/products/${product.id}`)}
                               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                             >
                               <Edit className="w-4 h-4 text-zinc-400" /> Full Editor

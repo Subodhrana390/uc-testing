@@ -83,6 +83,7 @@ export default function WishlistPage() {
         image_url: item.products.image_url,
       });
       toast.success("Added to cart");
+      await removeFromWishlist(item.id);
     } catch (error) {
       toast.error("Error adding to cart");
     } finally {
@@ -116,7 +117,7 @@ export default function WishlistPage() {
         {items.map((item) => (
           <Card key={item.id} className="border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center gap-4 sm:gap-6">
-              
+
               {/* Product Image */}
               <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100 mx-auto md:mx-0">
                 <Image

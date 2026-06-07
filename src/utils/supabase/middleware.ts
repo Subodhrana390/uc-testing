@@ -8,7 +8,7 @@ export async function updateSession(request: NextRequest) {
   });
 
   const pathname = request.nextUrl.pathname;
-  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminRoute = pathname.startsWith("/uc-admin-portal");
   const customCookieOptions = isAdminRoute ? {
     name: 'sb-admin-auth-token',
     path: '/',
@@ -64,11 +64,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Handle protected admin routes
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/uc-admin-portal")) {
     if (!user) {
-      if (!pathname.startsWith("/admin/login")) {
+      if (!pathname.startsWith("/uc-admin-portal/login")) {
         const url = request.nextUrl.clone();
-        url.pathname = "/admin/login";
+        url.pathname = "/uc-admin-portal/login";
         return NextResponse.redirect(url);
       }
     } else {
@@ -76,9 +76,9 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = "/";
         return NextResponse.redirect(url);
-      } else if (pathname === "/admin/login") {
+      } else if (pathname === "/uc-admin-portal/login") {
         const url = request.nextUrl.clone();
-        url.pathname = "/admin";
+        url.pathname = "/uc-admin-portal";
         return NextResponse.redirect(url);
       }
     }
@@ -100,7 +100,7 @@ export async function updateSession(request: NextRequest) {
     } else if (userRole !== "customer") {
       // Prevent admins from accessing customer-only account/checkout pages
       const url = request.nextUrl.clone();
-      url.pathname = "/admin";
+      url.pathname = "/uc-admin-portal";
       return NextResponse.redirect(url);
     }
   }
@@ -110,7 +110,7 @@ export async function updateSession(request: NextRequest) {
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     if (userRole === "admin") {
-      url.pathname = "/admin";
+      url.pathname = "/uc-admin-portal";
     } else {
       url.pathname = "/account/profile";
     }

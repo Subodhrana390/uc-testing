@@ -4,23 +4,38 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
-import { ArrowLeft, Save, Loader2, Search, Plus, X } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Search, Plus, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import MultiImageUpload from "@/components/admin/MultiImageUpload";
 import FileUpload from "@/components/admin/FileUpload";
+import LogoLoader from "@/components/ui/LogoLoader";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
   ssr: false,
   loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-md border" />
 });
 
-export default function AddProductPage() {
+export default function EditProductPage({ params }: { params: { id: string } }) {
+  const productId = params.id;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const [loading, setLoading] = useState(false);
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("description");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -68,15 +83,86 @@ export default function AddProductPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const [catsRes, brandsRes] = await Promise.all([
-        supabase.from("categories").select("*").order("name"),
-        supabase.from("brands").select("*").order("name")
-      ]);
-      if (catsRes.data) setCategories(catsRes.data);
-      if (brandsRes.data) setBrands(brandsRes.data);
+      try {
+        const [
+          { data: product },
+          { data: catsRes }, 
+          { data: brandsRes },
+          { data: attrValuesRes },
+          { data: relationsRes }
+        ] = await Promise.all([
+          supabase.from("products").select("*").eq("id", productId).single(),
+          supabase.from("categories").select("*").order("name"),
+          supabase.from("brands").select("*").order("name"),
+          supabase.from("product_attributes").select("*").eq("product_id", productId),
+          supabase.from("related_products").select("*, related:products!related_id(id, name, sku, price)").eq("product_id", productId)
+        ]);
+
+        if (product) {
+          setFormData({
+            name: product.name,
+            price: product.price.toString(),
+            sale_price: (product.sale_price || "").toString(),
+            sku: product.sku || "",
+            barcode: product.barcode || "",
+            brand_id: product.brand_id || "",
+            category_id: product.category_id || "",
+            stock_quantity: (product.stock_quantity || 0).toString(),
+            unit: product.unit || "pcs",
+            moq: (product.moq || 1).toString(),
+            short_description: product.short_description || "",
+            long_description: product.long_description || "",
+            specification: product.specification || "",
+            manufacturing_info: product.manufacturing_info || "",
+            warranty_info: product.warranty_info || "",
+            images: product.images || [],
+            tax_rate: (product.tax_rate || 0).toString(),
+            is_featured: product.is_featured || false,
+            is_recommended: product.is_recommended || false,
+            is_best_seller: product.is_best_seller || false,
+            is_trending: product.is_trending || false,
+            is_new_arrival: product.is_new_arrival || false,
+            is_on_sale: product.is_on_sale || false,
+            is_hot_deal: product.is_hot_deal || false,
+            is_top_rated: product.is_top_rated || false,
+            is_industrial_grade: product.is_industrial_grade || false,
+            is_ready_stock: product.is_ready_stock || false,
+            is_high_demand: product.is_high_demand || false,
+            datasheet_url: product.datasheet_url || "",
+            visibility: product.visibility !== false,
+            seo_title: product.seo_title || "",
+            seo_keywords: product.seo_keywords || "",
+            seo_description: product.seo_description || "",
+          });
+        }
+
+        if (catsRes) setCategories(catsRes);
+        if (brandsRes) setBrands(brandsRes);
+        
+        if (attrValuesRes) {
+          const values: Record<string, any> = {};
+          attrValuesRes.forEach(av => {
+            values[av.attribute_id] = av.value;
+          });
+          setAttributeValues(values);
+        }
+
+        if (relationsRes) {
+          setRelatedProducts(relationsRes.map(r => ({
+            ...(r.related as any),
+            relation_type: r.relation_type
+          })));
+        }
+
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load product data.");
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
-  }, [supabase]);
+  }, [supabase, productId]);
 
   useEffect(() => {
     async function fetchAttributes() {
@@ -113,6 +199,7 @@ export default function AddProductPage() {
     const { data } = await supabase
       .from("products")
       .select("id, name, sku, price")
+      .neq("id", productId)
       .ilike("name", `%${term}%`)
       .limit(5);
     setSearchResults(data || []);
@@ -151,10 +238,10 @@ export default function AddProductPage() {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
       const slug = generateSlug(formData.name);
-      const { data: product, error: productError } = await supabase.from("products").insert([
+      const { error: productError } = await supabase.from("products").update(
         {
           name: formData.name,
           slug,
@@ -192,82 +279,98 @@ export default function AddProductPage() {
           seo_title: formData.seo_title || null,
           seo_keywords: formData.seo_keywords || null,
           seo_description: formData.seo_description || null,
-        },
-      ]).select().single();
+        }
+      ).eq("id", productId);
 
       if (productError) throw productError;
 
-      // Insert dynamic attributes
+      // Update attributes: delete and re-insert
+      await supabase.from("product_attributes").delete().eq("product_id", productId);
       const attrInserts = Object.entries(attributeValues).map(([attrId, val]) => ({
-        product_id: product.id,
+        product_id: productId,
         attribute_id: attrId,
         value: val
       }));
-
       if (attrInserts.length > 0) {
-        const { error: attrError } = await supabase.from("product_attributes").insert(attrInserts);
-        if (attrError) throw attrError;
+        await supabase.from("product_attributes").insert(attrInserts);
       }
 
-      // Insert related products
+      // Update relations: delete and re-insert
+      await supabase.from("related_products").delete().eq("product_id", productId);
       const relationInserts = relatedProducts.map(rp => ({
-        product_id: product.id,
+        product_id: productId,
         related_id: rp.id,
-        relation_type: 'related'
+        relation_type: rp.relation_type
       }));
-
       if (relationInserts.length > 0) {
-        const { error: relError } = await supabase.from("related_products").insert(
-          relatedProducts.map(rp => ({
-            product_id: product.id,
-            related_id: rp.id,
-            relation_type: rp.relation_type
-          }))
-        );
-        if (relError) throw relError;
+        await supabase.from("related_products").insert(relationInserts);
       }
 
-      toast.success("Product created successfully!");
-      router.push("/admin/products");
+      toast.success("Product updated successfully!");
+      router.push("/uc-admin-portal/products");
     } catch (error: any) {
-      console.error("Error saving product:", error);
-      toast.error(error.message || "Failed to save product.");
+      console.error("Error updating product:", error);
+      toast.error(error.message || "Failed to update product.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  // Reusable Tailwind Class for Inputs
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", productId);
+      if (error) throw error;
+      toast.success("Product deleted");
+      router.push("/uc-admin-portal/products");
+    } catch (error: any) {
+      toast.error(error.message || "Delete failed");
+    } finally {
+      setDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
+  if (loading) {
+    return <LogoLoader text="Loading product details..." minHeight="400px" />;
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8 text-gray-900">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div className="flex items-center gap-4">
-          <Link href="/admin/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors">
+          <Link href="/uc-admin-portal/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Add New Product</h1>
-            <p className="text-gray-500 text-sm">Create a new product listing for your store.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
+            <p className="text-gray-500 text-sm">Update product specifications, inventory and visibility.</p>
           </div>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {loading ? "Saving..." : "Save Product"}
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-red-100 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" /> Delete
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "Updating..." : "Update Product"}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-8">
-
           {/* Basic Info Section */}
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
@@ -279,7 +382,6 @@ export default function AddProductPage() {
                 <input
                   id="name"
                   className={inputClass}
-                  placeholder="e.g. Premium Wireless Headphones"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -292,7 +394,6 @@ export default function AddProductPage() {
                   <input
                     id="sku"
                     className={inputClass}
-                    placeholder="e.g. UC-101-CHEM"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                   />
@@ -302,7 +403,6 @@ export default function AddProductPage() {
                   <input
                     id="barcode"
                     className={inputClass}
-                    placeholder="e.g. 1234567890123"
                     value={formData.barcode}
                     onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                   />
@@ -357,12 +457,11 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 pt-2">
+              <div>
                 <label className={labelClass} htmlFor="short_description">Short Description</label>
                 <textarea
                   id="short_description"
-                  className={`${inputClass} min-h-[100px] resize-none`}
-                  placeholder="e.g. A brief overview for search results and previews..."
+                  className={`${inputClass} min-h-[80px] resize-none`}
                   value={formData.short_description}
                   onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
                 />
@@ -383,7 +482,6 @@ export default function AddProductPage() {
                     id="price"
                     type="number"
                     className={inputClass}
-                    placeholder="0.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
@@ -395,7 +493,6 @@ export default function AddProductPage() {
                     id="sale_price"
                     type="number"
                     className={inputClass}
-                    placeholder="0.00"
                     value={formData.sale_price}
                     onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
                   />
@@ -422,28 +519,25 @@ export default function AddProductPage() {
                     id="stock"
                     type="number"
                     className={inputClass}
-                    placeholder="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="unit">Unit (e.g. pcs, kg, ltr)</label>
+                  <label className={labelClass} htmlFor="unit">Unit</label>
                   <input
                     id="unit"
                     className={inputClass}
-                    placeholder="pcs"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="moq">Minimum Order Quantity (MOQ)</label>
+                  <label className={labelClass} htmlFor="moq">MOQ</label>
                   <input
                     id="moq"
                     type="number"
                     className={inputClass}
-                    placeholder="1"
                     value={formData.moq}
                     onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
                   />
@@ -478,7 +572,7 @@ export default function AddProductPage() {
                   />
                   <RichTextEditor
                     label="Key Features"
-                    value={formData.specification} // Re-using specification as Features for now or map correctly
+                    value={formData.specification}
                     onChange={(content) => handleEditorChange("specification", content)}
                   />
                 </div>
@@ -518,7 +612,6 @@ export default function AddProductPage() {
                             <input
                               type={attr.type === 'number' ? 'number' : 'text'}
                               className={inputClass}
-                              placeholder={`Enter ${attr.name.toLowerCase()}`}
                               value={attributeValues[attr.id] || ""}
                               onChange={(e) => setAttributeValues({ ...attributeValues, [attr.id]: e.target.value })}
                             />
@@ -528,9 +621,7 @@ export default function AddProductPage() {
                     </div>
                   ) : (
                     <div className="py-12 text-center bg-gray-50 rounded-xl border border-dashed">
-                      <p className="text-sm text-gray-500 italic">
-                        {formData.category_id ? "No specialized attributes defined for this category." : "Select a category to load specific attributes."}
-                      </p>
+                      <p className="text-sm text-gray-500 italic">No specialized attributes defined for this category.</p>
                     </div>
                   )}
                 </div>
@@ -631,7 +722,7 @@ export default function AddProductPage() {
                             {type.replace('_', ' ')}
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {typedProducts.map((rp) => (
+                            {typedProducts.map((rp, idx) => (
                               <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group">
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 rounded-lg bg-zinc-50 border flex items-center justify-center text-zinc-300 font-black text-xs">
@@ -711,7 +802,6 @@ export default function AddProductPage() {
           </section>
         </div>
 
-        {/* Sidebar Column */}
         <div className="space-y-8">
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
@@ -728,11 +818,11 @@ export default function AddProductPage() {
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Visibility & Status</h2>
+              <h2 className="text-lg font-semibold">Visibility & Flags</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Publish Status</span>
+                <span className="text-sm font-medium">Visible on Store</span>
                 <button
                   onClick={() => setFormData({ ...formData, visibility: !formData.visibility })}
                   className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.visibility ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}
@@ -741,36 +831,74 @@ export default function AddProductPage() {
                 </button>
               </div>
 
-              <div className="space-y-3 pt-4 border-t">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Product Flags</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: 'is_featured', label: 'Featured' },
-                    { key: 'is_recommended', label: 'Recommended' },
-                    { key: 'is_best_seller', label: 'Best Seller' },
-                    { key: 'is_trending', label: 'Trending' },
-                    { key: 'is_new_arrival', label: 'New Arrival' },
-                    { key: 'is_on_sale', label: 'On Sale' },
-                    { key: 'is_hot_deal', label: 'Hot Deal' },
-                    { key: 'is_top_rated', label: 'Top Rated' },
-                    { key: 'is_industrial_grade', label: 'Industrial' },
-                    { key: 'is_ready_stock', label: 'In Stock' },
-                    { key: 'is_high_demand', label: 'High Demand' },
-                  ].map((flag) => (
-                    <button
-                      key={flag.key}
-                      onClick={() => setFormData({ ...formData, [flag.key]: !formData[flag.key as keyof typeof formData] })}
-                      className={`flex items-center justify-center px-2 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${formData[flag.key as keyof typeof formData] ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                    >
-                      {flag.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="grid grid-cols-2 gap-2 pt-4 border-t">
+                {[
+                  { key: 'is_featured', label: 'Featured' },
+                  { key: 'is_recommended', label: 'Recommended' },
+                  { key: 'is_best_seller', label: 'Best Seller' },
+                  { key: 'is_trending', label: 'Trending' },
+                  { key: 'is_new_arrival', label: 'New Arrival' },
+                  { key: 'is_on_sale', label: 'On Sale' },
+                  { key: 'is_hot_deal', label: 'Hot Deal' },
+                  { key: 'is_top_rated', label: 'Top Rated' },
+                  { key: 'is_industrial_grade', label: 'Industrial' },
+                  { key: 'is_ready_stock', label: 'In Stock' },
+                  { key: 'is_high_demand', label: 'High Demand' },
+                ].map((flag) => (
+                  <button
+                    key={flag.key}
+                    onClick={() => setFormData({ ...formData, [flag.key]: !formData[flag.key as keyof typeof formData] })}
+                    className={`flex items-center justify-center px-2 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${formData[flag.key as keyof typeof formData] ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {flag.label}
+                  </button>
+                ))}
               </div>
             </div>
           </section>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white rounded-2xl border border-zinc-150 p-6 shadow-xl text-zinc-900">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="text-lg font-bold text-zinc-800">Delete Product</DialogTitle>
+            <DialogDescription className="text-sm text-zinc-500">
+              Are you sure you want to delete <span className="font-semibold text-zinc-700">{formData.name || "this product"}</span>? This action cannot be undone and will permanently remove this item from the store.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 rounded-xl"
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl gap-2 font-medium"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Product
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+

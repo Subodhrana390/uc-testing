@@ -8,7 +8,7 @@ import { cookies } from 'next/headers'
 
 export async function login(formData: FormData) {
   const redirectTo = (formData.get('redirectTo') as string) || '/account/profile'
-  const isAdminLogin = redirectTo.startsWith('/admin')
+  const isAdminLogin = redirectTo.startsWith('/uc-admin-portal')
   
   const supabase = await (isAdminLogin ? createAdminClient() : createClient())
 
@@ -139,8 +139,8 @@ export async function signout() {
 export async function adminSignout() {
   const supabase = await createAdminClient()
   await (supabase.auth as any).signOut()
-  revalidatePath('/admin', 'layout')
-  redirect('/admin/login')
+  revalidatePath('/uc-admin-portal', 'layout')
+  redirect('/uc-admin-portal/login')
 }
 
 export async function updatePassword(formData: FormData) {

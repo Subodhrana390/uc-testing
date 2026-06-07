@@ -47,7 +47,7 @@ export async function approveReturn(orderId: string, adminNotes: string) {
 
   await logAudit(supabase, user.id, 'APPROVE_RETURN', 'Order', orderId, { status: 'RETURN_REQUESTED' }, { status: 'RETURN_APPROVED', adminNotes })
   
-  revalidatePath('/admin/orders')
+  revalidatePath('/uc-admin-portal/orders')
   revalidatePath('/account/orders')
   return { success: true }
 }
@@ -114,7 +114,7 @@ export async function processRefund(orderId: string, amount: number, reason: str
 
   await logAudit(supabase, user.id, 'PROCESS_REFUND', 'Order', orderId, null, { amount, reason, gatewayRefundId })
   
-  revalidatePath('/admin/orders')
+  revalidatePath('/uc-admin-portal/orders')
   revalidatePath('/account/orders')
   return { success: true }
 }
@@ -145,6 +145,6 @@ export async function adjustInventory(productId: string, adjustmentType: 'stock_
 
   await logAudit(supabase, user.id, 'ADJUST_INVENTORY', 'Product', productId, { [adjustmentType]: oldValue }, { [adjustmentType]: newValue, reason })
 
-  revalidatePath('/admin/inventory')
+  revalidatePath('/uc-admin-portal/inventory')
   return { success: true }
 }

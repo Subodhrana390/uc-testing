@@ -512,7 +512,7 @@ export default function AdminDashboardPage() {
               <p className="text-xs font-semibold text-zinc-400 mt-1">Latest transactions from your store</p>
             </div>
             <button
-              onClick={() => window.location.href = '/admin/orders'}
+              onClick={() => window.location.href = '/uc-admin-portal/orders'}
               className="text-xs font-bold text-sky-500 hover:text-sky-600 flex items-center gap-1 transition-all"
             >
               View all &rarr;

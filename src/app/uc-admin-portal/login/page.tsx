@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
       );
 
       window.location.href =
-        result.redirectTo || "/admin";
+        result.redirectTo || "/uc-admin-portal";
     }
   }
 
@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
             <input
               type="hidden"
               name="redirectTo"
-              value="/admin"
+              value="/uc-admin-portal"
             />
 
             <div className="space-y-4">
