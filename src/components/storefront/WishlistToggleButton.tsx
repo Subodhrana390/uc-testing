@@ -11,9 +11,10 @@ type Props = {
   productId: string;
   className?: string;
   label?: string;
+  onAdded?: () => void;
 };
 
-export default function WishlistToggleButton({ productId, className, label = "Save" }: Props) {
+export default function WishlistToggleButton({ productId, className, label = "Save", onAdded }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const { redirectToLogin } = useLoginRedirect();
   const [entryId, setEntryId] = useState<string | null>(null);
@@ -81,6 +82,9 @@ export default function WishlistToggleButton({ productId, className, label = "Sa
     setEntryId(data.id);
     window.dispatchEvent(new CustomEvent("wishlist-updated"));
     toast.success("Saved to wishlist");
+    if (onAdded) {
+      onAdded();
+    }
   }
 
   return (

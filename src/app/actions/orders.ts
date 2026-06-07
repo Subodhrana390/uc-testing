@@ -72,7 +72,8 @@ export async function createOrder(orderData: {
           id: item.id,
           quantity: item.quantity
         })),
-        p_attribution: attribution
+        p_attribution: attribution,
+        p_postal_code: orderData.postalCode
       }
     )
 

@@ -64,7 +64,8 @@ export default function DeliveryManagementPage() {
     estimate: "",
     status: "Standard",
     coverage: "",
-    active: true
+    active: true,
+    base_charge: 50
   });
 
   // --- PINCODES STATE ---
@@ -186,7 +187,8 @@ export default function DeliveryManagementPage() {
         estimate: zone.estimate,
         status: zone.status || "Standard",
         coverage: zone.coverage || "",
-        active: zone.active !== false
+        active: zone.active !== false,
+        base_charge: zone.base_charge || 50
       });
     } else {
       setEditingZone(null);
@@ -195,7 +197,8 @@ export default function DeliveryManagementPage() {
         estimate: "",
         status: "Standard",
         coverage: "",
-        active: true
+        active: true,
+        base_charge: 50
       });
     }
     setIsDrawerOpen(true);
@@ -1057,6 +1060,23 @@ export default function DeliveryManagementPage() {
                 placeholder="e.g. 24-48 Hours"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="zone-base-charge" className="text-xs font-medium text-zinc-500">Base Shipping Charge (₹)</Label>
+              <Input
+                id="zone-base-charge"
+                type="number"
+                min="0"
+                value={formData.base_charge}
+                onChange={(e) => setFormData({ ...formData, base_charge: Number(e.target.value) })}
+                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600"
+                placeholder="e.g. 50"
+                required
+              />
+              <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                The standard shipping cost for this zone.
+              </p>
             </div>
 
             <div className="space-y-2">

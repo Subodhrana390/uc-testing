@@ -9,6 +9,7 @@ import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
 import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
 import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
+import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters";
 import JsonLd from "@/components/seo/JsonLd";
 import { itemListSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 import { productsListingMetadata, SITE_URL } from "@/lib/seo";
@@ -26,7 +27,7 @@ export async function generateMetadata({
 export default async function ProductsPage({
   searchParams
 }: {
-  searchParams: { page?: string, sort?: string }
+  searchParams: { page?: string, sort?: string, category?: string, in_stock?: string, promo?: string }
 }) {
   const supabase = await createClient();
   const currentPage = parseInt(searchParams.page || "1");
@@ -48,13 +49,43 @@ export default async function ProductsPage({
   }
 
   const dealsPromise = supabase.from("deals").select("*").eq("is_active", true).order("position", { ascending: true }).limit(2);
+  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", "Active").order("name");
 
   let productsData: any[] = [];
   let totalCount = 0;
 
+  const categoryFilter = searchParams.category;
+  const inStockFilter = searchParams.in_stock === "true";
+  const promoFilter = searchParams.promo === "true";
+
+  // If a specific category is selected, we need to find its ID and its subcategories' IDs
+  let categoryIds: string[] = [];
+  if (categoryFilter && categoryFilter !== "all") {
+    const { data: targetCat } = await supabase.from("categories").select("id").eq("slug", categoryFilter).single();
+    if (targetCat) {
+      const { data: subCats } = await supabase.from("categories").select("id").eq("parent_id", targetCat.id);
+      categoryIds = [targetCat.id, ...(subCats || []).map(c => c.id)];
+    }
+  }
+
+  // Build the base query for non-rating sort
+  let query = supabase.from("products")
+    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), product_reviews(rating)", { count: "exact" })
+    .eq("status", "Active");
+
+  if (categoryIds.length > 0) {
+    query = query.in("category_id", categoryIds);
+  }
+  if (inStockFilter) {
+    query = query.gt("stock_quantity", 0);
+  }
+  if (promoFilter) {
+    query = query.not("sale_price", "is", null);
+  }
+
   if (sortMode === "rating") {
-    const { data: allProducts } = await supabase.from("products")
-      .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), product_reviews(rating)");
+    // For rating sort, we fetch all matching without range because we sort in memory
+    const { data: allProducts } = await query;
     
     const sorted = [...(allProducts || [])];
     sorted.sort((a, b) => {
@@ -72,13 +103,15 @@ export default async function ProductsPage({
     totalCount = sorted.length;
     productsData = sorted.slice(from, to + 1);
   } else {
-    const { data, count: dbCount } = await supabase.from("products")
-      .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), product_reviews(rating)", { count: "exact" })
-      .order(orderColumn, orderOptions)
-      .range(from, to);
+    // Standard database sorting and pagination
+    query = query.order(orderColumn, orderOptions).range(from, to);
+    const { data, count: dbCount } = await query;
     productsData = data || [];
     totalCount = dbCount || 0;
   }
+
+  const { data: categoriesResult } = await categoriesPromise;
+  const categoriesList = categoriesResult || [];
 
   const { data: deals } = await dealsPromise;
   const count = totalCount;
@@ -130,46 +163,7 @@ export default async function ProductsPage({
           <MobileFilterWrapper>
             <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
 
-            {/* Categories Context */}
-            <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Categories</h3>
-              <div className="space-y-1">
-                {["All Products", "Laboratory Chemicals", "Glassware", "Industrial Tools", "Safety Equipment"].map((category, idx) => (
-                  <button
-                    key={category}
-                    className={`flex items-center justify-between w-full text-xs font-medium rounded-md px-2.5 py-1.5 transition-colors text-left ${idx === 0
-                      ? "bg-zinc-100 text-zinc-900 font-semibold"
-                      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                      }`}
-                  >
-                    <span>{category}</span>
-                    <ArrowRight className="w-3 h-3 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status Configurations */}
-            <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Availability</h3>
-              <div className="space-y-2.5">
-                <label className="flex items-center gap-3 cursor-pointer group select-none">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="w-4 h-4 rounded-sm border-zinc-300 text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 accent-zinc-900 transition-all cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-zinc-600 group-hover:text-zinc-900 transition-colors">In Stock Only</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group select-none">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded-sm border-zinc-300 text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 accent-zinc-900 transition-all cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-zinc-600 group-hover:text-zinc-900 transition-colors">Promotional Offers</span>
-                </label>
-              </div>
-            </div>
+            <ProductSidebarFilters categories={categoriesList} />
 
             {/* Static Placement Deals Sidebar */}
             {(deals || []).map((deal: any) => (
