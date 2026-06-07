@@ -98,7 +98,7 @@ export default function PaymentsPage() {
     try {
       const { data, error } = await supabase
         .from("payments")
-        .select("*, orders(customer_name, customer_email, shipping_address, phone, delivery_estimate)")
+        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -115,6 +115,14 @@ export default function PaymentsPage() {
     setIsMounted(true);
     fetchPayments();
   }, [fetchPayments]);
+
+  const getDisplayOrderId = (id: string, dateStr: string) => {
+    if (!id || !dateStr) return `ORD-${id?.slice(0,8).toUpperCase()}`;
+    const date = new Date(dateStr);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `UC-${year}${month}-${id.substring(0, 6).toUpperCase()}`;
+  };
 
   const updateStatus = async (paymentId: string, orderId: string, status: string) => {
     try {
@@ -700,7 +708,7 @@ export default function PaymentsPage() {
                           {payment.transaction_id || payment.id.slice(0, 12).toUpperCase()}
                         </span>
                         <span className="text-xs text-zinc-400 font-mono">
-                          ORD-{payment.order_id.slice(0, 8).toUpperCase()}
+                          {payment.orders?.id ? getDisplayOrderId(payment.orders.id, payment.orders.created_at) : `ORD-${payment.order_id.slice(0, 8).toUpperCase()}`}
                         </span>
                       </div>
                     </TableCell>
@@ -838,8 +846,14 @@ export default function PaymentsPage() {
                 <div className="space-y-3">
                   <p className="text-sm font-bold text-zinc-900 border-b border-zinc-150 pb-2">Transaction Metadata</p>
                   <div className="grid grid-cols-2 gap-y-3 text-sm">
+                    {selectedOrder.orders?.id && (
+                      <>
+                        <span className="text-zinc-500 font-bold">Order Ref</span>
+                        <span className="text-right font-mono text-zinc-900 text-xs font-bold">{getDisplayOrderId(selectedOrder.orders.id, selectedOrder.orders.created_at)}</span>
+                      </>
+                    )}
                     <span className="text-zinc-500 font-bold">Transaction ID</span>
-                    <span className="text-right font-mono text-zinc-900 text-xs font-bold">{selectedOrder.id}</span>
+                    <span className="text-right font-mono text-zinc-900 text-xs font-bold">{selectedOrder.transaction_id || selectedOrder.id}</span>
 
                     <span className="text-zinc-500 font-bold">Processed On</span>
                     <span className="text-right text-zinc-900 font-bold">{new Date(selectedOrder.created_at).toLocaleString()}</span>

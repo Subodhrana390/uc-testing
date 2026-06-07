@@ -14,6 +14,11 @@ import {
   Package,
   X,
   Loader2,
+  Settings,
+  MoreVertical,
+  ArrowRight,
+  RefreshCw,
+  Printer,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -114,11 +119,13 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   // Form states
   const [trackingId, setTrackingId] = useState("");
   const [carrier, setCarrier] = useState("");
   const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
   const [carriers, setCarriers] = useState<any[]>([]);
@@ -220,6 +227,25 @@ export default function OrdersPage() {
     }
   };
 
+  const updateBulkStatus = async (status: string) => {
+    if (selectedOrders.length === 0) return;
+    try {
+      const promises = selectedOrders.map(id =>
+        fetch("/api/orders/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: id, status })
+        })
+      );
+      await Promise.all(promises);
+      setOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status } : o));
+      toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`);
+      setSelectedOrders([]);
+    } catch (error: any) {
+      toast.error("Failed to update some orders");
+    }
+  };
+
   const updatePaymentStatus = async (orderId: string, paymentStatus: string, paymentMethod?: string) => {
     try {
       const response = await fetch("/api/orders/status", {
@@ -240,7 +266,33 @@ export default function OrdersPage() {
     }
   };
 
-  const updateTracking = async (id: string) => {
+  const triggerRefund = async (order: any) => {
+    if (order.payment_method === "ONLINE") {
+      setIsRefunding(true);
+      try {
+        const res = await fetch("/api/razorpay/refund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: order.id })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Refund failed");
+        
+        toast.success("Refund processed successfully via Razorpay");
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Refunded" } : o));
+        setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
+      } catch (error: any) {
+        toast.error(error.message);
+      } finally {
+        setIsRefunding(false);
+      }
+    } else {
+      await updatePaymentStatus(order.id, "Refunded");
+      setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
+    }
+  };
+
+  const updateTracking = async (orderId: string) => {
     setIsUpdatingTracking(true);
     try {
       const response = await fetch("/api/orders/status", {
@@ -740,12 +792,54 @@ export default function OrdersPage() {
           </div>
         </div>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedOrders.length > 0 && (
+          <div className="bg-blue-50/50 border-b border-zinc-200 px-4 py-3 flex items-center justify-between animate-in slide-in-from-top-2">
+            <span className="text-sm font-semibold text-blue-800">
+              {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
+            </span>
+            <div className="flex gap-2">
+              <Select onValueChange={(val) => updateBulkStatus(val)}>
+                <SelectTrigger className="w-[180px] h-8 text-xs bg-white border-blue-200 text-blue-700">
+                  <SelectValue placeholder="Bulk Change Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Confirmed">Mark Confirmed</SelectItem>
+                  <SelectItem value="Processing">Mark Processing</SelectItem>
+                  <SelectItem value="Shipped">Mark Shipped</SelectItem>
+                  <SelectItem value="Delivered">Mark Delivered</SelectItem>
+                  <SelectItem value="Cancelled">Mark Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-xs text-zinc-600 border-zinc-300 bg-white"
+                onClick={() => setSelectedOrders([])}
+              >
+                Cancel Selection
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Orders Table */}
         <div className="border-t border-zinc-200">
           <ScrollArea className="h-[500px] w-full">
             <Table className="min-w-[800px]">
               <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
                 <TableRow>
+                  <TableHead className="w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer mt-1"
+                      checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedOrders(filteredOrders.map(o => o.id));
+                        else setSelectedOrders([]);
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="w-[120px] text-zinc-500 font-bold">Order ID</TableHead>
                   <TableHead className="text-zinc-500 font-bold">Customer</TableHead>
                   <TableHead className="text-zinc-500 font-bold">Date</TableHead>
@@ -782,7 +876,18 @@ export default function OrdersPage() {
                   </TableRow>
                 ) : (
                   filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm">
+                    <TableRow key={order.id} className={cn("hover:bg-zinc-50 transition-all duration-200", selectedOrders.includes(order.id) ? "bg-blue-50/40" : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm")}>
+                      <TableCell className="text-center">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                          checked={selectedOrders.includes(order.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedOrders(prev => [...prev, order.id]);
+                            else setSelectedOrders(prev => prev.filter(id => id !== order.id));
+                          }}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs font-bold text-zinc-500">
                         {getDisplayOrderId(order.id, order.created_at)}
                       </TableCell>
@@ -867,13 +972,18 @@ export default function OrdersPage() {
                               {order.payment_status === 'Refund Pending' && (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Refunded")}>
-                                    Mark Refunded
+                                  <DropdownMenuItem onClick={() => triggerRefund(order)} disabled={isRefunding}>
+                                    Process Refund
                                   </DropdownMenuItem>
                                 </>
                               )}
 
                               <DropdownMenuSeparator />
+
+                              <DropdownMenuItem onClick={() => window.open(`/uc-admin-portal/orders/${order.id}/label`, '_blank')}>
+                                <Printer className="w-4 h-4 mr-2 text-zinc-600" />
+                                Print Label
+                              </DropdownMenuItem>
 
                               <DropdownMenuItem onClick={() => {
                                 setSelectedOrder(order);
@@ -1020,12 +1130,10 @@ export default function OrdersPage() {
                         size="sm"
                         variant="outline"
                         className="mt-2 text-[10px] h-7 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 hover:text-orange-800 font-bold rounded-lg w-full"
-                        onClick={async () => {
-                          await updatePaymentStatus(selectedOrder.id, "Refunded");
-                          setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
-                        }}
+                        onClick={() => triggerRefund(selectedOrder)}
+                        disabled={isRefunding}
                       >
-                        Mark Refunded
+                        {isRefunding ? "Processing..." : "Process Refund"}
                       </Button>
                     )}
                   </div>
