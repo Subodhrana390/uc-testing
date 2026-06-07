@@ -81,6 +81,7 @@ export default function WishlistPage() {
         name: item.products.name,
         price: Number(item.products.price),
         image_url: item.products.image_url,
+        moq: item.products.moq || 1,
       });
       toast.success("Added to cart");
       await removeFromWishlist(item.id);

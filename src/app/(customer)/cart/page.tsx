@@ -114,6 +114,11 @@ export default function CartPage() {
                         <p className="text-sm sm:text-base font-black text-zinc-950">
                           {formatCurrency(item.price * item.quantity)}
                         </p>
+                        {item.moq > 1 && (
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">
+                            MOQ: {item.moq}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -121,8 +126,13 @@ export default function CartPage() {
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200/80 rounded-lg p-1 shrink-0">
                         <button
-                          className="rounded-md p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95 transition-all"
+                          className={`rounded-md p-1.5 transition-all ${
+                            item.quantity <= (item.moq || 1)
+                              ? "text-zinc-300 cursor-not-allowed"
+                              : "text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95"
+                          }`}
                           onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= (item.moq || 1)}
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>

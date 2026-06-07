@@ -94,7 +94,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         slug: product.slug,
         name: product.name,
         price: product.sale_price || product.price,
-        image_url: product.image_url
+        image_url: product.image_url,
+        moq: product.moq || 1
       });
       toast.success("Added to cart");
     }

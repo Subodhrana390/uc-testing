@@ -23,6 +23,7 @@ type Props = {
     price: number | string;
     sale_price?: number | string | null;
     image_url?: string | null;
+    moq?: number | null;
   };
 
   quantity?: number;
@@ -90,6 +91,7 @@ export default function AddToCartButton({
             price,
             image_url:
               product.image_url,
+            moq: product.moq || 1,
           },
           quantity
         );

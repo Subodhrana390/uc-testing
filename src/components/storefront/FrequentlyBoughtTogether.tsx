@@ -156,7 +156,8 @@ export default function FrequentlyBoughtTogether({
         name: p.name,
         price: p.sale_price || p.price,
         image_url: p.image_url || (p.images && p.images[0]) || null,
-      }, 1);
+        moq: p.moq || 1,
+      }, p.moq || 1);
     });
     toast.success(`Added ${selectedProducts.length} items to your cart!`);
   };
