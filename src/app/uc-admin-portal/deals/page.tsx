@@ -164,6 +164,21 @@ export default function DealsAdminPage() {
     return () => clearTimeout(timer);
   }, [productSearch]);
 
+  const syncProductSalePrice = async (productId: string | null, discountPercentage: number | null, isActive: boolean) => {
+    if (!productId) return;
+    
+    if (isActive && discountPercentage !== null) {
+      const { data: product } = await supabase.from("products").select("price").eq("id", productId).single();
+      if (product && product.price) {
+        const priceNum = parseFloat(product.price);
+        const salePrice = priceNum - (priceNum * (discountPercentage / 100));
+        await supabase.from("products").update({ sale_price: salePrice }).eq("id", productId);
+      }
+    } else {
+      await supabase.from("products").update({ sale_price: null }).eq("id", productId);
+    }
+  };
+
   const handleOpenDrawer = (deal?: any) => {
     if (deal) {
       setEditingDeal(deal);
@@ -202,6 +217,11 @@ export default function DealsAdminPage() {
         start_date: formData.start_date || null,
         end_date: formData.end_date || null
       };
+      
+      if (editingDeal && editingDeal.product_id && editingDeal.product_id !== payload.product_id) {
+        await syncProductSalePrice(editingDeal.product_id, null, false);
+      }
+
       if (editingDeal) {
         const { error } = await supabase.from("deals").update(payload).eq("id", editingDeal.id);
         if (error) throw error;
@@ -211,6 +231,9 @@ export default function DealsAdminPage() {
         if (error) throw error;
         toast.success("Deal created");
       }
+
+      await syncProductSalePrice(payload.product_id, payload.discount_percentage, payload.is_active);
+
       setIsDrawerOpen(false);
       fetchDeals();
     } catch (error: any) {
@@ -220,12 +243,16 @@ export default function DealsAdminPage() {
     }
   };
 
-  const handleToggleActive = async (id: string, current: boolean) => {
+  const handleToggleActive = async (deal: any) => {
     try {
-      const { error } = await supabase.from("deals").update({ is_active: !current }).eq("id", id);
+      const newStatus = !deal.is_active;
+      const { error } = await supabase.from("deals").update({ is_active: newStatus }).eq("id", deal.id);
       if (error) throw error;
-      setDeals(deals.map(d => d.id === id ? { ...d, is_active: !current } : d));
-      toast.success(current ? "Deal suspended" : "Deal reactivated");
+      
+      await syncProductSalePrice(deal.product_id, deal.discount_percentage, newStatus);
+      
+      setDeals(deals.map(d => d.id === deal.id ? { ...d, is_active: newStatus } : d));
+      toast.success(deal.is_active ? "Deal suspended" : "Deal reactivated");
     } catch (error: any) { toast.error(error.message); }
   };
 
@@ -233,6 +260,8 @@ export default function DealsAdminPage() {
     if (!dealToDelete) return;
     setDeleting(true);
     try {
+      await syncProductSalePrice(dealToDelete.product_id, null, false);
+      
       const { error } = await supabase.from("deals").delete().eq("id", dealToDelete.id);
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== dealToDelete.id));
@@ -538,7 +567,7 @@ export default function DealsAdminPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleToggleActive(deal.id, deal.is_active)}
+                            onClick={() => handleToggleActive(deal)}
                             className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg text-left"
                           >
                             {deal.is_active ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
