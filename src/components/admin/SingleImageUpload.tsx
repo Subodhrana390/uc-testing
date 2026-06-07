@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { X, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
@@ -64,7 +65,7 @@ export default function SingleImageUpload({
       
       {value ? (
         <div className="relative w-32 h-32 border border-zinc-100 overflow-hidden bg-zinc-50 group shadow-sm">
-          <img src={value} alt="Preview" className="w-full h-full object-contain" />
+          <Image unoptimized src={value} alt="Preview" fill className="object-contain" />
           <button
             type="button"
             onClick={removeImage}

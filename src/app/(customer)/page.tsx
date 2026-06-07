@@ -6,8 +6,6 @@ import { createClient } from "@/utils/supabase/server";
 import CategorySelector from "@/components/storefront/CategorySelector";
 import BannerCarousel from "@/components/storefront/BannerCarousel";
 import DealBanner from "@/components/storefront/DealBanner";
-import ProductCarousel from "@/components/storefront/ProductCarousel";
-import FAQAccordion from "@/components/storefront/FAQAccordion";
 import { faqItems } from "@/lib/storefront";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
@@ -16,6 +14,8 @@ import dynamic from "next/dynamic";
 
 const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/RecentlyViewedProducts"));
 const RecommendedProducts = dynamic(() => import("@/components/storefront/RecommendedProducts"));
+const ProductCarousel = dynamic(() => import("@/components/storefront/ProductCarousel"));
+const FAQAccordion = dynamic(() => import("@/components/storefront/FAQAccordion"));
 
 
 export const metadata: Metadata = homepageMetadata();

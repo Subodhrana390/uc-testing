@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import SingleImageUpload from "./SingleImageUpload";
+import Image from "next/image";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -353,7 +354,7 @@ export default function CategoryList({ type }: CategoryListProps) {
                   <td className="px-6 py-4 pl-8">
                     <div className="w-12 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shrink-0 shadow-sm">
                       {category.image_url ? (
-                        <img src={category.image_url} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                        <Image src={category.image_url} alt="" width={48} height={48} unoptimized className="w-full h-full object-contain mix-blend-multiply" />
                       ) : (
                         <FolderTree className="w-4 h-4 text-zinc-400" />
                       )}

@@ -105,6 +105,8 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
                   alt={banner.title}
                   fill
                   sizes="(max-width: 1024px) 100vw, 66vw"
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
                   className="w-full h-full object-cover"
                   priority={index === 0}
                 />

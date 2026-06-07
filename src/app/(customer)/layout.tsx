@@ -1,7 +1,9 @@
 import Header from "@/components/storefront/Header";
-import Footer from "@/components/storefront/Footer";
 import BackToTop from "@/components/storefront/BackToTop";
 import { createClient } from "@/utils/supabase/server";
+import dynamic from "next/dynamic";
+
+const Footer = dynamic(() => import("@/components/storefront/Footer"));
 
 export default async function CustomerLayout({
   children,

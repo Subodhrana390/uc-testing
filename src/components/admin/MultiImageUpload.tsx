@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Plus, Image as ImageIcon, Loader2, Upload, Star, Maximize2 } from "lucide-react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
@@ -99,7 +100,7 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                 className="w-full h-full cursor-pointer flex items-center justify-center relative"
                 title="Click to view large preview"
               >
-                <img src={images[0]} alt="Primary" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
+                <Image unoptimized src={images[0]} alt="Primary" fill className="object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
                 
                 {/* Click to expand overlay */}
                 <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
@@ -143,7 +144,7 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
                       className="w-full h-full cursor-pointer flex items-center justify-center relative"
                       title="Click to view large preview"
                     >
-                      <img src={url} alt="" className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
+                      <Image unoptimized src={url} alt="" fill className="object-contain mix-blend-multiply transition-transform duration-300 group-hover/item:scale-105" />
                       
                       {/* Click to expand overlay */}
                       <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
@@ -272,11 +273,15 @@ export default function MultiImageUpload({ images, onChange }: MultiImageUploadP
 
             {/* Modal Body - Large Image View */}
             <div className="flex-1 min-h-0 bg-zinc-50 relative flex items-center justify-center p-6 group">
-              <img
-                src={images[selectedImageIndex]}
-                alt={`Asset ${selectedImageIndex + 1}`}
-                className="max-w-full max-h-[55vh] object-contain rounded-lg shadow-sm"
-              />
+              <div className="relative w-full h-[55vh]">
+                <Image
+                  unoptimized
+                  src={images[selectedImageIndex]}
+                  alt={`Asset ${selectedImageIndex + 1}`}
+                  fill
+                  className="object-contain rounded-lg shadow-sm"
+                />
+              </div>
             </div>
 
             {/* Modal Footer */}

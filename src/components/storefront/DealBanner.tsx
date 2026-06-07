@@ -29,6 +29,8 @@ export default function DealBanner({
             alt=""
             fill
             sizes="100vw"
+            placeholder="blur"
+            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
             className="w-full h-full object-cover object-center"
           />
           {/* Advanced localized lighting protection overlay */}

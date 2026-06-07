@@ -2,6 +2,7 @@
 
 import { Search, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useEffect, useState, useRef, Suspense } from "react";
 
 function SearchInput() {
@@ -160,9 +161,11 @@ function SearchInput() {
                   }`}
               >
                 <div className="relative w-10 h-10 overflow-hidden bg-zinc-50 rounded-lg shrink-0 border border-zinc-150 flex items-center justify-center">
-                  <img
+                  <Image
                     src={item.image_url || "/images/prod_main.png"}
                     alt={item.name}
+                    width={40}
+                    height={40}
                     className="max-h-full max-w-full object-contain p-1"
                   />
                 </div>

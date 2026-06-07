@@ -10,7 +10,7 @@ import {
   clearRecentlyViewed,
   type RecentlyViewedItem,
 } from "@/lib/recentlyViewed";
-import { formatCurrency } from "@/lib/format";
+import ProductCard from "./ProductCard";
 
 interface Props {
   /** Exclude a product ID (e.g., the currently-viewed product). */
@@ -119,53 +119,22 @@ export default function RecentlyViewedProducts({
                   compact ? "w-[150px]" : "w-[180px] sm:w-[200px]"
                 }`}
               >
-                <Link href={`/products/${item.slug}`} className="group block">
-                  {/* Image */}
-                  <div
-                    className={`relative bg-zinc-50 border border-zinc-100 rounded-2xl overflow-hidden mb-3 group-hover:border-orange-200 group-hover:shadow-md transition-all duration-300 ${
-                      compact ? "aspect-square" : "aspect-square"
-                    }`}
-                  >
-                    <Image
-                      src={item.image_url || "/images/prod_main.png"}
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 33vw, 20vw"
-                      className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {/* Recently viewed badge */}
-                    <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5 flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5 text-orange-400" />
-                      <span className="text-[8px] font-black text-zinc-500 uppercase tracking-wide">
-                        Viewed
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="space-y-0.5 px-0.5">
-                    {item.category_name && (
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 truncate">
-                        {item.category_name}
-                      </p>
-                    )}
-                    <p
-                      className={`font-bold text-zinc-900 leading-snug line-clamp-2 group-hover:text-primary transition-colors ${
-                        compact ? "text-xs" : "text-sm"
-                      }`}
-                    >
-                      {item.name}
-                    </p>
-                    <p className="text-sm font-black text-zinc-950 mt-1">
-                      {formatCurrency(item.sale_price ?? item.price)}
-                      {item.sale_price && (
-                        <span className="ml-1.5 text-xs font-semibold text-zinc-400 line-through">
-                          {formatCurrency(item.price)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </Link>
+                <ProductCard
+                  product={{
+                    id: item.id,
+                    name: item.name,
+                    slug: item.slug,
+                    price: item.price,
+                    sale_price: item.sale_price,
+                    image_url: item.image_url,
+                    status: "Active",
+                    stock_quantity: 10,
+                    moq: 1,
+                    categories: item.category_name
+                      ? { name: item.category_name, slug: "" }
+                      : null,
+                  }}
+                />
               </motion.div>
             ))}
           </AnimatePresence>

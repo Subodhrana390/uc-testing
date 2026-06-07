@@ -107,7 +107,7 @@ BEGIN
             order_id,
             product_id,
             quantity,
-            price_at_time
+            unit_price
         )
         SELECT 
             v_order_id,

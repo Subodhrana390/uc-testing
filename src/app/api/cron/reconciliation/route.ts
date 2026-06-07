@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const discrepancies = [];
 
     if (!mismatchError && mismatchOrders) {
-      for (const order of mismatchOrders) {
+      for (const order of (mismatchOrders as any[])) {
         // @ts-ignore
         if (order.completed_payments === 0) {
           discrepancies.push({
