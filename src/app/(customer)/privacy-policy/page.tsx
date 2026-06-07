@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ShieldCheck, Lock, Eye, FileText, Database, UserCheck } from "lucide-react";
-import { staticPageMetadata } from "@/lib/seo";
+import { staticPageMetadata, SITE_URL } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = staticPageMetadata.privacyPolicy;
 
@@ -36,6 +38,18 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50/50 pb-20">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "Privacy Policy", url: `${SITE_URL}/privacy-policy` },
+        ]),
+        webPageSchema({
+          name: "Privacy Policy",
+          description: "UC Enterprises privacy policy on data collection and usage.",
+          url: `${SITE_URL}/privacy-policy`,
+          type: "WebPage",
+        }),
+      ]} />
       {/* Header Section */}
       <header className="bg-white border-b border-zinc-200">
         <div className="container mx-auto max-w-5xl px-6 py-16">
