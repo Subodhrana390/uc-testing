@@ -43,28 +43,34 @@ export async function createOrder(orderData: {
 
     const attribution = { first_touch, latest_touch }
 
-    // Recalculate total on the backend to prevent frontend spoofing
-    const calculatedSubtotal = orderData.items.reduce((acc, item) => acc + (item.price * item.quantity), 0)
-    const deliveryCharge = 50 // Fixed delivery charge
-    const calculatedTotal = calculatedSubtotal + deliveryCharge
+    // Rate Limiting / Checkout Throttling (Max 1 order per 30 seconds per user)
+    const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString()
+    const { count, error: countError } = await supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', thirtySecondsAgo)
+    
+    if (count && count > 0) {
+      console.warn(`Checkout throttled for user ${user.id}`)
+      return { success: false, error: 'Please wait a moment before placing another order to prevent duplicates.' }
+    }
 
     // Call Postgres RPC for transactional atomic order & inventory updates
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
-      'place_order_with_inventory',
+      'place_order_safe',
       {
         p_user_id: user.id,
         p_customer_name: orderData.fullName,
         p_customer_email: orderData.email,
         p_phone: orderData.phone,
         p_shipping_address: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
-        p_total_amount: calculatedTotal,
         p_payment_method: orderData.paymentMethod,
-        p_payment_status: orderData.paymentStatus || (orderData.paymentMethod === 'COD' ? 'Unpaid' : 'Paid'),
         p_delivery_estimate: orderData.deliveryEstimate || null,
+        p_idempotency_key: `order_${Date.now()}_${user.id}`, // Idempotency protection
         p_items: orderData.items.map(item => ({
           id: item.id,
-          quantity: item.quantity,
-          price: item.price
+          quantity: item.quantity
         })),
         p_attribution: attribution
       }
@@ -91,7 +97,7 @@ export async function createOrder(orderData: {
           customerName: orderData.fullName,
           customerEmail: orderData.email,
           shippingAddress: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
-          totalAmount: calculatedTotal,
+          totalAmount: result.total_amount, // Use server calculated amount
           items: orderData.items
         })
       } catch (emailErr) {
