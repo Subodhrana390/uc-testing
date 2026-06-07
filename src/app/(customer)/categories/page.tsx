@@ -1,7 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { FolderTree, ArrowRight, Layers, LayoutGrid, ChevronRight, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
+import { baseMetadata, canonicalUrl, SITE_URL } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
+
+export const metadata: Metadata = baseMetadata({
+  title: "Shop By Category — UC Enterprises",
+  description: "Browse all laboratory, industrial, and safety supply categories available at UC Enterprises.",
+  alternates: { canonical: canonicalUrl("/categories") },
+});
 
 export default async function CategoriesPage({
   searchParams,
@@ -43,6 +53,18 @@ export default async function CategoriesPage({
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#fff8ef_0%,#ffffff_30%,#fffdf7_100%)]">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "Categories", url: `${SITE_URL}/categories` },
+        ]),
+        webPageSchema({
+          name: "Shop By Category",
+          description: "Browse all laboratory, industrial, and safety supply categories available at UC Enterprises.",
+          url: `${SITE_URL}/categories`,
+          type: "CollectionPage",
+        }),
+      ]} />
       <section className="container mx-auto px-4 py-16">
         <div className="mb-14 flex flex-col md:flex-row md:items-end justify-between gap-6">
           {/* Left Side: Title and Subtitle */}

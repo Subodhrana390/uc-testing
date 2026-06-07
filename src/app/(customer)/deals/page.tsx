@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, BadgePercent, Clock, Flame, Tag } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import CountdownTimer from "./CountdownTimer";
+import { staticPageMetadata, SITE_URL } from "@/lib/seo";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
+
+export const metadata: Metadata = staticPageMetadata.deals;
 
 export default async function DealsPage() {
   const supabase = await createClient();
@@ -21,6 +27,18 @@ export default async function DealsPage() {
 
   return (
     <div className="bg-[linear-gradient(180deg,#fff4e5_0%,#ffffff_100%)]">
+      <JsonLd data={[
+        breadcrumbSchema([
+          { name: "Home", url: SITE_URL },
+          { name: "Deals", url: `${SITE_URL}/deals` },
+        ]),
+        webPageSchema({
+          name: "Current Deals & Offers",
+          description: "Explore active deals and limited-time offers on laboratory chemicals, glassware and industrial equipment at UC Enterprises.",
+          url: `${SITE_URL}/deals`,
+          type: "CollectionPage",
+        }),
+      ]} />
       <section className="container mx-auto px-4 py-14">
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
