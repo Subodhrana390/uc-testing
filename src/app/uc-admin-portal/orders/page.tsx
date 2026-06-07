@@ -81,7 +81,7 @@ import {
 type StatusType = "All" | "Placed" | "Confirmed" | "Processing" | "Pending" | "Shipped" | "Delivered" | "Cancelled" | "Return";
 
 const getPossibleNextStatuses = (currentStatus: string): string[] => {
-  const status = (currentStatus || "").toUpperCase();
+  const status = (currentStatus || "").trim().toUpperCase();
   const transitions: Record<string, string[]> = {
     PENDING: ["Placed", "Confirmed", "Cancelled"],
     PLACED: ["Confirmed", "Cancelled"],
@@ -96,7 +96,13 @@ const getPossibleNextStatuses = (currentStatus: string): string[] => {
     RETURNED: [],
   };
 
-  return transitions[status] || [];
+  const defaultStatuses = [
+    "Pending", "Placed", "Confirmed", "Processing", 
+    "Shipped", "Delivered", "Cancelled", 
+    "Return_Requested", "Return_Approved", "Returned"
+  ];
+
+  return transitions[status] || defaultStatuses;
 };
 
 export default function OrdersPage() {

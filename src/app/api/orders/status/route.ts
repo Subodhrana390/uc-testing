@@ -179,27 +179,10 @@ export async function POST(req: Request) {
         }
 
         if (existingOrder.status.toUpperCase() === "PENDING") {
-          try {
-            const { sendOrderConfirmationEmail } = await import('@/lib/email');
-            const { data: items } = await serviceRoleSupabase
-              .from("order_items")
-              .select("*, products(name)")
-              .eq("order_id", orderId);
-
-            await sendOrderConfirmationEmail({
-              orderId: order.id,
-              orderDate: order.created_at,
-              customerName: order.customer_name,
-              customerEmail: order.customer_email,
-              shippingAddress: order.shipping_address,
-              totalAmount: order.total_amount,
-              items: items || [],
-              trackingId: order.tracking_id,
-              carrier: order.carrier
-            });
-          } catch (emailErr) {
-            console.error("Failed to send verification order confirmation email:", emailErr);
-          }
+          await serviceRoleSupabase.from('email_queue').insert({
+            type: 'ORDER_CONFIRMATION',
+            payload: { orderId: order.id }
+          });
         }
       }
     } else {
@@ -255,65 +238,22 @@ export async function POST(req: Request) {
 
     // 4. Trigger Email Notification for Status Change
     if (status !== undefined && order) {
-      try {
-        const { data: items } = await serviceRoleSupabase
-          .from("order_items")
-          .select("*, products(name)")
-          .eq("order_id", orderId);
-
-        await sendStatusUpdateEmail({
-            orderId: order.id,
-            orderDate: order.created_at,
-            customerName: order.customer_name,
-            customerEmail: order.customer_email,
-            shippingAddress: order.shipping_address,
-            totalAmount: order.total_amount,
-            items: items || [],
-            trackingId: order.tracking_id,
-            carrier: order.carrier
-          },
-          status.toUpperCase(),
-          remarks
-        );
-      } catch (emailErr) {
-        console.error("Failed to send status update email:", emailErr);
-      }
+      await serviceRoleSupabase.from('email_queue').insert({
+        type: 'STATUS_UPDATE',
+        payload: {
+          orderId: order.id,
+          status: status.toUpperCase(),
+          remarks: remarks || null
+        }
+      });
     }
 
     // 5. If status is "Delivered", generate and send invoice
     if (status === "DELIVERED" || status === "Delivered") {
-      const { data: items, error: itemsError } = await supabase
-        .from("order_items")
-        .select("*, products(name, image_url)")
-        .eq("order_id", orderId);
-
-      if (itemsError) throw itemsError;
-
-      const invoiceData = {
-        orderId: order.id,
-        date: order.created_at,
-        customerName: order.customer_name,
-        customerEmail: order.customer_email,
-        customerPhone: order.phone,
-        address: order.shipping_address || "N/A",
-        items: items || [],
-        totalAmount: parseFloat(order.total_amount)
-      };
-
-      const doc = await generateInvoicePDF(invoiceData);
-      const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-      try {
-        await sendInvoiceEmail(
-          order.customer_email,
-          order.customer_name,
-          order.id,
-          pdfBase64
-        );
-        console.log(`Invoice sent to ${order.customer_email} for order ${orderId}`);
-      } catch (emailError) {
-        console.error("Failed to send invoice email:", emailError);
-      }
+      await serviceRoleSupabase.from('email_queue').insert({
+        type: 'INVOICE',
+        payload: { orderId: order.id }
+      });
     }
 
     return NextResponse.json({ success: true, order });
