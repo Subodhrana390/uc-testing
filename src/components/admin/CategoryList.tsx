@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import SingleImageUpload from "./SingleImageUpload";
 import Image from "next/image";
+import { toggleCategoryStatus } from "@/app/actions/admin";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -219,19 +220,18 @@ export default function CategoryList({ type }: CategoryListProps) {
   };
 
   const handleToggleStatus = async (category: any) => {
-    const newStatus = category.is_active ? "Archived" : "Active";
     const toastId = toast.loading("Updating status...");
     try {
-      const { error } = await supabase
-        .from("categories")
-        .update({ status: newStatus })
-        .eq("id", category.id);
-      if (error) throw error;
+      const result = await toggleCategoryStatus(category.id, category.status);
+      
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       
       setCategories(prev => prev.map(c => 
-        c.id === category.id ? { ...c, is_active: newStatus === "Active", status: newStatus } : c
+        c.id === category.id ? { ...c, is_active: result.newStatus === "Active", status: result.newStatus } : c
       ));
-      toast.success(`Category is now ${newStatus}`, { id: toastId });
+      toast.success(`Category is now ${result.newStatus}`, { id: toastId });
     } catch (error: any) {
       toast.error(error.message || "Failed to update status", { id: toastId });
     }

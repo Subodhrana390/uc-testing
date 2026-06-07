@@ -154,7 +154,7 @@ export async function cancelOrder(orderId: string) {
   }
 }
 
-export async function returnOrder(orderId: string, reason: string) {
+export async function returnOrder(orderId: string, reason: string, bankDetails?: any) {
   try {
     const supabase = await createClient()
 
@@ -189,9 +189,14 @@ export async function returnOrder(orderId: string, reason: string) {
     // Update payment status to Refund Pending
     // We only want to set it to Refund Pending if it was paid, but setting it universally 
     // for returned items lets the admin know they need to verify if a refund is due.
+    const updateData: any = { payment_status: 'Refund Pending' };
+    if (bankDetails) {
+      updateData.refund_bank_details = bankDetails;
+    }
+
     const { error: paymentUpdateError } = await supabase
       .from('orders')
-      .update({ payment_status: 'Refund Pending' })
+      .update(updateData)
       .eq('id', orderId)
       .eq('user_id', user.id)
 

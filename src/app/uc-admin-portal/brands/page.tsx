@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import SingleImageUpload from "@/components/admin/SingleImageUpload";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { toggleBrandStatus } from "@/app/actions/admin";
 
 // Recharts imports
 import {
@@ -216,19 +217,18 @@ export default function BrandsPage() {
   };
 
   const handleToggleStatus = async (brand: any) => {
-    const newStatus = brand.status === "Active" ? "Inactive" : "Active";
     const toastId = toast.loading("Updating brand status...");
     try {
-      const { error } = await supabase
-        .from("brands")
-        .update({ status: newStatus })
-        .eq("id", brand.id);
-      if (error) throw error;
+      const result = await toggleBrandStatus(brand.id, brand.status);
+      
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       
       setBrands(prev => prev.map(b => 
-        b.id === brand.id ? { ...b, status: newStatus } : b
+        b.id === brand.id ? { ...b, status: result.newStatus } : b
       ));
-      toast.success(`Brand is now ${newStatus}`, { id: toastId });
+      toast.success(`Brand is now ${result.newStatus}`, { id: toastId });
     } catch (error: any) {
       toast.error(error.message || "Failed to update status", { id: toastId });
     }

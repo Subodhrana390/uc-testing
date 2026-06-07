@@ -43,9 +43,16 @@ export default function OrderHistoryPage() {
 
   // Return Modal State
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+  const [returnOrderPaymentMethod, setReturnOrderPaymentMethod] = useState<string | null>(null);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [returnReason, setReturnReason] = useState("");
   const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [bankDetails, setBankDetails] = useState({
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+    ifscCode: ""
+  });
 
   // Accordion Expand State
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
@@ -175,9 +182,11 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const handleOpenReturnDialog = (orderId: string) => {
-    setReturnOrderId(orderId);
+  const handleOpenReturnDialog = (order: any) => {
+    setReturnOrderId(order.id);
+    setReturnOrderPaymentMethod(order.payment_method);
     setReturnReason("");
+    setBankDetails({ bankName: "", accountName: "", accountNumber: "", ifscCode: "" });
     setIsReturnOpen(true);
   };
 
@@ -188,9 +197,16 @@ export default function OrderHistoryPage() {
     }
     if (!returnOrderId) return;
 
+    if (returnOrderPaymentMethod === 'COD') {
+      if (!bankDetails.bankName || !bankDetails.accountName || !bankDetails.accountNumber || !bankDetails.ifscCode) {
+        toast.error("Please fill all bank details for the refund.");
+        return;
+      }
+    }
+
     setReturnSubmitting(true);
     try {
-      const res = await returnOrder(returnOrderId, returnReason);
+      const res = await returnOrder(returnOrderId, returnReason, returnOrderPaymentMethod === 'COD' ? bankDetails : undefined);
       if (res.success) {
         toast.success("Return requested successfully!");
         setOrders(prev => prev.map(o => o.id === returnOrderId ? { ...o, status: "RETURN_REQUESTED", payment_status: "Refund Pending" } : o));
@@ -459,7 +475,7 @@ export default function OrderHistoryPage() {
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenReturnDialog(order.id);
+                        handleOpenReturnDialog(order);
                       }}
                       variant="outline"
                       className="border-pink-100 text-pink-600 hover:bg-pink-50 hover:text-pink-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
@@ -706,6 +722,34 @@ export default function OrderHistoryPage() {
                 className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
               />
             </div>
+            {returnOrderPaymentMethod === 'COD' && (
+              <div className="space-y-4 pt-4 border-t border-zinc-100 mt-4">
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-900">Refund Bank Details</h4>
+                  <p className="text-xs text-zinc-500 mb-4">Since this is a COD order, please provide your bank details for the refund.</p>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Bank Name</label>
+                    <Input value={bankDetails.bankName} onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})} placeholder="e.g. State Bank of India" className="rounded-xl border-zinc-200" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Account Holder Name</label>
+                    <Input value={bankDetails.accountName} onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value})} placeholder="Name as per bank account" className="rounded-xl border-zinc-200" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Account Number</label>
+                      <Input type="password" value={bankDetails.accountNumber} onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})} placeholder="Account Number" className="rounded-xl border-zinc-200" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">IFSC Code</label>
+                      <Input value={bankDetails.ifscCode} onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value})} placeholder="IFSC Code" className="rounded-xl border-zinc-200 uppercase" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
             <Button

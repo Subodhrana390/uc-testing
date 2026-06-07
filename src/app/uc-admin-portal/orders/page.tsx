@@ -1002,6 +1002,30 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
+                {selectedOrder.refund_bank_details && (
+                  <div className="mt-4 p-4 rounded-xl bg-orange-50 border border-orange-200">
+                    <h4 className="font-bold text-sm text-orange-900 mb-3">Customer Bank Details for Refund</h4>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-orange-700/70 font-semibold uppercase tracking-wider block mb-1">Bank Name</span>
+                        <span className="font-bold text-orange-950">{selectedOrder.refund_bank_details.bankName}</span>
+                      </div>
+                      <div>
+                        <span className="text-orange-700/70 font-semibold uppercase tracking-wider block mb-1">Account Name</span>
+                        <span className="font-bold text-orange-950">{selectedOrder.refund_bank_details.accountName}</span>
+                      </div>
+                      <div>
+                        <span className="text-orange-700/70 font-semibold uppercase tracking-wider block mb-1">Account No</span>
+                        <span className="font-bold text-orange-950 font-mono tracking-widest">{selectedOrder.refund_bank_details.accountNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-orange-700/70 font-semibold uppercase tracking-wider block mb-1">IFSC Code</span>
+                        <span className="font-bold text-orange-950 uppercase">{selectedOrder.refund_bank_details.ifscCode}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-zinc-900">Purchased Items</h4>
                   <div className="rounded-xl border border-zinc-200 overflow-hidden">
