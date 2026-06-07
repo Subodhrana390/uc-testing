@@ -216,6 +216,7 @@ export default async function ProductsPage({
                   currentPage={currentPage}
                   totalPages={totalPages}
                   baseUrl="/products"
+                  preserveParams={searchParams as Record<string, string>}
                 />
               </div>
             )}
