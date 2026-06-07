@@ -22,11 +22,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/process-email-queue",
-      "schedule": "* * * * *"
-    }
   ]
 }
