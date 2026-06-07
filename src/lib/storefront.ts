@@ -90,6 +90,8 @@ export function getDepartmentMeta(department: string) {
 
 export const primaryNavLinks = [
   { href: "/", label: "Home" },
+  { href: "/categories", label: "All Categories" },
+  { href: "/about", label: "About" },
   { href: "/products", label: "All Products" },
   { href: "/track-order", label: "Track Order" },
 ];
