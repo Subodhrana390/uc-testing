@@ -1,20 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Home, ArrowRight } from "lucide-react";
 
-export default function NotFound() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push("/");
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, [router]);
-
+export default function NotFoundClient() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
 
@@ -40,11 +29,14 @@ export default function NotFound() {
           The page you are looking for doesn’t exist.
         </p>
 
-        {/* Redirect Info */}
-        <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-700">
-          Redirecting to homepage
-          <ArrowRight className="h-4 w-4 animate-pulse" />
-        </div>
+        {/* Manual Redirect Button */}
+        <Link 
+          href="/"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 transition-colors px-6 py-3 text-sm font-semibold text-white group"
+        >
+          Return to homepage
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
     </div>
   );
