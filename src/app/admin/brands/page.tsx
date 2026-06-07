@@ -215,6 +215,25 @@ export default function BrandsPage() {
     }
   };
 
+  const handleToggleStatus = async (brand: any) => {
+    const newStatus = brand.status === "Active" ? "Inactive" : "Active";
+    const toastId = toast.loading("Updating brand status...");
+    try {
+      const { error } = await supabase
+        .from("brands")
+        .update({ status: newStatus })
+        .eq("id", brand.id);
+      if (error) throw error;
+      
+      setBrands(prev => prev.map(b => 
+        b.id === brand.id ? { ...b, status: newStatus } : b
+      ));
+      toast.success(`Brand is now ${newStatus}`, { id: toastId });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update status", { id: toastId });
+    }
+  };
+
   if (loading) return <LogoLoader text="Loading brand directory..." />;
 
   return (
@@ -476,13 +495,20 @@ export default function BrandsPage() {
                      <span className="text-xs font-medium text-zinc-500 block">{brand.category || "—"}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5",
-                      brand.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                    )}>
-                      {brand.status === "Active" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-                      {brand.status}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={brand.status === "Active"}
+                        onCheckedChange={() => handleToggleStatus(brand)}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5",
+                        brand.status === "Active" ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                      )}>
+                        {brand.status === "Active" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                        {brand.status}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right pr-8">
                     <div className="flex items-center justify-end gap-1">

@@ -218,6 +218,25 @@ export default function CategoryList({ type }: CategoryListProps) {
     }
   };
 
+  const handleToggleStatus = async (category: any) => {
+    const newStatus = category.is_active ? "Archived" : "Active";
+    const toastId = toast.loading("Updating status...");
+    try {
+      const { error } = await supabase
+        .from("categories")
+        .update({ status: newStatus })
+        .eq("id", category.id);
+      if (error) throw error;
+      
+      setCategories(prev => prev.map(c => 
+        c.id === category.id ? { ...c, is_active: newStatus === "Active", status: newStatus } : c
+      ));
+      toast.success(`Category is now ${newStatus}`, { id: toastId });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update status", { id: toastId });
+    }
+  };
+
   if (loading) {
     return <LogoLoader text="Loading departments..." />;
   }
@@ -379,12 +398,19 @@ export default function CategoryList({ type }: CategoryListProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-medium border",
-                      category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                    )}>
-                      {category.is_active ? "Active" : "Archived"}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={category.is_active}
+                        onCheckedChange={() => handleToggleStatus(category)}
+                        className="data-[state=checked]:bg-teal-600"
+                      />
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-medium border",
+                        category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                      )}>
+                        {category.is_active ? "Active" : "Archived"}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right pr-8 relative">
                     <button
