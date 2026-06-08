@@ -172,10 +172,13 @@ export default function PaymentsPage() {
   };
 
   const downloadCSV = () => {
-    const headers = ["Payment ID", "Order ID", "Amount", "Method", "Status", "Date"];
-    const rows = filteredPayments.map(p => [
-      p.id, p.order_id, p.amount, p.payment_method, p.status, new Date(p.created_at).toLocaleDateString()
-    ]);
+    const headers = ["Payment ID", "Custom Order ID", "System Order ID (UUID)", "Amount", "Method", "Status", "Date"];
+    const rows = filteredPayments.map(p => {
+      const customOrderId = p.orders?.id ? getDisplayOrderId(p.orders.id, p.orders.created_at) : `ORD-${p.order_id.slice(0, 8).toUpperCase()}`;
+      return [
+        p.id, customOrderId, p.order_id, p.amount, p.payment_method, p.status, new Date(p.created_at).toLocaleDateString()
+      ];
+    });
     let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -665,7 +668,7 @@ export default function PaymentsPage() {
             <TableHeader className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200">
               <TableRow className="border-b border-zinc-200 hover:bg-transparent">
                 <TableHead className="w-[180px] font-bold text-zinc-500 pl-6 h-12">Transaction Ref</TableHead>
-                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Order ID</TableHead>
+                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Custom Order ID</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Customer</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Amount</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Status</TableHead>
@@ -860,7 +863,7 @@ export default function PaymentsPage() {
                   <div className="grid grid-cols-2 gap-y-3 text-sm">
                     {selectedOrder.orders?.id && (
                       <>
-                        <span className="text-zinc-500 font-bold">Order Ref</span>
+                        <span className="text-zinc-500 font-bold">Custom Order ID</span>
                         <span className="text-right font-mono text-zinc-900 text-xs font-bold">{getDisplayOrderId(selectedOrder.orders.id, selectedOrder.orders.created_at)}</span>
                       </>
                     )}
