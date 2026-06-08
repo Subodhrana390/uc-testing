@@ -90,7 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: categories } = await supabase
     .from("categories")
     .select("slug, updated_at")
-    .eq("status", true);
+    .eq("status", "Active");
 
   const categoryPages: MetadataRoute.Sitemap = (categories || []).map((c) => ({
     url: `${SITE_URL}/categories/${c.slug}`,

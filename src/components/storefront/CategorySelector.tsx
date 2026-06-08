@@ -73,7 +73,7 @@ export default function CategorySelector({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-10">
+    <div data-nosnippet className="w-full max-w-4xl mx-auto py-10">
       <div className="relative group bg-white border border-zinc-100 p-4 sm:p-6 shadow-xl shadow-red-50/20 rounded-2xl sm:rounded-[2rem]">
         <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-transparent pointer-events-none rounded-[2rem]" />
 

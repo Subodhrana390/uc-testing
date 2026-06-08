@@ -19,17 +19,17 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!product) return {};
 
   return {
-    title: `${product.name} | UC Enterprises`,
-    description: product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
+    title: product.seo_title || `${product.name} | UC Enterprises`,
+    description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
     openGraph: {
-      title: product.name,
-      description: product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
+      title: product.seo_title || product.name,
+      description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
       images: product.image_url ? [{ url: product.image_url }] : [],
     },
     twitter: {
       card: "summary_large_image",
-      title: product.name,
-      description: product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
+      title: product.seo_title || product.name,
+      description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
       images: product.image_url ? [product.image_url] : [],
     },
     alternates: {
@@ -86,6 +86,8 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
       <JsonLd data={[
         productSchema({
           id: product.id,
+          seo_title: product.seo_title,
+          seo_description: product.seo_description,
           name: product.name,
           slug: product.slug,
           description: product.short_description || product.description,

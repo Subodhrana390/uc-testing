@@ -16,6 +16,8 @@ interface ProductInput {
   name: string;
   slug: string;
   description?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
   price: number;
   sale_price?: number | null;
   image_url?: string | null;
@@ -163,9 +165,10 @@ export function productSchema(p: ProductInput) {
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${url}#product`,
-    name: p.name,
+    name: p.seo_title || p.name,
     url,
     description:
+      p.seo_description ||
       p.description ||
       `${p.name}${p.categoryName ? ` — ${p.categoryName}` : ""} available at UC Enterprises. Pan-India delivery with competitive pricing.`,
     sku: p.sku || p.id,

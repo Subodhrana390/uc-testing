@@ -149,7 +149,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group/prodcard relative flex flex-col bg-transparent transition-all h-full overflow-hidden rounded-2xl">
+    <div data-nosnippet className="group/prodcard relative flex flex-col bg-transparent transition-all h-full overflow-hidden rounded-2xl">
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden">
         <Link href={`/products/${product.slug}`} className="absolute inset-0 z-0">

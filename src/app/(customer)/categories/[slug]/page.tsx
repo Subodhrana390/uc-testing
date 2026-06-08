@@ -29,7 +29,7 @@ export async function generateMetadata({
   const supabase = createStaticClient();
   const { data: category } = await supabase
     .from("categories")
-    .select("name, slug, description, image_url")
+    .select("name, slug, description, image_url, seo_title, seo_description")
     .eq("slug", params.slug)
     .single();
 
@@ -44,9 +44,9 @@ export async function generateMetadata({
     .eq("category_id", category.slug);
 
   return categoryMetadata({
-    name: category.name,
+    name: category.seo_title || category.name,
     slug: category.slug,
-    description: category.description,
+    description: category.seo_description || category.description,
     image_url: category.image_url,
     productCount: count || undefined,
   });
@@ -99,8 +99,8 @@ export default async function CategoryPage({
           { name: category.name, url: categoryUrl },
         ]),
         webPageSchema({
-          name: `${category.name} — Buy Online at Best Price`,
-          description: category.description || `Shop ${category.name} at UC Enterprises with competitive wholesale pricing and pan-India delivery.`,
+          name: category.seo_title || `${category.name} — Buy Online at Best Price`,
+          description: category.seo_description || category.description || `Shop ${category.name} at UC Enterprises with competitive wholesale pricing and pan-India delivery.`,
           url: categoryUrl,
           type: "CollectionPage",
         }),

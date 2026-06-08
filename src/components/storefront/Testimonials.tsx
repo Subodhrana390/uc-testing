@@ -26,7 +26,7 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <div className="py-8">
+    <div data-nosnippet className="py-8">
       <div className="mb-10 flex items-end justify-between border-b border-zinc-100 pb-5">
         <div className="relative pl-4 border-l-4 border-primary">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Testimonials</p>

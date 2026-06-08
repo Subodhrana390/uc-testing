@@ -74,6 +74,25 @@ const nextConfig = {
       }
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/product/:slug',
+        destination: '/products/:slug',
+        permanent: true,
+      },
+      {
+        source: '/category/:slug',
+        destination: '/categories/:slug',
+        permanent: true,
+      },
+      {
+        source: '/deal/:slug',
+        destination: '/deals/:slug',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

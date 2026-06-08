@@ -515,6 +515,15 @@ export default function ProductDetailsClient({
       </div>
 
       <FrequentlyBoughtTogether currentProduct={product} />
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        title={product.name}
+        text={product.short_description || `Check out ${product.name} at UC Enterprises`}
+        url={typeof window !== "undefined" ? window.location.href : `https://uc-enterprises.vercel.app/products/${product.slug}`}
+        imageUrl={product.image_url || product.images?.[0]}
+      />
     </>
   );
 }

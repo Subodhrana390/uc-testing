@@ -20,7 +20,7 @@ export default function DealBanner({
   gradient = "from-zinc-900 via-zinc-800 to-zinc-950"
 }: DealBannerProps) {
   return (
-    <div className={`relative overflow-hidden rounded-md bg-gradient-to-r ${gradient} p-10 md:p-16 shadow-2xl min-h-[450px] flex items-center`}>
+    <div data-nosnippet className={`relative overflow-hidden rounded-md bg-gradient-to-r ${gradient} p-10 md:p-16 shadow-2xl min-h-[450px] flex items-center`}>
       {/* Background Image Strategy */}
       {imageUrl && (
         <div className="absolute inset-0 z-0">
