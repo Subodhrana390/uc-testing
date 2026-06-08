@@ -14,7 +14,8 @@ import {
   Loader2,
   Settings,
   Menu,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
@@ -27,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 const sidebarLinks = [
   { name: "My Profile", icon: User, href: "/account/profile" },
   { name: "My Orders", icon: Package, href: "/account/orders" },
+  { name: "My Invoices", icon: FileText, href: "/my-invoices" },
   { name: "Address Book", icon: MapPin, href: "/account/address-book" },
   { name: "Change Password", icon: Settings, href: "/account/change-password" },
   { name: "Email Preferences", icon: Mail, href: "/account/newsletter" },

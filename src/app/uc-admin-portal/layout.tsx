@@ -133,6 +133,7 @@ export default function AdminLayout({
         { icon: <Clock className="w-3.5 h-3.5" />, label: "Orders", href: "/uc-admin-portal/orders" },
         { icon: <IndianRupee className="w-3.5 h-3.5" />, label: "Payments", href: "/uc-admin-portal/payments" },
         { icon: <Activity className="w-3.5 h-3.5" />, label: "Delivery", href: "/uc-admin-portal/delivery" },
+        { icon: <Terminal className="w-3.5 h-3.5" />, label: "Invoices", href: "/uc-admin-portal/invoices" },
       ]
     },
     {
@@ -214,6 +215,10 @@ export default function AdminLayout({
         iconColor = "text-rose-500";
         activeBg = "bg-rose-50 border-rose-200 text-rose-700";
         break;
+      case "Invoices":
+        iconColor = "text-indigo-500";
+        activeBg = "bg-indigo-50 border-indigo-200 text-indigo-700";
+        break;
       case "Products":
         iconColor = "text-orange-500";
         activeBg = "bg-orange-50 border-orange-200 text-orange-700";
@@ -269,6 +274,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/orders")) return "theme-orders";
     if (path.startsWith("/uc-admin-portal/payments")) return "theme-payments";
     if (path.startsWith("/uc-admin-portal/delivery")) return "theme-delivery";
+    if (path.startsWith("/uc-admin-portal/invoices")) return "theme-invoices";
     if (path.startsWith("/uc-admin-portal/products")) return "theme-products";
     if (path.startsWith("/uc-admin-portal/categories/main")) return "theme-categories-main";
     if (path.startsWith("/uc-admin-portal/categories/sub")) return "theme-categories-sub";
