@@ -49,6 +49,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 
 export default function BannersPage() {
   const [banners, setBanners] = useState<any[]>([]);
@@ -57,7 +65,6 @@ export default function BannersPage() {
   const [saving, setSaving] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
   const [formData, setFormData] = useState({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: 0, is_active: true });
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [bannerToDelete, setBannerToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,7 +101,6 @@ export default function BannersPage() {
       setFormData({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: banners.length, is_active: true });
     }
     setIsDrawerOpen(true);
-    setActiveDropdown(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -268,66 +274,56 @@ export default function BannersPage() {
                     ) : <span className="text-xs text-zinc-300">—</span>}
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleToggleActive(banner.id, banner.is_active)}
-                      className={cn(
-                        "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all inline-flex items-center gap-1.5",
-                        banner.is_active
-                          ? "bg-yellow-50 text-yellow-800 border-yellow-100"
-                          : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                      )}
-                    >
-                      {banner.is_active && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />}
-                      {banner.is_active ? "Active" : "Hidden"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={banner.is_active}
+                        onCheckedChange={() => handleToggleActive(banner.id, banner.is_active)}
+                        className="data-[state=checked]:bg-yellow-500"
+                      />
+                      <span
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all inline-flex items-center gap-1.5",
+                          banner.is_active
+                            ? "bg-yellow-50 text-yellow-800 border-yellow-100"
+                            : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        )}
+                      >
+                        {banner.is_active && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />}
+                        {banner.is_active ? "Active" : "Hidden"}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right pr-8 relative">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleOpenDrawer(banner)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === banner.id ? null : banner.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all"
-                      >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all ml-auto">
                         <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {activeDropdown === banner.id && (
-                      <div className="absolute right-8 top-12 w-52 bg-white border border-zinc-200 shadow-lg rounded-xl z-50 p-1.5 overflow-hidden text-left">
-                        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Banner Options</div>
-                        <button
-                          type="button"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-white border-zinc-200 shadow-lg rounded-xl p-1.5">
+                        <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">
+                          Banner Options
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
                           onClick={() => handleOpenDrawer(banner)}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg text-left"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                         >
                           <Edit className="w-4 h-4 text-zinc-400" /> Edit Content
-                        </button>
-                        <button
-                          type="button"
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleToggleActive(banner.id, banner.is_active)}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg text-left"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                         >
                           {banner.is_active ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
                           {banner.is_active ? "Hide Banner" : "Show Banner"}
-                        </button>
+                        </DropdownMenuItem>
                         <div className="h-px bg-zinc-100 my-1 mx-1" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBannerToDelete(banner);
-                            setActiveDropdown(null);
-                          }}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg text-left"
+                        <DropdownMenuItem
+                          onClick={() => setBannerToDelete(banner)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg cursor-pointer focus:text-red-700 focus:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" /> Delete Permanently
-                        </button>
-                      </div>
-                    )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -444,11 +440,6 @@ export default function BannersPage() {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Global Dropdown Dismiss Layer */}
-      {activeDropdown && (
-        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
-      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!bannerToDelete} onOpenChange={(open) => !open && setBannerToDelete(null)}>

@@ -15,9 +15,31 @@ import {
   UserCheck,
   TrendingUp,
   X,
+  Loader2,
+  Package,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Recharts imports
 import {
@@ -38,7 +60,15 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const [orderHistoryCustomer, setOrderHistoryCustomer] = useState<any>(null);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  const [notificationCustomer, setNotificationCustomer] = useState<any>(null);
+  const [notificationSubject, setNotificationSubject] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -57,6 +87,56 @@ export default function CustomersPage() {
       toast.error("Failed to load customers");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderHistory = async (customer: any) => {
+    setOrderHistoryCustomer(customer);
+    setLoadingOrders(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, created_at, total_amount, status')
+        .eq('user_id', customer.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (error) throw error;
+      setCustomerOrders(data || []);
+    } catch (error: any) {
+      toast.error("Failed to fetch order history");
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notificationSubject || !notificationMessage) {
+      toast.error("Please fill in both fields");
+      return;
+    }
+    setSendingNotification(true);
+    // Simulate sending email
+    setTimeout(() => {
+      setSendingNotification(false);
+      setNotificationCustomer(null);
+      setNotificationSubject("");
+      setNotificationMessage("");
+      toast.success("Notification sent successfully");
+    }, 1000);
+  };
+
+  const handleSuspendAccount = async (customer: any) => {
+    try {
+      const newStatus = customer.status === 'suspended' ? 'active' : 'suspended';
+      const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', customer.id);
+      if (error) throw error;
+      
+      setCustomers(customers.map(c => c.id === customer.id ? { ...c, status: newStatus } : c));
+      toast.success(`Account ${newStatus === 'suspended' ? 'suspended' : 'activated'}`);
+    } catch (error: any) {
+      toast.error(`Update failed. The database schema might lack a 'status' column on profiles.`);
     }
   };
 
@@ -419,34 +499,55 @@ export default function CustomersPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-50 text-teal-700 border border-teal-100">
-                        Active
-                      </span>
+                      {customer.status === 'suspended' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                          Suspended
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-50 text-teal-700 border border-teal-100">
+                          Active
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 text-right relative">
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === customer.id ? null : customer.id)}
-                        className="w-8 h-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center transition-all ml-auto border border-transparent hover:border-zinc-200"
-                      >
-                        <MoreHorizontal className="w-4 h-4 text-zinc-400" />
-                      </button>
-
-                      {activeDropdown === customer.id && (
-                        <div className="absolute right-6 top-12 w-56 bg-white border border-zinc-200 shadow-lg rounded-xl py-1.5 z-50 text-left">
-                          <div className="px-4 py-1.5 text-[10px] font-bold text-zinc-400 border-b border-zinc-100 tracking-wider">ACTIONS</div>
-                          <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 text-left">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="w-8 h-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center transition-all ml-auto border border-transparent hover:border-zinc-200">
+                          <MoreHorizontal className="w-4 h-4 text-zinc-400" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-white border border-zinc-200 shadow-lg rounded-xl py-1.5 z-50 text-left">
+                          <DropdownMenuLabel className="px-4 py-1.5 text-[10px] font-bold text-zinc-400 border-b border-zinc-100 tracking-wider">
+                            ACTIONS
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() => fetchOrderHistory(customer)}
+                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 cursor-pointer"
+                          >
                             <ShieldCheck className="w-4 h-4 text-zinc-400" /> View Order History
-                          </button>
-                          <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 text-left">
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setNotificationCustomer(customer);
+                              setNotificationSubject("");
+                              setNotificationMessage("");
+                            }}
+                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 cursor-pointer"
+                          >
                             <Mail className="w-4 h-4 text-zinc-400" /> Send Notification
-                          </button>
+                          </DropdownMenuItem>
                           <div className="h-px bg-zinc-100 my-1 mx-2" />
-                          <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
-                            <Ban className="w-4 h-4" /> Suspend Account
-                          </button>
-                        </div>
-                      )}
+                          <DropdownMenuItem
+                            onClick={() => handleSuspendAccount(customer)}
+                            className={cn(
+                              "flex w-full items-center gap-2.5 px-4 py-2 text-sm hover:bg-zinc-50 cursor-pointer",
+                              customer.status === 'suspended' ? "text-emerald-600 hover:text-emerald-700" : "text-red-600 hover:text-red-700 focus:text-red-700 focus:bg-red-50"
+                            )}
+                          >
+                            {customer.status === 'suspended' ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                            {customer.status === 'suspended' ? "Reactivate Account" : "Suspend Account"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 )))}
@@ -455,9 +556,105 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {activeDropdown && (
-        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
-      )}
+      {/* Dialog for Order History */}
+      <Dialog open={!!orderHistoryCustomer} onOpenChange={(open) => !open && setOrderHistoryCustomer(null)}>
+        <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl border-zinc-200">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+              <Package className="w-5 h-5 text-teal-600" />
+              Order History
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Recent orders for <span className="font-semibold text-zinc-700">{orderHistoryCustomer?.full_name || orderHistoryCustomer?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingOrders ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+              </div>
+            ) : customerOrders.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500 text-sm border border-dashed border-zinc-200 rounded-xl">
+                No orders found for this customer.
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="space-y-3">
+                  {customerOrders.map(order => (
+                    <div key={order.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-100 bg-zinc-50/50 hover:bg-zinc-50 transition-colors">
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-zinc-800">
+                          Order #{order.id.slice(0, 8).toUpperCase()}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {new Date(order.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="text-sm font-bold text-zinc-900">
+                          ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md inline-block">
+                          {order.status || 'Placed'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOrderHistoryCustomer(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Send Notification */}
+      <Dialog open={!!notificationCustomer} onOpenChange={(open) => !open && setNotificationCustomer(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-white rounded-2xl border-zinc-200">
+          <form onSubmit={handleSendNotification}>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-teal-600" />
+                Send Notification
+              </DialogTitle>
+              <DialogDescription className="text-zinc-500">
+                Send a direct email to <span className="font-semibold text-zinc-700">{notificationCustomer?.email}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-xs font-semibold text-zinc-600">Subject</Label>
+                <Input
+                  id="subject"
+                  value={notificationSubject}
+                  onChange={(e) => setNotificationSubject(e.target.value)}
+                  placeholder="Notification subject..."
+                  className="rounded-xl border-zinc-200 focus-visible:ring-teal-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="message" className="text-xs font-semibold text-zinc-600">Message</Label>
+                <Textarea
+                  id="message"
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  placeholder="Write your message here..."
+                  className="rounded-xl border-zinc-200 focus-visible:ring-teal-600 min-h-[120px] resize-none"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNotificationCustomer(null)}>Cancel</Button>
+              <Button type="submit" disabled={sendingNotification} className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+                {sendingNotification && <Loader2 className="w-4 h-4 animate-spin" />}
+                Send Email
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

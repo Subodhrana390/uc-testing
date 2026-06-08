@@ -279,7 +279,7 @@ function TrackOrderContent() {
 
     // Add Order Placed milestone for all orders
     list.push({
-      title: "Order Placed",
+      title: "Order Confirmed",
       description: "Your order details have been successfully saved. Payment authorized.",
       time: formatMilestoneDate(baseDate, 0),
       status: "confirmed"
@@ -323,7 +323,7 @@ function TrackOrderContent() {
     } else {
       if (statusStep >= 1) {
         list.push({
-          title: "Under Processing",
+          title: "Processing",
           description: "Items picked and undergoing quality inspection at Zirakpur hub.",
           // Use updated_at only if status IS processing (i.e., this is the current step)
           time: statusStep === 1 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 4),
@@ -332,7 +332,7 @@ function TrackOrderContent() {
       }
       if (statusStep >= 2) {
         list.push({
-          title: "Dispatched",
+          title: "Shipped",
           description: `Handed over to ${carrierName}. Tracking details generated.`,
           time: statusStep === 2 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 12),
           status: "shipped"
@@ -485,9 +485,11 @@ function TrackOrderContent() {
                               ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
                               : order.status.toLowerCase() === "processing"
                                 ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
-                                : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
-                                  ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
-                                  : order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved"
+                                : order.status.toLowerCase() === "pending" || order.status.toLowerCase() === "confirmed" || order.status.toLowerCase() === "placed"
+                                  ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
+                                  : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
+                                    ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
+                                    : order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved"
                                     ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
                                     : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
                         )}>
@@ -629,7 +631,7 @@ function TrackOrderContent() {
                                 idx === 0 ? "border-emerald-500 ring-4 ring-emerald-50" : "border-zinc-300"
                               )} />
                               {idx !== milestones.length - 1 && (
-                                <div className="w-px h-full bg-zinc-200 my-1" min-height="2rem" />
+                                <div className="w-px flex-1 bg-zinc-200 my-1" style={{ minHeight: '2rem' }} />
                               )}
                             </div>
                             <div className="pb-8 pt-0.5">

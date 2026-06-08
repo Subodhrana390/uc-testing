@@ -496,16 +496,20 @@ export default function BrandsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleToggleStatus(brand)}
+                      <Switch
+                        checked={brand.status === true}
+                        onCheckedChange={() => handleToggleStatus(brand)}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                      <span
                         className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 hover:opacity-80",
+                          "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5",
                           brand.status === true ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
                         )}
                       >
                         {brand.status === true && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
                         {brand.status ? "Active" : "Inactive"}
-                      </button>
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right pr-8">

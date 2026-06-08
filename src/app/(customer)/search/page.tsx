@@ -50,7 +50,12 @@ export default function SearchPage() {
   const [appliedMaxPrice, setAppliedMaxPrice] = useState<number | null>(null);
   const [inStockFilter, setInStockFilter] = useState(false);
   const [outOfStockFilter, setOutOfStockFilter] = useState(false);
-  const [sortBy, setSortBy] = useState("latest");
+  const sortParam = searchParams.get("sort") || "latest";
+  const [sortBy, setSortBy] = useState(sortParam);
+
+  useEffect(() => {
+    setSortBy(sortParam);
+  }, [sortParam]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -479,7 +484,13 @@ export default function SearchPage() {
               <div className="relative">
                 <select
                   value={sortBy}
-                  onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => { 
+                    setSortBy(e.target.value); 
+                    setCurrentPage(1); 
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("sort", e.target.value);
+                    router.replace(`/search?${params.toString()}`, { scroll: false });
+                  }}
                   className="h-9 pl-3 pr-8 bg-white border border-zinc-200 text-[10px] font-black uppercase tracking-widest text-zinc-950 rounded-lg shadow-xs appearance-none outline-hidden focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 cursor-pointer transition-all"
                 >
                   <option value="latest">Sort: Newest</option>
@@ -840,6 +851,9 @@ export default function SearchPage() {
           </div>
         )}
       </div>
+
+      {/* Floating Mobile Actions for Infinite Scroll */}
+      <MobileFloatingActionBar />
     </div>
   );
 }
