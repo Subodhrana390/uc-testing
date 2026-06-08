@@ -393,8 +393,9 @@ export default function AddProductPage() {
                           const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
                           setFormData({ ...formData, category_id: selectedMainCategoryId, tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate });
                         } else {
-                          const subCat = categories.find((c: any) => c.id === subId);
-                          setFormData({ ...formData, category_id: subId, tax_rate: subCat ? subCat.tax_rate.toString() : formData.tax_rate });
+                          // Always pull tax_rate from Main Category
+                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
+                          setFormData({ ...formData, category_id: subId, tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate });
                         }
                       }}
                     >

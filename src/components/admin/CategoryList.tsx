@@ -80,7 +80,8 @@ export default function CategoryList({ type }: CategoryListProps) {
     image_url: "",
     is_active: true,
     display_order: 0,
-    parent_id: null as string | null
+    parent_id: null as string | null,
+    tax_rate: 0
   });
 
   const supabase = useMemo(() => createClient(), []);
@@ -136,7 +137,8 @@ export default function CategoryList({ type }: CategoryListProps) {
         image_url: category.image_url || "",
         is_active: category.is_active,
         display_order: category.display_order,
-        parent_id: category.parent_id
+        parent_id: category.parent_id,
+        tax_rate: category.tax_rate || 0
       });
     } else {
       setEditingCategory(null);
@@ -147,7 +149,8 @@ export default function CategoryList({ type }: CategoryListProps) {
         image_url: "",
         is_active: true,
         display_order: categories.length,
-        parent_id: type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null)
+        parent_id: type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null),
+        tax_rate: 0
       });
     }
     setIsDrawerOpen(true);
@@ -552,6 +555,19 @@ export default function CategoryList({ type }: CategoryListProps) {
                 value={formData.display_order}
                 onChange={e => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
                 className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
+              />
+            </div>
+
+            {/* Default GST Tax Rate */}
+            <div className="space-y-2">
+              <Label htmlFor="cat-tax" className="text-xs font-medium text-zinc-500">Default GST Rate (%)</Label>
+              <Input
+                id="cat-tax"
+                type="number"
+                value={formData.tax_rate}
+                onChange={e => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) || 0 })}
+                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
+                placeholder="e.g. 18"
               />
             </div>
 
