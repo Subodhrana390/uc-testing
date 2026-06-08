@@ -153,26 +153,32 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden">
         <Link href={`/products/${product.slug}`} className="absolute inset-0 z-0">
-          <Image
-            src={product.image_url || "/images/prod_main.png"}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-            placeholder="blur"
-            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
-            className="object-contain p-3.5 transition-transform duration-700 group-hover/prodcard:scale-105"
-          />
+          {product.image_url ? (
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              placeholder="blur"
+              blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+              className="object-contain p-3.5 transition-transform duration-700 group-hover/prodcard:scale-105"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-zinc-50 flex items-center justify-center">
+              <span className="text-[9px] text-zinc-300 font-bold uppercase tracking-widest text-center">No Image</span>
+            </div>
+          )}
         </Link>
 
         {/* Badges */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10 pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
           {discount && (
-            <div className="bg-primary text-white text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm shadow-md">
-              -{discount}%
+            <div className="bg-primary text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+              {discount}% OFF
             </div>
           )}
           {product.status === "New" && (
-            <div className="bg-emerald-600 text-white text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm shadow-md">
+            <div className="bg-emerald-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
               New
             </div>
           )}
@@ -212,7 +218,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </h3>
 
-        {/* Price & Inventory */}
+        {/* Price */}
         <div className="flex items-center justify-between pt-1 mt-auto">
           <div className="flex flex-col">
             <span className="text-sm font-black text-zinc-950 leading-none">
@@ -223,12 +229,6 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {formatCurrency(product.price)}
               </span>
             )}
-          </div>
-
-          <div className="flex flex-col items-end text-right">
-            <span className={`text-[9px] font-black uppercase tracking-widest ${product.stock_quantity > 0 ? "text-emerald-600" : "text-amber-600"}`}>
-              {product.stock_quantity > 0 ? "In Stock" : "Out"}
-            </span>
           </div>
         </div>
       </Link>

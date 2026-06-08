@@ -193,7 +193,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm font-medium text-zinc-600">
-                  <span>Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                  <span>Subtotal ({items.length} items)</span>
                   <span className="font-bold text-zinc-950">{formatCurrency(getCartTotal())}</span>
                 </div>
 

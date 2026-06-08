@@ -145,7 +145,7 @@ export default async function ProductsPage({
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
             <MobileFilterToggle />
             <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 py-2 rounded-lg shadow-2xs">
               Total SKU: <span className="font-semibold text-zinc-900">{count || 0} Items</span>

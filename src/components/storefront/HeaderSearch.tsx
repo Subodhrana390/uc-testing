@@ -123,12 +123,12 @@ function SearchInput() {
   };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full text-left">
       <form onSubmit={handleFormSubmit} className="relative w-full">
         {loading ? (
-          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-red-600 animate-spin" />
+          <Loader2 className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-red-600 animate-spin" />
         ) : (
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         )}
         <input
           type="text"
@@ -140,8 +140,8 @@ function SearchInput() {
             setShowSuggestions(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search products, brands, and business essentials"
-          className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 pl-11 pr-4 text-sm outline-none transition focus:border-primary focus:bg-white"
+          placeholder="Search products, brands..."
+          className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 pl-12 pr-4 text-sm text-left outline-none transition focus:border-primary focus:bg-white"
         />
       </form>
 

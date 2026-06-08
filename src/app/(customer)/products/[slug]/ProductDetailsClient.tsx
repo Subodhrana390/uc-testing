@@ -16,6 +16,7 @@ import { addRecentlyViewed } from "@/lib/recentlyViewed";
 import { addCartItem, isInCart, updateCartItemQuantity } from "@/lib/cart";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
+import ShareModal from "@/components/storefront/ShareModal";
 
 export default function ProductDetailsClient({ 
   product, 
@@ -28,6 +29,7 @@ export default function ProductDetailsClient({
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
@@ -79,7 +81,7 @@ export default function ProductDetailsClient({
         image_url: product.image_url ?? null,
         category_name: product.categories?.name ?? null,
       });
-      setActiveImage(product.images?.[0] || product.image_url || "/images/prod_main.png");
+      setActiveImage(product.images?.[0] || product.image_url || null);
     }
   }, [product]);
 
@@ -126,30 +128,8 @@ export default function ProductDetailsClient({
     setTouchStartX(null);
   };
 
-  const handleShare = async () => {
-    if (!product) return;
-    const shareData = {
-      title: product.name,
-      text: product.short_description || `Check out ${product.name} on UC Enterprises`,
-      url: window.location.origin + `/products/${product.slug}`,
-    };
-
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-      try {
-        await navigator.share(shareData);
-      } catch (error: any) {
-        if (error.name !== "AbortError") {
-          toast.error("Failed to share product.");
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success("Product link copied to clipboard!");
-      } catch (err) {
-        toast.error("Failed to copy link.");
-      }
-    }
+  const handleShare = () => {
+    setIsShareModalOpen(true);
   };
 
   useEffect(() => {
@@ -278,11 +258,25 @@ export default function ProductDetailsClient({
         <ChevronRight className="h-3 w-3" />
         {product.categories?.parent?.name && (
           <>
-            <span className="text-zinc-300">{product.categories.parent.name}</span>
+            <Link 
+              href={`/categories/${product.categories.parent.slug}`} 
+              className="hover:text-primary transition-colors"
+            >
+              {product.categories.parent.name}
+            </Link>
             <ChevronRight className="h-3 w-3" />
           </>
         )}
-        <span className="text-zinc-900">{product.categories?.name || "Uncategorized"}</span>
+        {product.categories?.slug ? (
+          <Link 
+            href={`/categories/${product.categories.slug}`} 
+            className="hover:text-primary transition-colors text-zinc-900 font-semibold"
+          >
+            {product.categories.name}
+          </Link>
+        ) : (
+          <span className="text-zinc-900 font-semibold">{product.categories?.name || "Uncategorized"}</span>
+        )}
       </div>
 
       <div className="grid gap-12 lg:grid-cols-2">
@@ -310,7 +304,7 @@ export default function ProductDetailsClient({
               ))}
             </div>
           )}
-          <div className="flex-1 max-w-[450px] mx-auto lg:mx-0 w-full">
+          <div className="flex-1 max-w-[450px] mx-auto lg:mx-0 w-full relative">
             <div
               className="relative aspect-square overflow-hidden rounded-[2.5rem] group cursor-zoom-in"
               onTouchStart={handleTouchStart}
@@ -323,26 +317,22 @@ export default function ProductDetailsClient({
                 e.currentTarget.style.setProperty('--y', `${y}%`);
               }}
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleShare();
-                }}
-                className="absolute top-6 right-6 z-10 h-10 w-10 bg-white/80 backdrop-blur-md shrink-0 rounded-xl border border-white/50 shadow-sm p-0 flex items-center justify-center hover:bg-white hover:shadow-md transition-all text-zinc-600 hover:text-zinc-950 active:scale-95"
-                title="Share Product"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-              <Image
-                src={activeImage || "/images/prod_main.png"}
-                alt={product.name}
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain p-6 transition-transform duration-200 group-hover:scale-[2.5]"
-                style={{
-                  transformOrigin: 'var(--x, 50%) var(--y, 50%)'
-                } as any}
-              />
+              {activeImage ? (
+                <Image
+                  src={activeImage}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-contain p-6 transition-transform duration-200 group-hover:scale-[2.5]"
+                  style={{
+                    transformOrigin: 'var(--x, 50%) var(--y, 50%)'
+                  } as any}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-zinc-50 flex items-center justify-center rounded-[2.5rem]">
+                  <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest text-center">No Image</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -356,14 +346,26 @@ export default function ProductDetailsClient({
 
           <div className="space-y-4">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 leading-[1.2]">{product.name}</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-1 text-amber-500">
                 <Star className={`h-4 w-4 ${Number(product.averageRating) > 0 ? "fill-amber-500" : ""}`} />
                 <span className="text-sm font-bold">{Number(product.averageRating) > 0 ? product.averageRating : "N/A"}</span>
                 <span className="text-zinc-500 text-sm font-medium ml-1">({product.reviewCount} Reviews)</span>
               </div>
-              <span className="text-zinc-200">|</span>
+              <span className="hidden sm:inline text-zinc-200">|</span>
               <span className="text-sm font-medium text-zinc-500">Brand: <span className="text-zinc-900 font-semibold">{product.brands?.name || "UC Generic"}</span></span>
+              
+              <span className="hidden sm:inline text-zinc-200">|</span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleShare();
+                }}
+                className="flex items-center gap-1.5 text-sm font-bold text-zinc-500 hover:text-primary transition-colors active:scale-95 ml-auto sm:ml-0"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
             </div>
             <p className="text-base leading-relaxed text-zinc-600 max-w-2xl">
               {product.short_description || "High-performance industrial solution designed for precision and durability in professional environments."}

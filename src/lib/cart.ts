@@ -70,7 +70,7 @@ export function removeCartItem(id: string) {
 }
 
 export function getCartCount() {
-  return getCartItems().reduce((total, item) => total + item.quantity, 0);
+  return getCartItems().length;
 }
 
 export function getCartTotal() {

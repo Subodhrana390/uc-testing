@@ -62,25 +62,25 @@ export default function Header({ categories, user }: HeaderProps) {
     <>
       <div className="sticky top-0 z-50 w-full">
         {/* Top Bar */}
-        <div className="border-b border-zinc-100 bg-[linear-gradient(90deg,#fff5f5_0%,#ffffff_100%)] text-zinc-700 overflow-hidden">
-          <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-xs font-medium text-zinc-600">
-            <div className="flex items-center gap-4">
+        <div className="bg-zinc-950 text-zinc-400 overflow-hidden">
+          <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-6">
               <a
                 href={supportPhoneHref}
-                className="inline-flex items-center gap-2 hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 hover:text-white transition-colors"
               >
-                <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                <Phone className="h-3 w-3 text-primary" />
                 {supportPhone}
               </a>
               <a
                 href={supportEmailHref}
-                className="hidden xs:inline-flex items-center gap-2 hover:text-primary transition-colors"
+                className="hidden xs:inline-flex items-center gap-2 hover:text-white transition-colors"
               >
-                <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                <Mail className="h-3 w-3 text-primary" />
                 Sales Support
               </a>
             </div>
-            <div className="hidden md:inline-flex items-center gap-2">
+            <div className="hidden md:inline-flex items-center gap-2 text-zinc-500">
               <MapPin className="h-3 w-3 text-primary" />
               Zirakpur, Punjab
             </div>
@@ -89,40 +89,40 @@ export default function Header({ categories, user }: HeaderProps) {
 
         <header className="border-b border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm">
           <div className="container mx-auto px-4">
-            <div className="flex h-14 sm:h-16 items-center justify-between gap-4 sm:gap-8">
-              {/* Mobile Menu Button */}
-              <button
-                className={cn(
-                  "lg:hidden -ml-2 p-2 text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
-                )}
-                onClick={() => setIsMobileMenuOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+            <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-8 relative">
+              <div className="flex items-center gap-1 sm:gap-4 flex-1 min-w-0">
+                {/* Mobile Menu Button */}
+                <button
+                  className="lg:hidden -ml-2 p-2 shrink-0 text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
+                  onClick={() => setIsMobileMenuOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
 
-              {/* Logo */}
-              <Link
-                href="/"
-                className="shrink-0 flex items-center gap-2 sm:gap-3 group"
-              >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 overflow-hidden flex items-center justify-center p-1 transition group-hover:border-primary group-hover:scale-105">
-                  <Image
-                    src="/logo.png"
-                    alt="UC Enterprises"
-                    width={40}
-                    height={40}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 leading-none">
-                    UC <span className="text-primary">ENTERPRISES</span>
-                  </span>
-                  <span className="text-[11px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5">
-                    Quality Industrial Supplies
-                  </span>
-                </div>
-              </Link>
+                {/* Logo */}
+                <Link
+                  href="/"
+                  className="shrink flex items-center gap-2 sm:gap-3 group min-w-0"
+                >
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 overflow-hidden flex items-center justify-center p-1 transition group-hover:border-primary group-hover:scale-105">
+                    <Image
+                      src="/logo.png"
+                      alt="UC Enterprises"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col min-w-0 text-left">
+                    <span className="text-base sm:text-xl font-bold tracking-tight text-zinc-900 leading-none truncate">
+                      UC <span className="text-primary">ENTERPRISES</span>
+                    </span>
+                    <span className="text-[9px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5 truncate hidden sm:block">
+                      Quality Industrial Supplies
+                    </span>
+                  </div>
+                </Link>
+              </div>
 
               {/* Desktop Search */}
               <div className="hidden lg:block flex-1 max-w-lg">
@@ -130,7 +130,7 @@ export default function Header({ categories, user }: HeaderProps) {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1 sm:gap-4">
+              <div className="flex items-center justify-end gap-3 sm:gap-4 shrink-0">
                 {!user ? (
                   <button
                     onClick={goToLogin}
@@ -202,21 +202,21 @@ export default function Header({ categories, user }: HeaderProps) {
                           <div key={mainCat.id} className="group/main">
                             <Link
                               href={`/search?main=${mainCat.slug}`}
-                              className="flex items-center justify-between w-full px-3 py-2 text-xs font-black rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
+                              className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
                             >
                               {mainCat.name}
-                              <ChevronDown className="h-3 w-3 -rotate-90 opacity-40 group-hover/main:opacity-100" />
+                              <ChevronDown className="h-4 w-4 -rotate-90 opacity-40 group-hover/main:opacity-100" />
                             </Link>
 
                             {/* Subcategories (Right Panel) */}
                             <div className="invisible absolute left-[33.33%] top-0 w-[66.66%] h-full p-5 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar">
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-base font-black tracking-tight text-zinc-950 uppercase">
+                              <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
                                   {mainCat.name}
                                 </h3>
                                 <Link
                                   href={`/search?main=${mainCat.slug}`}
-                                  className="text-[9px] font-black text-primary hover:underline uppercase tracking-widest"
+                                  className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
                                 >
                                   View All
                                 </Link>
@@ -228,7 +228,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                     <Link
                                       key={subCat.id}
                                       href={`/search?main=${mainCat.slug}&sub=${subCat.slug}`}
-                                      className="text-xs font-bold text-zinc-600 hover:text-primary transition-colors"
+                                      className="text-sm font-bold text-zinc-600 hover:text-primary transition-colors py-1"
                                     >
                                       {subCat.name}
                                     </Link>
@@ -323,62 +323,48 @@ export default function Header({ categories, user }: HeaderProps) {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto py-4">
-                <div className="px-5 space-y-5">
+              <div className="flex-1 overflow-y-auto py-6">
+                <div className="px-5 space-y-8">
                   {/* Account Links */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {/* Login / Profile */}
                     {!user ? (
                       <button
                         onClick={() => { setIsMobileMenuOpen(false); goToLogin(); }}
-                        className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
+                        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm"
                       >
-                        <User className="h-5 w-5" />
-                        <span className="text-[10px] font-bold">Login</span>
+                        <User className="h-4 w-4" />
+                        <span>Login</span>
                       </button>
                     ) : (
                       <Link
                         href="/account/profile"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
+                        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm"
                       >
                         <User className="h-4 w-4 text-primary" />
-                        <span className="text-[11px] font-semibold">Profile</span>
+                        <span>Profile</span>
                       </Link>
                     )}
 
-                    {/* Logout / Wishlist */}
-                    {user ? (
-                      <button
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span className="text-[11px] font-semibold">Logout</span>
-                      </button>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors">
-                        <WishlistButton />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Saved</span>
-                      </div>
-                    )}
+                    {/* Wishlist */}
+                    <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm">
+                      <WishlistButton />
+                      <span>Saved</span>
+                    </div>
                   </div>
 
-
                   {/* Navigation Links */}
-                  <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3 px-4">
-                      Navigation
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4 px-2">
+                      Menu
                     </p>
                     {primaryNavLinks.map((link) => (
                       <Link
                         key={link.href}
                         href={link.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-4 px-4 py-2.5 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-semibold text-sm"
+                        className="flex items-center px-4 py-3 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-medium text-base"
                       >
                         {link.label}
                       </Link>
@@ -386,11 +372,11 @@ export default function Header({ categories, user }: HeaderProps) {
                   </div>
 
                   {/* Categories */}
-                  <div className="space-y-1 pt-3">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3 px-4">
-                      Categories
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4 px-2">
+                      Shop By Category
                     </p>
-                    <div className="space-y-2 px-2">
+                    <div className="space-y-2">
                       {categories
                         .filter((c) => !c.parent_id)
                         .map((mainCat) => (
@@ -398,7 +384,7 @@ export default function Header({ categories, user }: HeaderProps) {
                             <Link
                               href={`/search?main=${mainCat.slug}`}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center justify-between px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-zinc-950 bg-zinc-50 border border-zinc-100"
+                              className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-zinc-900 bg-zinc-50 hover:bg-zinc-100 transition-colors"
                             >
                               {mainCat.name}
                             </Link>
@@ -410,7 +396,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                     key={subCat.id}
                                     href={`/search?main=${mainCat.slug}&sub=${subCat.slug}`}
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="px-4 py-1.5 rounded-lg text-[10px] font-bold text-zinc-500 hover:text-primary transition-colors"
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-primary hover:bg-orange-50 transition-colors"
                                   >
                                     {subCat.name}
                                   </Link>
@@ -423,7 +409,19 @@ export default function Header({ categories, user }: HeaderProps) {
                 </div>
               </div>
 
-              <div className="p-5 border-t bg-zinc-50">
+              <div className="p-5 border-t bg-zinc-50 space-y-4">
+                {user && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-red-100 text-red-600 hover:bg-red-50 transition-colors font-semibold text-sm shadow-sm"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                )}
                 <div className="flex flex-col gap-1 text-[9px] font-black text-zinc-500 uppercase tracking-widest text-center">
                   <span>Support: {supportPhone}</span>
                 </div>

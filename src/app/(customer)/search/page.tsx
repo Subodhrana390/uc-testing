@@ -426,7 +426,7 @@ export default function SearchPage() {
 
           {/* Sort + count */}
           {products.length > 0 && (
-            <div className="flex items-center gap-3 self-end md:self-auto">
+            <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
               <button
                 onClick={() => setIsMobileFilterOpen(true)}
                 className="lg:hidden h-9 px-3 bg-white border border-zinc-200 text-xs font-medium text-zinc-700 rounded-lg shadow-xs flex items-center gap-2 hover:bg-zinc-50 transition-colors"
