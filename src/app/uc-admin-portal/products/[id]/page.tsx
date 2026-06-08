@@ -40,9 +40,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [formData, setFormData] = useState({
     name: "",
     price: "",
+    cost_price: "0",
     sale_price: "",
     sku: "",
     barcode: "",
+    hsn_code: "",
     brand_id: "",
     category_id: "",
     stock_quantity: "0",
@@ -66,6 +68,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     is_industrial_grade: false,
     is_ready_stock: false,
     is_high_demand: false,
+    is_tax_inclusive: false,
     datasheet_url: "",
     visibility: true,
     seo_title: "",
@@ -136,9 +139,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           setFormData({
             name: product.name,
             price: product.price.toString(),
+            cost_price: (product.cost_price || 0).toString(),
             sale_price: (product.sale_price || "").toString(),
             sku: product.sku || "",
             barcode: product.barcode || "",
+            hsn_code: product.hsn_code || "",
             brand_id: product.brand_id || "",
             category_id: product.category_id || "",
             stock_quantity: (product.stock_quantity || 0).toString(),
@@ -162,6 +167,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             is_industrial_grade: product.is_industrial_grade || false,
             is_ready_stock: product.is_ready_stock || false,
             is_high_demand: product.is_high_demand || false,
+            is_tax_inclusive: product.is_tax_inclusive || false,
             datasheet_url: product.datasheet_url || "",
             visibility: product.visibility !== false,
             seo_title: product.seo_title || "",
@@ -281,8 +287,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           slug,
           sku: formData.sku,
           barcode: formData.barcode,
+          hsn_code: formData.hsn_code || null,
           brand_id: formData.brand_id || null,
           price: parseFloat(formData.price),
+          cost_price: parseFloat(formData.cost_price || "0"),
           sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
           category_id: formData.category_id,
           stock_quantity: parseInt(formData.stock_quantity),
@@ -298,6 +306,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           datasheet_url: formData.datasheet_url || null,
           status: formData.visibility ? "Active" : "Draft",
           tax_rate: parseFloat(formData.tax_rate || "0"),
+          is_tax_inclusive: formData.is_tax_inclusive,
           visibility: formData.visibility,
           is_featured: formData.is_featured,
           is_recommended: formData.is_recommended,
@@ -444,6 +453,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass} htmlFor="hsn_code">HSN Code (GST)</label>
+                  <input
+                    id="hsn_code"
+                    className={inputClass}
+                    placeholder="e.g. 8501"
+                    value={formData.hsn_code}
+                    onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Main Category */}
                 <div>
                   <label className={labelClass} htmlFor="main_category">Main Category *</label>
@@ -560,9 +582,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <h2 className="text-lg font-semibold">Pricing & Inventory</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className={labelClass} htmlFor="price">Base Price (₹) *</label>
+                  <label className={labelClass} htmlFor="cost_price">Cost Price (₹)</label>
+                  <input
+                    id="cost_price"
+                    type="number"
+                    className={inputClass}
+                    value={formData.cost_price}
+                    onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="price">Sales Price (₹) *</label>
                   <input
                     id="price"
                     type="number"
@@ -573,7 +605,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="sale_price">Sale Price (₹)</label>
+                  <label className={labelClass} htmlFor="sale_price">Discounted Price (₹)</label>
                   <input
                     id="sale_price"
                     type="number"
@@ -583,16 +615,27 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   />
                 </div>
                 <div>
-                  <label className={labelClass} htmlFor="tax_rate">Tax Rate (%)</label>
-                  <div className="relative">
-                    <input
-                      id="tax_rate"
-                      type="number"
-                      className={inputClass}
-                      value={formData.tax_rate}
-                      onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
+                  <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-full">
+                      <input
+                        id="tax_rate"
+                        type="number"
+                        className={inputClass}
+                        value={formData.tax_rate}
+                        onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap text-sm text-gray-700 bg-gray-50 border border-gray-200 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_tax_inclusive}
+                        onChange={(e) => setFormData({ ...formData, is_tax_inclusive: e.target.checked })}
+                        className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300"
+                      />
+                      <span className="font-medium">Inclusive</span>
+                    </label>
                   </div>
                 </div>
               </div>
