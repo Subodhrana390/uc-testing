@@ -30,9 +30,14 @@ export async function login(formData: FormData) {
   // Role check based on login type
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, status')
     .eq('id', user?.id)
     .single()
+
+  if (profile?.status === 'suspended') {
+    await (supabase.auth as any).signOut()
+    return { error: 'Your account has been suspended. Please contact support.' }
+  }
 
   if (isAdminLogin) {
     if (profile?.role !== 'admin') {

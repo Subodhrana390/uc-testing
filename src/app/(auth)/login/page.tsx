@@ -49,16 +49,20 @@ function AuthContainer() {
       }
       setLoading(false);
     } else {
-      // Verify user has customer role
+      // Verify user has customer role and is not suspended
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", data.user?.id)
         .single();
 
       if (profileError || profile?.role !== "customer") {
         await supabase.auth.signOut();
         toast.error("Unauthorized: Customer credentials required.");
+        setLoading(false);
+      } else if (profile?.status === "suspended") {
+        await supabase.auth.signOut();
+        toast.error("Your account has been suspended. Please contact support.");
         setLoading(false);
       } else {
         toast.success("Welcome back!");
