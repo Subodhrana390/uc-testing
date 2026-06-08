@@ -43,7 +43,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   {/* Empty State / Default Fallback Banner */ }
   if (banners.length === 0) {
     return (
-      <div className="relative overflow-hidden rounded-sm border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-white md:p-16 lg:col-span-2 shadow-sm min-h-[480px] md:min-h-[580px] flex flex-col justify-center">
+      <div className="relative overflow-hidden rounded-sm border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-white md:p-16 lg:col-span-2 shadow-sm min-h-[350px] md:min-h-[450px] flex flex-col justify-center">
         <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="absolute left-10 bottom-0 h-44 w-44 rounded-full bg-amber-500/5 blur-3xl" />
 
@@ -86,7 +86,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   return (
     <div className="relative overflow-hidden rounded-md lg:col-span-2 group">
       {/* Slides */}
-      <div className="relative h-[480px] md:h-[580px]">
+      <div className="relative h-[350px] md:h-[450px]">
         {banners.map((banner, index) => (
           <div
             key={banner.id}

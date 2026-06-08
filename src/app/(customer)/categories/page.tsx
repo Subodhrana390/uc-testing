@@ -25,7 +25,7 @@ export default async function CategoriesPage({
   const { data: allCategories } = await supabase
     .from("categories")
     .select("id, name, slug, status, image_url, description, parent_id")
-    .eq("status", "Active")
+    .eq("status", true)
     .order("name", { ascending: true });
 
   const safeCategories = allCategories || [];

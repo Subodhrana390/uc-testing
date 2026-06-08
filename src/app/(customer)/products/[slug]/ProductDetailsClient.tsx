@@ -13,8 +13,9 @@ import DeliveryEstimator from "@/components/storefront/DeliveryEstimator";
 import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTogether";
 import ProductReviews from "@/components/storefront/ProductReviews";
 import { addRecentlyViewed } from "@/lib/recentlyViewed";
-import { isInCart, updateCartItemQuantity } from "@/lib/cart";
+import { addCartItem, isInCart, updateCartItemQuantity } from "@/lib/cart";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { useRouter } from "next/navigation";
 
 export default function ProductDetailsClient({ 
   product, 
@@ -23,6 +24,7 @@ export default function ProductDetailsClient({
   product: any, 
   attributes: any[] 
 }) {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
@@ -30,6 +32,22 @@ export default function ProductDetailsClient({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
   const resumeTimeoutRef = useMemo(() => ({ current: null as any }), []);
+
+  const handleBuyNow = () => {
+    const price = Number(product.sale_price || product.price) || 0;
+    addCartItem(
+      {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price,
+        image_url: product.image_url,
+        moq: product.moq || 1,
+      },
+      quantity
+    );
+    router.push("/checkout");
+  };
 
   const handleUserInteraction = () => {
     setIsAutoScrollPaused(true);
@@ -144,13 +162,13 @@ export default function ProductDetailsClient({
     switch (tabId) {
       case "description":
         return (
-          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
+          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
         );
       case "specification":
         return (
           <div className="space-y-12">
             {product.specification && (
-              <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-relaxed"
+              <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
               />
             )}
@@ -207,13 +225,13 @@ export default function ProductDetailsClient({
         );
       case "manufacturing":
         return (
-          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
+          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
           />
         );
       case "warranty":
         return (
-          <div className="prose prose-zinc prose-sm max-w-none text-zinc-600 leading-loose"
+          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
           />
         );
@@ -253,7 +271,7 @@ export default function ProductDetailsClient({
 
   return (
     <>
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-8">
+      <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-8">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         <ChevronRight className="h-3 w-3" />
         <Link href="/products" className="hover:text-primary transition-colors">Products</Link>
@@ -305,6 +323,16 @@ export default function ProductDetailsClient({
                 e.currentTarget.style.setProperty('--y', `${y}%`);
               }}
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShare();
+                }}
+                className="absolute top-6 right-6 z-10 h-10 w-10 bg-white/80 backdrop-blur-md shrink-0 rounded-xl border border-white/50 shadow-sm p-0 flex items-center justify-center hover:bg-white hover:shadow-md transition-all text-zinc-600 hover:text-zinc-950 active:scale-95"
+                title="Share Product"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
               <Image
                 src={activeImage || "/images/prod_main.png"}
                 alt={product.name}
@@ -327,32 +355,32 @@ export default function ProductDetailsClient({
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-zinc-950 leading-[1.1]">{product.name}</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 leading-[1.2]">{product.name}</h1>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1 text-amber-500">
                 <Star className={`h-4 w-4 ${Number(product.averageRating) > 0 ? "fill-amber-500" : ""}`} />
-                <span className="text-sm font-black">{Number(product.averageRating) > 0 ? product.averageRating : "N/A"}</span>
-                <span className="text-zinc-400 text-xs font-bold ml-1">({product.reviewCount} Reviews)</span>
+                <span className="text-sm font-bold">{Number(product.averageRating) > 0 ? product.averageRating : "N/A"}</span>
+                <span className="text-zinc-500 text-sm font-medium ml-1">({product.reviewCount} Reviews)</span>
               </div>
               <span className="text-zinc-200">|</span>
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Brand: <span className="text-zinc-900">{product.brands?.name || "UC Generic"}</span></span>
+              <span className="text-sm font-medium text-zinc-500">Brand: <span className="text-zinc-900 font-semibold">{product.brands?.name || "UC Generic"}</span></span>
             </div>
-            <p className="text-sm leading-relaxed text-zinc-600 max-w-xl">
+            <p className="text-base leading-relaxed text-zinc-600 max-w-2xl">
               {product.short_description || "High-performance industrial solution designed for precision and durability in professional environments."}
             </p>
           </div>
 
           <div className="space-y-4 py-2">
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
-              <span className="text-4xl sm:text-5xl font-black text-zinc-950 tracking-tighter">
+              <span className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
                 {formatCurrency(product.sale_price || product.price)}
               </span>
               {product.sale_price && (
-                <span className="text-xl sm:text-2xl font-bold text-zinc-300 line-through tracking-tighter">
+                <span className="text-lg sm:text-xl font-medium text-zinc-400 line-through">
                   {formatCurrency(product.price)}
                 </span>
               )}
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded">
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
                 GST Inclusive
               </span>
             </div>
@@ -388,24 +416,23 @@ export default function ProductDetailsClient({
                 )}
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <AddToCartButton
                   product={product}
                   quantity={quantity}
-                  className="h-10 flex-1 sm:flex-initial justify-center rounded-xl bg-zinc-950 px-8 text-[10px] font-black uppercase tracking-widest text-white hover:bg-primary shadow-md shadow-zinc-100 transition-all active:scale-[0.98]"
+                  className="h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl bg-zinc-950 px-4 sm:px-8 text-xs font-bold text-white hover:bg-zinc-800 shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap"
                 />
+                <button
+                  onClick={handleBuyNow}
+                  className="h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl bg-primary px-4 sm:px-8 text-xs font-bold text-white hover:bg-red-700 shadow-md shadow-red-100 transition-all active:scale-[0.98] whitespace-nowrap"
+                >
+                  Buy Now
+                </button>
                 <WishlistToggleButton
                   productId={product.id}
                   label={null as any}
-                  className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+                  className="h-11 w-11 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
                 />
-                <button
-                  onClick={handleShare}
-                  className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors text-zinc-500 hover:text-zinc-900"
-                  title="Share Product"
-                >
-                  <Share2 className="w-4 h-4 text-zinc-500" />
-                </button>
                 {product.datasheet_url && (
                   <a
                     href={product.datasheet_url}
@@ -437,9 +464,9 @@ export default function ProductDetailsClient({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
-                ? "border-primary text-zinc-950"
-                : "border-transparent text-zinc-400 hover:text-zinc-600"
+              className={`pb-4 text-sm font-semibold transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
+                ? "border-primary text-zinc-900"
+                : "border-transparent text-zinc-500 hover:text-zinc-700"
                 }`}
             >
               {tab.label}
@@ -447,7 +474,7 @@ export default function ProductDetailsClient({
           ))}
         </div>
 
-        <div className="flex sm:hidden flex-col w-full gap-3">
+        <div className="flex sm:hidden flex-col w-full gap-8">
           {[
             { id: "description", label: "Overview" },
             { id: "specification", label: "Technical Specs" },
@@ -455,22 +482,13 @@ export default function ProductDetailsClient({
             { id: "warranty", label: "Warranty & Support" },
             { id: "shipping", label: "Shipping & Delivery" }
           ].map((tab) => (
-            <div key={tab.id} className="w-full border-b border-zinc-100 pb-3">
-              <button
-                onClick={() => setActiveTab(activeTab === tab.id ? "" : tab.id)}
-                className={`w-full py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all text-left flex items-center justify-between ${activeTab === tab.id
-                  ? "text-primary"
-                  : "text-zinc-600 hover:text-zinc-950"
-                  }`}
-              >
-                <span>{tab.label}</span>
-                <span className="text-xs">{activeTab === tab.id ? "−" : "+"}</span>
-              </button>
-              {activeTab === tab.id && (
-                <div className="pt-4 pb-2">
-                  {renderTabContent(tab.id)}
-                </div>
-              )}
+            <div key={tab.id} className="w-full border-b border-zinc-100 pb-8 last:border-0 last:pb-0">
+              <h3 className="text-xl font-bold text-zinc-900 mb-4">
+                {tab.label}
+              </h3>
+              <div className="pt-2">
+                {renderTabContent(tab.id)}
+              </div>
             </div>
           ))}
         </div>

@@ -16,17 +16,17 @@ import { createClient } from "@/utils/supabase/client";
 function AuthContainer() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialMode = (searchParams.get("mode") as "login" | "register" | "forgot") || "login";
+  const initialMode = (searchParams.get("mode") as "login" | "register") || "login";
   const returnTo = searchParams.get("returnTo") || "/account/profile";
 
-  const [mode, setMode] = useState<"login" | "register" | "forgot">(initialMode);
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
-  const changeMode = (newMode: "login" | "register" | "forgot") => {
+  const changeMode = (newMode: "login" | "register") => {
     setMode(newMode);
     router.replace(`/login?mode=${newMode}&returnTo=${encodeURIComponent(returnTo)}`, { scroll: false });
   };
@@ -89,25 +89,6 @@ function AuthContainer() {
     }
   }
 
-  async function handleForgot(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get("email") as string;
-    const supabase = createClient();
-
-    const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/account/change-password`,
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Recovery link sent! Check your inbox.");
-    }
-    setLoading(false);
-  }
-
   return (
     <div className="w-full max-w-[1000px] mx-auto overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row min-h-[600px] border border-zinc-200">
 
@@ -143,12 +124,10 @@ function AuthContainer() {
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-950 leading-tight">
               {mode === 'login' && "Welcome back."}
               {mode === 'register' && "Start your journey."}
-              {mode === 'forgot' && "Reset access."}
             </h2>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-sm font-medium">
               {mode === 'login' && "Sign in to your account to manage orders, access saved items, and view exclusive offers."}
               {mode === 'register' && "Create a secure account today to experience seamless checkout and member-only benefits."}
-              {mode === 'forgot' && "Enter your email and we'll send you secure instructions to reset your password."}
             </p>
           </motion.div>
         </div>
@@ -209,9 +188,9 @@ function AuthContainer() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium text-zinc-700">Password</label>
-                      <button type="button" onClick={() => changeMode("forgot")} className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+                      <Link href="/forgot-password" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
                         Forgot password?
-                      </button>
+                      </Link>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -317,55 +296,6 @@ function AuthContainer() {
             </motion.div>
           )}
 
-          {/* FORGOT PASSWORD FORM */}
-          {mode === 'forgot' && (
-            <motion.div
-              key="forgot"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.3 }}
-              className="w-full max-w-sm space-y-8"
-            >
-              <div className="space-y-1">
-                <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Recover Password</h1>
-                <p className="text-sm text-zinc-500">We'll send you reset instructions</p>
-              </div>
-
-              <form onSubmit={handleForgot} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-700">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input
-                      name="email" type="email" placeholder="name@company.com" required
-                      className="w-full bg-white border border-zinc-300 text-zinc-900 px-10 py-3 text-sm rounded-lg focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 outline-none transition-all placeholder:text-zinc-400"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                    <>Send Instructions <ArrowRight className="w-4 h-4" /></>
-                  )}
-                </button>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => changeMode("login")}
-                    className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
-                  >
-                    ← Back to sign in
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </div>

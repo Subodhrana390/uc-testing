@@ -140,7 +140,7 @@ function SearchInput() {
             setShowSuggestions(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search produxcts, brands, and business essentials"
+          placeholder="Search products, brands, and business essentials"
           className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 pl-11 pr-4 text-sm outline-none transition focus:border-primary focus:bg-white"
         />
       </form>

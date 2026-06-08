@@ -585,22 +585,22 @@ function TrackOrderContent() {
 
                     {/* Carrier Info */}
                     {order.tracking_id && (
-                      <div className="mt-8 p-5 bg-zinc-50/50 border border-zinc-200/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="mt-8 p-5 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-zinc-250 shadow-sm text-zinc-400">
-                            <MapPin className="w-4.5 h-4.5" />
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-blue-200 shadow-sm text-blue-600">
+                            <Truck className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                              Carrier Handle: {order.carrier || "Partner Logistics"}
+                            <p className="text-xs font-bold text-blue-600/70 uppercase tracking-widest">
+                              Carrier: {order.carrier || "Delivery Partner"}
                             </p>
-                            <p className="text-xs font-bold text-zinc-850 mt-0.5">
-                              Waybill ID: <span className="font-mono text-zinc-950 text-sm">{order.tracking_id}</span>
+                            <p className="text-sm font-bold text-zinc-900 mt-0.5">
+                              Tracking Number: <span className="font-mono bg-white px-2 py-1 rounded border border-zinc-200 ml-1">{order.tracking_id}</span>
                             </p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-zinc-700 hover:bg-zinc-50 active:scale-95 transition-all w-full sm:w-auto shadow-sm">
-                          Track Carrier Direct
+                        <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                          Track on Carrier Website
                         </button>
                       </div>
                     )}
@@ -616,28 +616,30 @@ function TrackOrderContent() {
                         <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Transit Logs</h4>
                       </div>
 
-                      <div className="relative pl-4 border-l border-zinc-150 space-y-6 ml-2 py-1">
+                      <div className="space-y-0">
                         {milestones.map((milestone, idx) => (
-                          <div key={idx} className="relative group">
-                            {/* Point Indicator */}
-                            <span className={cn(
-                              "absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border border-white transition-all duration-300",
-                              idx === 0
-                                ? "bg-emerald-500 ring-4 ring-emerald-500/10"
-                                : "bg-zinc-350"
-                            )} />
-
-                            <div>
-                              <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                                <h5 className={cn(
-                                  "text-xs font-bold",
-                                  idx === 0 ? "text-zinc-950" : "text-zinc-650"
-                                )}>
-                                  {milestone.title}
-                                </h5>
-                                <span className="text-[9px] font-semibold text-zinc-450 uppercase">{milestone.time}</span>
-                              </div>
-                              <p className="text-[11px] text-zinc-450 font-medium leading-relaxed mt-1">
+                          <div key={idx} className="flex gap-4">
+                            <div className="w-24 shrink-0 pt-1 text-right">
+                              <div className="text-xs font-bold text-zinc-900">{milestone.time.split(',')[0]}</div>
+                              <div className="text-[10px] text-zinc-500 font-semibold">{milestone.time.split(',')[1]}</div>
+                            </div>
+                            <div className="relative flex flex-col items-center">
+                              <span className={cn(
+                                "w-3 h-3 rounded-full border-2 bg-white z-10 shrink-0",
+                                idx === 0 ? "border-emerald-500 ring-4 ring-emerald-50" : "border-zinc-300"
+                              )} />
+                              {idx !== milestones.length - 1 && (
+                                <div className="w-px h-full bg-zinc-200 my-1" min-height="2rem" />
+                              )}
+                            </div>
+                            <div className="pb-8 pt-0.5">
+                              <h5 className={cn(
+                                "text-sm font-bold",
+                                idx === 0 ? "text-emerald-700" : "text-zinc-700"
+                              )}>
+                                {milestone.title}
+                              </h5>
+                              <p className="text-xs text-zinc-500 font-medium mt-1 leading-relaxed">
                                 {milestone.description}
                               </p>
                             </div>

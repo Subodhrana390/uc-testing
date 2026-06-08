@@ -79,7 +79,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     : "0.0";
 
   const categoryName = product.categories?.name || "Industrial";
-  const mainCategory = product.categories?.parent?.name || categoryName;
+  const parentName = product.categories?.parent?.name;
+  const displayCategory = parentName ? `${parentName} › ${categoryName}` : categoryName;
 
   const toggleCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -198,8 +199,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Content Section */}
       <Link href={`/products/${product.slug}`} className="p-2.5 space-y-1.5 flex-1 flex flex-col">
         {/* Category & Rating */}
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary truncate max-w-[65%]">{mainCategory}</span>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[75%]" title={displayCategory}>{displayCategory}</span>
           <div className="flex items-center gap-0.5 text-amber-500">
             <Star className="h-3 w-3 fill-amber-500" />
             <span className="text-[11px] font-black text-zinc-900">{avgRating}</span>
@@ -236,15 +237,15 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="px-2.5 pb-2.5 mt-auto">
         <button
           onClick={toggleCart}
-          className={`w-full flex items-center justify-center gap-2 py-3.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] ${inCart
+          className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${inCart
             ? "bg-emerald-600 text-white"
             : "bg-primary text-white hover:bg-zinc-950"
             }`}
         >
           {inCart ? (
-            <>In Cart <Check className="w-3.5 h-3.5" /></>
+            <>In Cart <Check className="w-4 h-4" /></>
           ) : (
-            <>Add To Cart <ShoppingCart className="w-3.5 h-3.5" /></>
+            <>Add To Cart <ShoppingCart className="w-4 h-4" /></>
           )}
         </button>
       </div>

@@ -41,7 +41,7 @@ export default function CartPage() {
 
   return (
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)]">
-      <section className="container mx-auto px-4 py-8 sm:py-12">
+      <section className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
         {/* Breadcrumb */}
         <div className="mb-6">
           <Link href="/products" className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors">
@@ -88,7 +88,7 @@ export default function CartPage() {
                   key={item.id}
                   className="flex gap-4 sm:gap-6 border border-zinc-100 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow rounded-2xl group"
                 >
-                  <div className="relative h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-xl overflow-hidden bg-zinc-50/50">
+                  <div className="relative h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-xl overflow-hidden">
                     <Image
                       src={item.image_url || "/images/prod_main.png"}
                       alt={item.name}
@@ -122,7 +122,7 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-4 mt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200/80 rounded-lg p-1 shrink-0">
                         <button

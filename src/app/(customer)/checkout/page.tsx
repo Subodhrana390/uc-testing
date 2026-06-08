@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Truck,
   Lock,
+  Check,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] =
@@ -232,8 +234,8 @@ export default function CheckoutPage() {
             });
 
             if (!matchedZone) {
-              matchedZone = zones?.find(z => 
-                z.coverage.toLowerCase().includes("pan india") || 
+              matchedZone = zones?.find(z =>
+                z.coverage.toLowerCase().includes("pan india") ||
                 z.name.toLowerCase().includes("rest of india")
               );
             }
@@ -266,9 +268,9 @@ export default function CheckoutPage() {
             .select("value")
             .eq("key", "global_safety_buffer")
             .maybeSingle();
-          
+
           const safetyBuffer = bufferSetting ? parseInt(bufferSetting.value) || 0 : 0;
-          
+
           const d = new Date();
           d.setDate(d.getDate() + daysToAdd + safetyBuffer);
 
@@ -292,6 +294,28 @@ export default function CheckoutPage() {
       setDeliveryEstimate(null);
     }
   }, [form.postalCode, supabase]);
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (!form.fullName || !form.phone || !form.address || !form.city || !form.postalCode) {
+        toast.error("Please fill all required shipping fields");
+        return;
+      }
+      if (!selectedAddressId) {
+        toast.error("Please select a shipping address");
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3);
+    }
+  };
 
   const handlePlaceOrder = async (
     e: React.FormEvent
@@ -400,7 +424,7 @@ export default function CheckoutPage() {
               }
             } catch (err: any) {
               // Verification threw — clean up the unpaid order
-              try { await deleteFailedOrder(supabaseOrderId); } catch (_) {}
+              try { await deleteFailedOrder(supabaseOrderId); } catch (_) { }
               toast.error("An unexpected error occurred during order verification.");
               router.push(`/checkout/failed?error=${encodeURIComponent(err.message || "An unexpected error occurred during payment verification.")}`);
             }
@@ -471,7 +495,7 @@ export default function CheckoutPage() {
     } catch (error: any) {
       // Clean up any Unpaid order that was created before the failure
       if (createdOrderId) {
-        try { await deleteFailedOrder(createdOrderId); } catch (_) {}
+        try { await deleteFailedOrder(createdOrderId); } catch (_) { }
       }
       toast.error(error.message || "Failed to place order");
       router.push(`/checkout/failed?error=${encodeURIComponent(error.message || "Failed to place order")}`);
@@ -491,9 +515,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-20">
-      <div className="container mx-auto px-4 py-8 sm:py-12">
-        {/* Header / Breadcrumb */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <Link
             href="/cart"
             className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors"
@@ -509,165 +532,276 @@ export default function CheckoutPage() {
         <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
           {/* Left Side */}
           <div className="space-y-8">
-            {/* Contact Information */}
-            <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
-                <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
-                  <User className="h-5 w-5" />
+            {/* Stepper UI */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between relative px-2 z-10">
+                <div className="absolute left-[28px] right-[28px] top-5 -translate-y-1/2 h-1.5 bg-zinc-100 rounded-full -z-10">
+                  <div className="h-full bg-primary rounded-full transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
                 </div>
-                <h2 className="text-xl font-black tracking-tight text-zinc-950">
-                  Contact Information
-                </h2>
+
+                {[
+                  { step: 1, label: "Shipping" },
+                  { step: 2, label: "Payment" },
+                  { step: 3, label: "Review" }
+                ].map((item) => {
+                  const isCompleted = currentStep > item.step;
+                  const isActive = currentStep === item.step;
+                  const isPending = currentStep < item.step;
+
+                  return (
+                    <div key={item.step} className="flex flex-col items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ring-4 ring-white shadow-sm",
+                        isCompleted ? "bg-primary text-white" : isActive ? "bg-zinc-950 text-white scale-110" : "bg-zinc-100 text-zinc-400"
+                      )}>
+                        {isCompleted ? <Check className="w-5 h-5" /> : item.step}
+                      </div>
+                      <span className={cn(
+                        "text-[11px] font-bold uppercase tracking-wider bg-white px-2",
+                        isActive ? "text-zinc-950" : isCompleted ? "text-primary" : "text-zinc-400"
+                      )}>
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-600 ml-1">
-                    Full Name <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    value={form.fullName}
-                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                    placeholder="Enter your name"
-                    className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-600 ml-1">
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="10-digit mobile number"
-                    className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold text-zinc-600 ml-1">
-                    Email Address
-                  </label>
-                  <Input
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="email@example.com"
-                    className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Address */}
-            <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
-                    <MapPin className="h-5 w-5" />
+            {currentStep === 1 && (
+              <>
+                {/* Contact Information */}
+                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-zinc-950">
+                      Contact Information
+                    </h2>
                   </div>
-                  <h2 className="text-xl font-black tracking-tight text-zinc-950">
-                    Shipping Address
-                  </h2>
-                </div>
 
-                <Link href="/account/address-book?returnTo=/checkout">
-                  <button className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-xs font-bold text-zinc-700 transition">
-                    Change / Manage
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-600 ml-1">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={form.fullName}
+                        onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                        placeholder="Enter your name"
+                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-600 ml-1">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        placeholder="10-digit mobile number"
+                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-bold text-zinc-600 ml-1">
+                        Email Address
+                      </label>
+                      <Input
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="email@example.com"
+                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Address */}
+                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <h2 className="text-xl font-black tracking-tight text-zinc-950">
+                        Shipping Address
+                      </h2>
+                    </div>
+
+                    <Link href="/account/address-book?returnTo=/checkout">
+                      <button className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-xs font-bold text-zinc-700 transition">
+                        Change / Manage
+                      </button>
+                    </Link>
+                  </div>
+
+                  {addresses.length > 0 ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {addresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          onClick={() => handleSelectAddress(addr)}
+                          className={cn(
+                            "p-5 border rounded-2xl cursor-pointer transition-all relative overflow-hidden",
+                            selectedAddressId === addr.id
+                              ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
+                              : "border-zinc-200 hover:border-zinc-400 hover:shadow-sm"
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-black uppercase tracking-widest text-zinc-500 bg-white px-2 py-1 rounded border border-zinc-100 shadow-sm">
+                              {addr.type}
+                            </span>
+                            {selectedAddressId === addr.id && (
+                              <CheckCircle2 className="w-5 h-5 text-zinc-950" />
+                            )}
+                          </div>
+                          <p className="text-sm font-black text-zinc-950 mb-1">
+                            {addr.full_name}
+                          </p>
+                          <p className="text-xs font-medium text-zinc-500 leading-relaxed line-clamp-2">
+                            {addr.address_line1} {addr.address_line2 ? `, ${addr.address_line2}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-10 border-2 border-dashed border-zinc-200 rounded-3xl text-center">
+                      <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MapPin className="h-8 w-8 text-zinc-300" />
+                      </div>
+                      <p className="text-sm font-bold text-zinc-950 mb-2">
+                        No saved addresses found
+                      </p>
+                      <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
+                        Add a delivery address to continue placing your order.
+                      </p>
+
+                      <Link href="/account/address-book?returnTo=/checkout">
+                        <button className="rounded-xl h-12 px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center gap-2">
+                          <Plus className="h-4 w-4" /> Add Delivery Address
+                        </button>
+                      </Link>
+                    </div>
+                  )}
+                </section>
+
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
+                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                    Continue to Payment
                   </button>
-                </Link>
-              </div>
+                </div>
+              </>
+            )}
 
-              {addresses.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {addresses.map((addr) => (
+            {currentStep === 2 && (
+              <>
+                {/* Payment Method */}
+                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-zinc-950">
+                      Payment Method
+                    </h2>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div
-                      key={addr.id}
-                      onClick={() => handleSelectAddress(addr)}
+                      onClick={() => setPaymentMethod("ONLINE")}
                       className={cn(
-                        "p-5 border rounded-2xl cursor-pointer transition-all relative overflow-hidden",
-                        selectedAddressId === addr.id
+                        "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
+                        paymentMethod === "ONLINE"
                           ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
-                          : "border-zinc-200 hover:border-zinc-400 hover:shadow-sm"
+                          : "border-zinc-200 hover:border-zinc-400"
                       )}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-black uppercase tracking-widest text-zinc-500 bg-white px-2 py-1 rounded border border-zinc-100 shadow-sm">
-                          {addr.type}
-                        </span>
-                        {selectedAddressId === addr.id && (
-                          <CheckCircle2 className="w-5 h-5 text-zinc-950" />
-                        )}
-                      </div>
-                      <p className="text-sm font-black text-zinc-950 mb-1">
-                        {addr.full_name}
-                      </p>
-                      <p className="text-xs font-medium text-zinc-500 leading-relaxed line-clamp-2">
-                        {addr.address_line1} {addr.address_line2 ? `, ${addr.address_line2}` : ""}
-                      </p>
+                      <p className="font-bold text-sm text-zinc-950">Online Payment</p>
+                      {paymentMethod === "ONLINE" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-10 border-2 border-dashed border-zinc-200 rounded-3xl text-center">
-                  <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MapPin className="h-8 w-8 text-zinc-300" />
+
+                    <div
+                      onClick={() => setPaymentMethod("COD")}
+                      className={cn(
+                        "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
+                        paymentMethod === "COD"
+                          ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
+                          : "border-zinc-200 hover:border-zinc-400"
+                      )}
+                    >
+                      <p className="font-bold text-sm text-zinc-950">Cash on Delivery</p>
+                      {paymentMethod === "COD" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
+                    </div>
                   </div>
-                  <p className="text-sm font-bold text-zinc-950 mb-2">
-                    No saved addresses found
-                  </p>
-                  <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
-                    Add a delivery address to continue placing your order.
-                  </p>
+                </section>
 
-                  <Link href="/account/address-book?returnTo=/checkout">
-                    <button className="rounded-xl h-12 px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> Add Delivery Address
-                    </button>
-                  </Link>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                    Back to Shipping
+                  </button>
+                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                    Continue to Review
+                  </button>
                 </div>
-              )}
-            </section>
+              </>
+            )}
 
-            {/* Payment Method */}
-            <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
-                <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
-                  <CreditCard className="h-5 w-5" />
-                </div>
-                <h2 className="text-xl font-black tracking-tight text-zinc-950">
-                  Payment Method
-                </h2>
-              </div>
+            {currentStep === 3 && (
+              <>
+                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-zinc-950">
+                      Review Your Order
+                    </h2>
+                  </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div
-                  onClick={() => setPaymentMethod("ONLINE")}
-                  className={cn(
-                    "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
-                    paymentMethod === "ONLINE"
-                      ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
-                      : "border-zinc-200 hover:border-zinc-400"
-                  )}
-                >
-                  <p className="font-bold text-sm text-zinc-950">Online Payment</p>
-                  {paymentMethod === "ONLINE" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
-                </div>
+                  <div className="grid gap-6">
+                    <div className="p-5 border border-zinc-200 rounded-2xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Shipping To</h3>
+                        <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
+                      </div>
+                      <p className="font-bold text-sm text-zinc-950">{form.fullName}</p>
+                      <p className="text-sm text-zinc-600">{form.address}, {form.city}, {form.state} {form.postalCode}</p>
+                      <p className="text-sm text-zinc-600">{form.phone}</p>
+                    </div>
 
-                <div
-                  onClick={() => setPaymentMethod("COD")}
-                  className={cn(
-                    "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
-                    paymentMethod === "COD"
-                      ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
-                      : "border-zinc-200 hover:border-zinc-400"
-                  )}
-                >
-                  <p className="font-bold text-sm text-zinc-950">Cash on Delivery</p>
-                  {paymentMethod === "COD" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
+                    <div className="p-5 border border-zinc-200 rounded-2xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Payment Method</h3>
+                        <button onClick={() => setCurrentStep(2)} className="text-xs font-bold text-primary hover:underline">Edit</button>
+                      </div>
+                      <p className="font-bold text-sm text-zinc-950">{paymentMethod === "ONLINE" ? "Online Payment (Razorpay)" : "Cash on Delivery"}</p>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                    Back to Payment
+                  </button>
+                  <button
+                    onClick={handlePlaceOrder}
+                    disabled={submitting || isPlacingOrder}
+                    className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {submitting || isPlacingOrder
+                      ? "Processing..."
+                      : paymentMethod === "ONLINE"
+                      ? "Proceed to Payment"
+                      : "Place Order (COD)"}
+                  </button>
                 </div>
-              </div>
-            </section>
+              </>
+            )}
           </div>
 
           {/* Right Sidebar */}
@@ -682,7 +816,7 @@ export default function CheckoutPage() {
                 <div className="space-y-4 pb-6 border-b border-zinc-100 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                   {items.map((item) => (
                     <div key={`summary-${item.id}`} className="flex gap-4 group">
-                      <div className="relative w-16 h-16 shrink-0 bg-zinc-50/50 rounded-xl overflow-hidden">
+                      <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden">
                         <Image
                           src={item.image_url || "/images/prod_main.png"}
                           alt={item.name}
@@ -718,7 +852,7 @@ export default function CheckoutPage() {
                     <span>Estimated Tax</span>
                     <span className="font-bold text-zinc-950">{formatCurrency(taxTotal)}</span>
                   </div>
-                  
+
                   {deliveryEstimate && (
                     <div className="flex justify-between text-sm font-black text-emerald-700 bg-emerald-50/80 p-3.5 rounded-xl border border-emerald-100/60 mt-4">
                       <span className="flex items-center gap-2">
@@ -736,30 +870,18 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="pt-6 space-y-4">
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={submitting || isPlacingOrder}
-                    className="w-full h-14 rounded-xl bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-base transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting || isPlacingOrder
-                      ? "Processing..."
-                      : paymentMethod === "ONLINE"
-                      ? "Proceed to Payment"
-                      : "Place Order (COD)"}
-                  </button>
-
                   <div className="flex items-center justify-center gap-2 text-xs font-semibold text-zinc-400 pt-2">
                     <Lock className="w-3.5 h-3.5" />
                     <span>Secure Encrypted Checkout</span>
                   </div>
-                  
+
                   {/* Trust Badges */}
                   <div className="flex justify-center gap-3 pt-4 border-t border-zinc-100 mt-2">
                     <div className="w-12 h-7 bg-white rounded-md flex items-center justify-center border border-zinc-200 shadow-sm" title="Visa">
                       <span className="text-[10px] font-black italic text-[#1434CB]">VISA</span>
                     </div>
                     <div className="w-12 h-7 bg-white rounded-md flex items-center justify-center border border-zinc-200 shadow-sm" title="Mastercard">
-                       <span className="text-[10px] font-black italic text-[#EB001B]">MASTER</span>
+                      <span className="text-[10px] font-black italic text-[#EB001B]">MASTER</span>
                     </div>
                     <div className="w-12 h-7 bg-white rounded-md flex items-center justify-center border border-zinc-200 shadow-sm" title="UPI">
                       <span className="text-[10px] font-black tracking-wide text-zinc-800">UPI</span>

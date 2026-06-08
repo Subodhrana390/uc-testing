@@ -298,7 +298,7 @@ export default function OrdersPage() {
       const response = await fetch("/api/orders/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: id, status: "Shipped", trackingId, carrier })
+        body: JSON.stringify({ orderId, status: "Shipped", trackingId, carrier })
       });
 
       if (!response.ok) {
@@ -306,7 +306,7 @@ export default function OrdersPage() {
         throw new Error(resData.error || "Tracking update failed");
       }
 
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       toast.success("Logistics updated");
       setIsTrackingOpen(false);
       setSelectedOrder(null);
@@ -799,7 +799,7 @@ export default function OrdersPage() {
               {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
             </span>
             <div className="flex gap-2">
-              <Select onValueChange={(val) => updateBulkStatus(val)}>
+              <Select onValueChange={(val: string | null) => { if (val) updateBulkStatus(val); }}>
                 <SelectTrigger className="w-[180px] h-8 text-xs bg-white border-blue-200 text-blue-700">
                   <SelectValue placeholder="Bulk Change Status" />
                 </SelectTrigger>

@@ -234,23 +234,21 @@ export default function FrequentlyBoughtTogether({
         </div>
 
         {/* Summary Bundle Card */}
-        <div className="w-full lg:w-[320px] bg-zinc-950 text-white p-8 rounded-[2.5rem] flex flex-col justify-between shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
-          
+        <div className="w-full lg:w-[320px] bg-white border border-zinc-200 p-8 rounded-[2.5rem] flex flex-col justify-between shadow-sm relative overflow-hidden">
           <div className="relative z-10 space-y-6">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Bundle Price</p>
-              <h3 className="text-3xl font-black tracking-tight mt-1">{formatCurrency(totalPrice)}</h3>
-              <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">For {selectedProducts.length} selected items</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Bundle Price</p>
+              <h3 className="text-3xl font-black tracking-tight mt-1 text-zinc-900">{formatCurrency(totalPrice)}</h3>
+              <p className="text-xs text-zinc-500 font-medium mt-1">For {selectedProducts.length} selected items</p>
             </div>
 
-            <div className="border-t border-zinc-800 pt-6 space-y-3">
+            <div className="border-t border-zinc-100 pt-6 space-y-3">
               {selectedProducts.map((p, idx) => (
-                <div key={p.id} className="flex justify-between items-start gap-4 text-xs">
-                  <span className="text-zinc-400 font-medium line-clamp-1 flex-1 text-left">
+                <div key={p.id} className="flex justify-between items-start gap-4 text-sm">
+                  <span className="text-zinc-600 font-medium line-clamp-1 flex-1 text-left">
                     {idx + 1}. {p.name}
                   </span>
-                  <span className="font-bold text-zinc-200">
+                  <span className="font-bold text-zinc-900">
                     {formatCurrency(p.sale_price || p.price)}
                   </span>
                 </div>
@@ -260,7 +258,7 @@ export default function FrequentlyBoughtTogether({
 
           <button
             onClick={handleAddBundleToCart}
-            className="w-full h-12 bg-white text-zinc-950 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 mt-8 shadow-lg shadow-black/20 active:scale-[0.98]"
+            className="w-full h-12 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all flex items-center justify-center gap-2 mt-8 shadow-sm active:scale-[0.98]"
           >
             <ShoppingCart className="w-4 h-4" />
             Add Bundle to Cart

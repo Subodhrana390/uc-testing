@@ -16,6 +16,8 @@ const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/Rec
 const RecommendedProducts = dynamic(() => import("@/components/storefront/RecommendedProducts"));
 const ProductCarousel = dynamic(() => import("@/components/storefront/ProductCarousel"));
 const FAQAccordion = dynamic(() => import("@/components/storefront/FAQAccordion"));
+const WhyChooseUs = dynamic(() => import("@/components/storefront/WhyChooseUs"));
+const Testimonials = dynamic(() => import("@/components/storefront/Testimonials"));
 
 
 export const metadata: Metadata = homepageMetadata();
@@ -81,6 +83,11 @@ export default async function HomePage() {
       {/* Interactive Category Selector Selector */}
       <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4">
         <CategorySelector categories={safeCategories} />
+      </section>
+
+      {/* Trust & Value Proposition */}
+      <section className="max-w-7xl mx-auto px-4 py-8 mt-4">
+        <WhyChooseUs />
       </section>
 
       {/* Flash Sale Carousel */}
@@ -252,6 +259,11 @@ export default async function HomePage() {
         )
       }
 
+      {/* Testimonials */}
+      <section className="max-w-7xl mx-auto px-4 py-8 mt-4">
+        <Testimonials />
+      </section>
+
       {/* Top Selling Products Segment */}
       {
         safeTopSelling.length > 0 && (
@@ -301,6 +313,8 @@ export default async function HomePage() {
         <RecentlyViewedProducts maxItems={8} />
         <RecommendedProducts maxItems={8} />
       </section>
+
+
 
       {/* FAQ Accordion Section */}
       <section className="max-w-7xl mx-auto px-4 py-10">

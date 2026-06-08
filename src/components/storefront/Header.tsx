@@ -63,7 +63,7 @@ export default function Header({ categories, user }: HeaderProps) {
       <div className="sticky top-0 z-50 w-full">
         {/* Top Bar */}
         <div className="border-b border-zinc-100 bg-[linear-gradient(90deg,#fff5f5_0%,#ffffff_100%)] text-zinc-700 overflow-hidden">
-          <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-widest">
+          <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-xs font-medium text-zinc-600">
             <div className="flex items-center gap-4">
               <a
                 href={supportPhoneHref}
@@ -115,10 +115,10 @@ export default function Header({ categories, user }: HeaderProps) {
                   />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base sm:text-lg font-black tracking-tight text-zinc-950 leading-none">
+                  <span className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 leading-none">
                     UC <span className="text-primary">ENTERPRISES</span>
                   </span>
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                  <span className="text-[11px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5">
                     Quality Industrial Supplies
                   </span>
                 </div>
@@ -134,17 +134,17 @@ export default function Header({ categories, user }: HeaderProps) {
                 {!user ? (
                   <button
                     onClick={goToLogin}
-                    className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-700 hover:text-primary transition-colors"
+                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                   >
-                    <User className="h-3.5 w-3.5" />
+                    <User className="h-4 w-4" />
                     <span>Login</span>
                   </button>
                 ) : (
                   <Link
                     href="/account/profile"
-                    className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-700 hover:text-primary transition-colors"
+                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                   >
-                    <User className="h-3.5 w-3.5" />
+                    <User className="h-4 w-4" />
                     <span>Account</span>
                   </Link>
                 )}
@@ -152,10 +152,10 @@ export default function Header({ categories, user }: HeaderProps) {
                 {user && (
                   <button
                     onClick={handleLogout}
-                    className="hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-red-600 transition-colors border-l border-zinc-100 pl-4"
+                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-red-600 transition-colors border-l border-zinc-100 pl-4"
                     title="Logout"
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    <LogOut className="h-4 w-4" />
                   </button>
                 )}
 
@@ -185,7 +185,7 @@ export default function Header({ categories, user }: HeaderProps) {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-6 py-2 border-t border-zinc-50 text-xs font-black uppercase tracking-widest text-zinc-700">
+            <nav className="hidden lg:flex items-center gap-8 py-3 border-t border-zinc-50 text-sm font-semibold text-zinc-700">
               <div className="group relative">
                 <button className="inline-flex items-center gap-2 text-primary hover:text-red-700 transition-colors">
                   Categories
@@ -343,7 +343,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors"
                       >
                         <User className="h-4 w-4 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Profile</span>
+                        <span className="text-[11px] font-semibold">Profile</span>
                       </Link>
                     )}
 
@@ -357,7 +357,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
+                        <span className="text-[11px] font-semibold">Logout</span>
                       </button>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-700 hover:bg-zinc-100 transition-colors">
@@ -378,7 +378,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         key={link.href}
                         href={link.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-4 px-4 py-2.5 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-black text-xs uppercase tracking-widest"
+                        className="flex items-center gap-4 px-4 py-2.5 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-semibold text-sm"
                       >
                         {link.label}
                       </Link>

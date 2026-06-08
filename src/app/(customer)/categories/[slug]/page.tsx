@@ -73,7 +73,7 @@ export default async function CategoryPage({
   // Fetch subcategory IDs too (show parent + sub products)
   const { data: subCategories } = await supabase
     .from("categories")
-    .select("id")
+    .select("id, name, slug")
     .eq("parent_id", category.id);
 
   const categoryIds = [category.id, ...(subCategories?.map((s) => s.id) || [])];
@@ -129,6 +129,18 @@ export default async function CategoryPage({
             <p className="mt-3 max-w-2xl text-sm text-zinc-300">
               Explore live products under this category with updated pricing and storefront links.
             </p>
+          )}
+          {subCategories && subCategories.length > 0 && (
+            <div className="mt-6 border-t border-zinc-800 pt-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">Explore Subcategories</p>
+              <div className="flex flex-wrap gap-2">
+                {subCategories.map((sub) => (
+                  <Link key={sub.id} href={`/categories/${sub.slug}`} className="bg-zinc-900 border border-zinc-800 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-colors">
+                    {sub.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
