@@ -17,7 +17,6 @@ export default function InfiniteProductList({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -70,7 +69,7 @@ export default function InfiniteProductList({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
         {(isMobile ? products : initialProducts).map((product) => (
           <ProductCard key={product.id} product={product as any} />
         ))}

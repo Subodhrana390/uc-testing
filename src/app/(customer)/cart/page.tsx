@@ -41,7 +41,7 @@ export default function CartPage() {
 
   return (
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)]">
-      <section className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Breadcrumb */}
         <div className="mb-6">
           <Link href="/products" className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors">
@@ -80,7 +80,7 @@ export default function CartPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[1.4fr_0.6fr] pb-12">
+          <div className="grid gap-8 lg:gap-12 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] pb-12 items-start">
             {/* Cart Items */}
             <div className="space-y-4">
               {items.map((item) => (
@@ -88,27 +88,26 @@ export default function CartPage() {
                   key={item.id}
                   className="flex gap-4 sm:gap-6 border border-zinc-100 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow rounded-2xl group"
                 >
-                  <div className="relative h-24 w-24 sm:h-32 sm:w-32 shrink-0 rounded-xl overflow-hidden">
+                  <div className="relative h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 shrink-0 overflow-hidden flex items-center justify-center">
                     <Image
                       src={item.image_url || "/images/prod_main.png"}
                       alt={item.name}
                       fill
-                      sizes="128px"
-                      className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, 160px"
+                      className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 
                   {/* Product Info & Actions */}
-                  <div className="flex-1 flex flex-col justify-between min-w-0 py-1">
+                  <div className="flex-1 flex flex-col min-w-0 py-1">
                     <div className="flex justify-between gap-4 items-start">
-                      <div className="space-y-1.5">
+                      <div className="space-y-2 max-w-xl">
                         <Link
                           href={`/products/${item.slug}`}
-                          className="text-sm sm:text-base font-bold text-zinc-950 hover:text-primary transition-colors line-clamp-2 leading-snug pr-4"
+                          className="text-sm font-bold text-zinc-900 hover:text-primary transition-colors line-clamp-2 leading-snug pr-4"
                         >
                           {item.name}
                         </Link>
-
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm sm:text-base font-black text-zinc-950">
@@ -122,15 +121,14 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-auto pt-3 border-t border-zinc-50/0">
                       {/* Quantity Controls */}
-                      <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200/80 rounded-lg p-1 shrink-0">
+                      <div className="flex items-center gap-1 bg-white border border-zinc-200/80 rounded-xl p-1 shrink-0 shadow-sm">
                         <button
-                          className={`rounded-md p-1.5 transition-all ${
-                            item.quantity <= (item.moq || 1)
-                              ? "text-zinc-300 cursor-not-allowed"
-                              : "text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95"
-                          }`}
+                          className={`rounded-md p-1.5 transition-all ${item.quantity <= (item.moq || 1)
+                            ? "text-zinc-300 cursor-not-allowed"
+                            : "text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95"
+                            }`}
                           onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
                           disabled={item.quantity <= (item.moq || 1)}
                         >
@@ -174,7 +172,7 @@ export default function CartPage() {
             {/* Order Summary */}
             <div className="h-fit border border-zinc-200 bg-white shadow-sm rounded-3xl overflow-hidden sticky top-24">
               <div className="p-6 sm:p-8 bg-zinc-50/50 border-b border-zinc-100">
-                <h2 className="text-xl font-black text-zinc-950">
+                <h2 className="text-lg font-black text-zinc-950">
                   Order Summary
                 </h2>
               </div>
@@ -182,7 +180,7 @@ export default function CartPage() {
                 {/* Items List in Summary */}
                 <div className="space-y-3 pb-5 border-b border-zinc-100">
                   {items.map((item) => (
-                    <div key={`summary-${item.id}`} className="flex justify-between text-sm">
+                    <div key={`summary-${item.id}`} className="flex justify-between text-xs">
                       <div className="flex gap-2 min-w-0 pr-4">
                         <span className="font-bold text-zinc-950">{item.quantity} ×</span>
                         <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
@@ -192,31 +190,31 @@ export default function CartPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between text-sm font-medium text-zinc-600">
+                <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
                   <span>Subtotal ({items.length} items)</span>
                   <span className="font-bold text-zinc-950">{formatCurrency(getCartTotal())}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm font-medium text-zinc-600">
+                <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
                   <span>Estimated Shipping</span>
                   <span className="font-bold text-zinc-950">Calculated at checkout</span>
                 </div>
 
-                <div className="flex justify-between text-sm font-medium text-zinc-600 pb-6 border-b border-zinc-100">
+                <div className="flex justify-between text-xs font-medium text-zinc-600 pb-6 border-b border-zinc-100">
                   <span>Estimated Tax</span>
                   <span className="font-bold text-zinc-950 text-right max-w-[200px] leading-tight">
                     Calculated at checkout<br />
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-lg pt-2">
+                <div className="flex items-center justify-between text-base pt-2">
                   <span className="font-black text-zinc-950">Total</span>
-                  <span className="font-black text-primary text-xl">{formatCurrency(getCartTotal())}</span>
+                  <span className="font-black text-primary text-lg">{formatCurrency(getCartTotal())}</span>
                 </div>
 
                 <div className="pt-6 space-y-4">
                   <Link href="/checkout" className="block">
-                    <button className="w-full h-14 rounded-xl bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-base transition-all active:scale-[0.98]">
+                    <button className="w-full h-12 rounded-xl bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-sm transition-all active:scale-[0.98]">
                       Proceed to Checkout
                     </button>
                   </Link>

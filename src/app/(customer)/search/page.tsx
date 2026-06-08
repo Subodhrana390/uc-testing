@@ -442,7 +442,7 @@ export default function SearchPage() {
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-6 lg:px-8 py-10">
 
         {/* Header */}
-        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-zinc-200/80">
+        <div className="mb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-4 border-b border-zinc-200/80">
           <div className="space-y-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
               <Search className="w-3.5 h-3.5" /> Catalog Exploration
@@ -473,7 +473,7 @@ export default function SearchPage() {
           </div>
 
           {products.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 self-start md:self-auto mt-4 md:mt-0 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto mt-4 lg:mt-0 w-full lg:w-auto">
               <button
                 onClick={() => setIsMobileFilterOpen(true)}
                 className="lg:hidden h-9 px-3 bg-white border border-zinc-200 text-xs font-medium text-zinc-700 rounded-lg shadow-xs flex items-center gap-2 hover:bg-zinc-50 transition-colors"
@@ -534,10 +534,10 @@ export default function SearchPage() {
             )}
             <aside className={cn(
               "bg-white border border-zinc-200/80 p-5 shadow-xs space-y-6 transition-transform duration-300",
-              "lg:block lg:sticky lg:top-24 lg:rounded-xl lg:col-span-1 lg:translate-x-0",
+              "lg:block lg:sticky lg:top-24 lg:rounded-xl lg:col-span-1 lg:translate-x-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto",
               isMobileFilterOpen
                 ? "fixed inset-y-0 left-0 z-50 w-[280px] max-w-[80vw] overflow-y-auto rounded-r-xl translate-x-0"
-                : "fixed inset-y-0 left-0 z-50 w-[280px] max-w-[80vw] overflow-y-auto rounded-r-xl -translate-x-full lg:relative lg:z-auto lg:w-auto lg:overflow-visible lg:rounded-xl lg:translate-x-0 hidden lg:block"
+                : "fixed inset-y-0 left-0 z-50 w-[280px] max-w-[80vw] overflow-y-auto rounded-r-xl -translate-x-full hidden lg:block"
             )}>
               {/* Sidebar header */}
               <div className="flex justify-between items-center">
@@ -784,7 +784,7 @@ export default function SearchPage() {
             <div className="lg:col-span-3 space-y-10">
               {paginatedProducts.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
                     {paginatedProducts.map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}

@@ -201,7 +201,7 @@ export default function RecommendedProducts({
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="w-[200px] shrink-0 rounded-2xl bg-zinc-100 animate-pulse"
+              className="w-[180px] sm:w-[200px] shrink-0 rounded-2xl bg-zinc-100 animate-pulse"
               style={{ height: 280, animationDelay: `${i * 80}ms` }}
             />
           ))}
@@ -272,7 +272,7 @@ export default function RecommendedProducts({
           {products.map((product) => (
             <div
               key={product.id}
-              className="w-[200px] sm:w-[230px] shrink-0 snap-start"
+              className="w-[180px] sm:w-[200px] shrink-0 snap-start"
             >
               <ProductCard product={product} />
             </div>

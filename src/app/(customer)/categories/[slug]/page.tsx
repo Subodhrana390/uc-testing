@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createStaticClient } from "@/utils/supabase/static";
-import ProductCard from "@/components/storefront/ProductCard";
+import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters";
+import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
+import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
+import InfiniteProductList from "@/components/storefront/InfiniteProductList";
+import Pagination from "@/components/storefront/Pagination";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { categoryMetadata, SITE_URL } from "@/lib/seo";
@@ -55,10 +59,16 @@ export async function generateMetadata({
 // ─── Page component (Server Component) ───────────────────────────────────────
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string; in_stock?: string; out_of_stock?: string; promo?: string; min_price?: string; max_price?: string; brand?: string };
 }) {
   const supabase = createStaticClient();
+  const currentPage = parseInt(searchParams.page || "1");
+  const pageSize = 12;
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const { data: category } = await supabase
     .from("categories")
@@ -70,24 +80,82 @@ export default async function CategoryPage({
     notFound();
   }
 
-  // Fetch subcategory IDs too (show parent + sub products)
-  const { data: subCategories } = await supabase
-    .from("categories")
-    .select("id, name, slug")
-    .eq("parent_id", category.id);
+  let activeParentCategory = null;
+  let activeSiblingCategories: any[] = [];
+  let categoryIds = [category.id];
 
-  const categoryIds = [category.id, ...(subCategories?.map((s) => s.id) || [])];
+  if (category.parent_id) {
+    // Current category is a subcategory
+    const { data: parent } = await supabase.from("categories").select("*").eq("id", category.parent_id).single();
+    activeParentCategory = parent;
+    
+    const { data: siblings } = await supabase.from("categories").select("id, name, slug").eq("parent_id", category.parent_id).order("name");
+    activeSiblingCategories = siblings || [];
+    
+    categoryIds = [category.id];
+  } else {
+    // Current category is a top-level parent
+    activeParentCategory = category;
 
-  const { data: products } = await supabase
+    const { data: subs } = await supabase.from("categories").select("id, name, slug").eq("parent_id", category.id).order("name");
+    activeSiblingCategories = subs || [];
+    
+    categoryIds = [category.id, ...activeSiblingCategories.map(s => s.id)];
+  }
+
+  const inStockFilter = searchParams.in_stock === "true";
+  const outOfStockFilter = searchParams.out_of_stock === "true";
+  const promoFilter = searchParams.promo === "true";
+  const minPriceFilter = searchParams.min_price ? Number(searchParams.min_price) : null;
+  const maxPriceFilter = searchParams.max_price ? Number(searchParams.max_price) : null;
+  const brandFilter = searchParams.brand;
+
+  const brandsPromise = supabase.from("brands").select("id, name").order("name");
+  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", "Active").order("name");
+
+  let query = supabase
     .from("products")
     .select(
-      "id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)"
+      "id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)",
+      { count: "exact" }
     )
     .in("category_id", categoryIds)
     .eq("status", "Active")
     .order("created_at", { ascending: false });
 
+  if (inStockFilter && !outOfStockFilter) {
+    query = query.gt("stock_quantity", 0);
+  }
+  if (outOfStockFilter && !inStockFilter) {
+    query = query.eq("stock_quantity", 0);
+  }
+  if (promoFilter) {
+    query = query.not("sale_price", "is", null);
+  }
+  if (minPriceFilter !== null && !isNaN(minPriceFilter)) {
+    query = query.gte("price", minPriceFilter);
+  }
+  if (maxPriceFilter !== null && !isNaN(maxPriceFilter)) {
+    query = query.lte("price", maxPriceFilter);
+  }
+  if (brandFilter) {
+    query = query.eq("brands.name", brandFilter);
+  }
+
+  // Apply dynamic pagination range for desktop pagination / initial load
+  query = query.range(from, to);
+
+  const { data: products, count: totalCount } = await query;
   const safeProducts = products || [];
+  const safeTotalCount = totalCount || 0;
+  const totalPages = Math.ceil(safeTotalCount / 12);
+  
+  const { data: brandsResult } = await brandsPromise;
+  const brandsList = brandsResult || [];
+
+  const { data: categoriesResult } = await categoriesPromise;
+  const categoriesList = categoriesResult || [];
+
   const categoryUrl = `${SITE_URL}/categories/${category.slug}`;
 
   return (
@@ -119,23 +187,27 @@ export default async function CategoryPage({
           </ol>
         </nav>
 
-        <div className="mt-6 border border-orange-100 bg-zinc-950 p-8 text-white">
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-orange-300">Category</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight">{category.name}</h1>
-          {category.description && (
-            <p className="mt-3 max-w-2xl text-sm text-zinc-300">{category.description}</p>
-          )}
-          {!category.description && (
-            <p className="mt-3 max-w-2xl text-sm text-zinc-300">
-              Explore live products under this category with updated pricing and storefront links.
-            </p>
-          )}
-          {subCategories && subCategories.length > 0 && (
-            <div className="mt-6 border-t border-zinc-800 pt-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">Explore Subcategories</p>
-              <div className="flex flex-wrap gap-2">
-                {subCategories.map((sub) => (
-                  <Link key={sub.id} href={`/categories/${sub.slug}`} className="bg-zinc-900 border border-zinc-800 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-colors">
+        <div className="mt-6 border-b border-zinc-200/80 pb-8 mb-8">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Category</p>
+          <h1 className="mt-3 text-4xl md:text-5xl font-black tracking-tight text-zinc-900">{category.name}</h1>
+          <p className="mt-3 max-w-2xl text-sm text-zinc-500 font-medium leading-relaxed">
+            {category.description || "Explore live products under this category with updated pricing and storefront links."}
+          </p>
+
+          {/* Only show subcategories pill chips if we are on a top-level category */}
+          {!category.parent_id && activeSiblingCategories && activeSiblingCategories.length > 0 && (
+            <div className="mt-8 pt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Explore Subcategories</p>
+              <div 
+                className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {activeSiblingCategories.map((sub) => (
+                  <Link 
+                    key={sub.id} 
+                    href={`/categories/${sub.slug}`} 
+                    className="shrink-0 bg-white border border-zinc-200/80 px-4 py-2 rounded-full text-[11px] font-bold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 hover:border-zinc-300 transition-all shadow-2xs"
+                  >
                     {sub.name}
                   </Link>
                 ))}
@@ -144,17 +216,56 @@ export default async function CategoryPage({
           )}
         </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {safeProducts.map((product) => (
-            <ProductCard key={product.id} product={product as any} />
-          ))}
-        </div>
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8 items-start">
+          
+          <MobileFilterWrapper>
+            <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
+              <ProductSidebarFilters 
+                categories={categoriesList} 
+                brands={brandsList} 
+                currentCategorySlug={category.slug}
+                activeParentCategory={activeParentCategory}
+                activeSiblingCategories={activeSiblingCategories}
+              />
+            </aside>
+          </MobileFilterWrapper>
 
-        {!safeProducts.length && (
-          <div className="mt-10 border border-dashed border-orange-200 bg-white p-10 text-center text-sm font-semibold text-zinc-600">
-            No products are currently published in this category.
+          <div className="lg:col-span-3 space-y-10">
+            <div className="flex justify-end items-center mb-6 lg:hidden">
+              <MobileFilterToggle />
+            </div>
+
+            <InfiniteProductList
+              initialProducts={safeProducts}
+              searchParams={{ ...searchParams, category: category.slug }}
+              totalPages={totalPages}
+            />
+
+            {!safeProducts.length && (
+              <div className="border border-zinc-200/80 bg-white p-16 rounded-xl shadow-2xs text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mb-4 border border-zinc-100">
+                  <span className="text-2xl">📦</span>
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 mb-2">No products found</h3>
+                <p className="text-sm font-medium text-zinc-500 max-w-sm">
+                  We couldn't find any published products in this category matching your current filters.
+                </p>
+              </div>
+            )}
+
+            {/* Pagination Segment Footer */}
+            {totalPages > 1 && (
+              <div className="pt-4 border-t border-zinc-200/60 hidden md:block">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  baseUrl={`/categories/${category.slug}`}
+                  preserveParams={{ ...searchParams } as Record<string, string>}
+                />
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </section>
     </div>
   );

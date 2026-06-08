@@ -29,7 +29,7 @@ export async function generateMetadata({
 export default async function ProductsPage({
   searchParams
 }: {
-  searchParams: { page?: string, sort?: string, category?: string, in_stock?: string, promo?: string }
+  searchParams: { page?: string, sort?: string, category?: string, in_stock?: string, out_of_stock?: string, promo?: string, min_price?: string, max_price?: string, brand?: string }
 }) {
   const supabase = await createClient();
   const currentPage = parseInt(searchParams.page || "1");
@@ -50,7 +50,6 @@ export default async function ProductsPage({
     orderOptions = { ascending: false };
   }
 
-  const dealsPromise = supabase.from("deals").select("*").eq("is_active", true).order("position", { ascending: true }).limit(2);
   const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", "Active").order("name");
 
   let productsData: any[] = [];
@@ -58,7 +57,14 @@ export default async function ProductsPage({
 
   const categoryFilter = searchParams.category;
   const inStockFilter = searchParams.in_stock === "true";
+  const outOfStockFilter = searchParams.out_of_stock === "true";
   const promoFilter = searchParams.promo === "true";
+  const minPriceFilter = searchParams.min_price ? Number(searchParams.min_price) : null;
+  const maxPriceFilter = searchParams.max_price ? Number(searchParams.max_price) : null;
+  const brandFilter = searchParams.brand;
+
+  // Fetch available brands for the filter sidebar
+  const brandsPromise = supabase.from("brands").select("id, name").order("name");
 
   // If a specific category is selected, we need to find its ID and its subcategories' IDs
   let categoryIds: string[] = [];
@@ -71,18 +77,33 @@ export default async function ProductsPage({
   }
 
   // Build the base query for non-rating sort
+  // We need to use inner join for brands if we want to filter by brand name
   let query = supabase.from("products")
-    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), product_reviews(rating)", { count: "exact" })
+    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)", { count: "exact" })
     .eq("status", "Active");
 
   if (categoryIds.length > 0) {
     query = query.in("category_id", categoryIds);
   }
-  if (inStockFilter) {
+  if (inStockFilter && !outOfStockFilter) {
     query = query.gt("stock_quantity", 0);
+  }
+  if (outOfStockFilter && !inStockFilter) {
+    query = query.eq("stock_quantity", 0);
   }
   if (promoFilter) {
     query = query.not("sale_price", "is", null);
+  }
+  if (minPriceFilter !== null && !isNaN(minPriceFilter)) {
+    // Note: since sale_price overrides price, ideally we'd coalesce.
+    // For simplicity with Supabase postgrest, we can check price directly since sale_price logic is complex.
+    query = query.gte("price", minPriceFilter);
+  }
+  if (maxPriceFilter !== null && !isNaN(maxPriceFilter)) {
+    query = query.lte("price", maxPriceFilter);
+  }
+  if (brandFilter) {
+    query = query.eq("brands.name", brandFilter);
   }
 
   if (sortMode === "rating") {
@@ -115,7 +136,9 @@ export default async function ProductsPage({
   const { data: categoriesResult } = await categoriesPromise;
   const categoriesList = categoriesResult || [];
 
-  const { data: deals } = await dealsPromise;
+  const { data: brandsResult } = await brandsPromise;
+  const brandsList = brandsResult || [];
+
   const count = totalCount;
   const totalPages = Math.ceil(totalCount / pageSize);
   const sortedProducts = productsData;
@@ -165,33 +188,8 @@ export default async function ProductsPage({
           <MobileFilterWrapper>
             <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
 
-            <ProductSidebarFilters categories={categoriesList} />
+            <ProductSidebarFilters categories={categoriesList} brands={brandsList} />
 
-            {/* Static Placement Deals Sidebar */}
-            {(deals || []).map((deal: any) => (
-              <Link
-                key={deal.id}
-                href={deal.link_url}
-                className="block group relative overflow-hidden bg-zinc-950 p-6 rounded-xl shadow-md border border-zinc-800 transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="absolute top-3 right-3">
-                  <BadgePercent className="h-4 w-4 text-primary animate-pulse" />
-                </div>
-                <div className="relative z-10 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{deal.badge_text || "OFFER"}</span>
-                  <h4 className="text-md font-bold text-white leading-tight uppercase tracking-tight">{deal.title}</h4>
-                  <p className="text-xs text-zinc-400 font-normal leading-relaxed line-clamp-2">{deal.description}</p>
-                  <div className="pt-2 flex items-center gap-1.5 text-white text-[11px] font-semibold tracking-wide">
-                    Claim Deal <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-                {deal.image_url && (
-                  <div className="absolute -right-2 -bottom-2 w-16 h-16 opacity-15 group-hover:opacity-30 transition-opacity">
-                    <Image src={deal.image_url} alt="" fill sizes="64px" className="object-contain" />
-                  </div>
-                )}
-              </Link>
-            ))}
             </aside>
           </MobileFilterWrapper>
 

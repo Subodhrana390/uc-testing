@@ -38,7 +38,7 @@ export default function FrequentlyBoughtTogether({
   currentProduct: any;
 }) {
   const [bundleProducts, setBundleProducts] = useState<Product[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([currentProduct.id]));
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -112,8 +112,8 @@ export default function FrequentlyBoughtTogether({
         }
 
         setBundleProducts(fetchedProducts);
-        // Pre-select all bundle products
-        setSelectedIds(new Set(fetchedProducts.map((p) => p.id)));
+        // Pre-select all bundle products + current product
+        setSelectedIds(new Set([currentProduct.id, ...fetchedProducts.map((p) => p.id)]));
       } catch (err) {
         console.error("Error fetching frequently bought together products:", err);
       } finally {
@@ -137,34 +137,47 @@ export default function FrequentlyBoughtTogether({
   };
 
   // Compute prices
-  const currentPrice = currentProduct.sale_price || currentProduct.price;
-  let totalPrice = Number(currentPrice);
-  const selectedProducts = [currentProduct];
+  let baseTotalPrice = 0;
+  const selectedProducts: Product[] = [];
+  const allProducts = [currentProduct, ...bundleProducts];
 
-  bundleProducts.forEach((p) => {
+  allProducts.forEach((p) => {
     if (selectedIds.has(p.id)) {
-      totalPrice += Number(p.sale_price || p.price);
+      baseTotalPrice += Number(p.sale_price || p.price);
       selectedProducts.push(p);
     }
   });
 
+  const isBundleEligible = selectedProducts.length > 1;
+  const discountPercentage = 10; // 10% discount
+  const discountMultiplier = isBundleEligible ? (100 - discountPercentage) / 100 : 1;
+  const totalPrice = baseTotalPrice * discountMultiplier;
+
   const handleAddBundleToCart = () => {
     selectedProducts.forEach((p) => {
+      const originalPrice = p.sale_price || p.price;
+      const finalPrice = originalPrice * discountMultiplier;
+
       addCartItem({
         id: p.id,
         slug: p.slug,
         name: p.name,
-        price: p.sale_price || p.price,
+        price: finalPrice,
         image_url: p.image_url || (p.images && p.images[0]) || null,
         moq: p.moq || 1,
       }, p.moq || 1);
     });
-    toast.success(`Added ${selectedProducts.length} items to your cart!`);
+    
+    if (isBundleEligible) {
+      toast.success(`Added ${selectedProducts.length} items to your cart with a ${discountPercentage}% bundle discount!`);
+    } else {
+      toast.success(`Added 1 item to your cart!`);
+    }
   };
 
   return (
-    <div className="mt-4 border-t border-zinc-100 pt-4">
-      <div className="mb-10 space-y-2">
+    <div className="mt-8 border-t border-zinc-100 pt-8">
+      <div className="mb-6 space-y-2">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Bundle & Save</p>
         <h2 className="text-3xl font-black tracking-tight text-zinc-950">Frequently Bought Together</h2>
       </div>
@@ -174,15 +187,26 @@ export default function FrequentlyBoughtTogether({
         <div className="flex-1 relative group w-full overflow-hidden">
           <div
             ref={scrollContainerRef}
-            className="flex flex-row md:flex-wrap items-center justify-start md:justify-center gap-4 p-4 md:p-6 border border-zinc-100 bg-zinc-50/30 rounded-[2.5rem] overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory py-4 px-4 md:px-6"
+            className="flex flex-row items-center justify-start gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-4"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {/* Current Product Card Wrapper */}
-            <div className="w-[200px] xs:w-[220px] shrink-0 relative snap-start">
+            <div className={`w-[180px] sm:w-[200px] shrink-0 relative snap-start transition-all ${selectedIds.has(currentProduct.id) ? 'opacity-100' : 'opacity-50'}`}>
               <ProductCard product={currentProduct} />
-              <div className="absolute top-3 left-3 z-30 w-6 h-6 rounded-md bg-zinc-950 text-white flex items-center justify-center border border-zinc-950 shadow-md">
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleSelect(currentProduct.id);
+                }}
+                className={`absolute top-3 left-3 z-30 w-6 h-6 rounded-md flex items-center justify-center transition-all border shadow-md active:scale-95 ${selectedIds.has(currentProduct.id)
+                  ? 'bg-primary border-primary text-white'
+                  : 'bg-white border-zinc-300 text-transparent hover:border-zinc-400'
+                  }`}
+              >
                 <Check className="w-4 h-4" />
-              </div>
+              </button>
+              
               <div className="absolute top-3 right-12 z-30 bg-zinc-950/80 backdrop-blur-sm text-white text-[7px] font-black uppercase tracking-widest px-2 py-1 rounded-sm shadow-md pointer-events-none">
                 This Item
               </div>
@@ -195,7 +219,7 @@ export default function FrequentlyBoughtTogether({
                 <div key={p.id} className="contents">
                   <div className="text-zinc-300 font-bold text-2xl select-none shrink-0">+</div>
                   
-                  <div className={`w-[200px] xs:w-[220px] shrink-0 relative transition-all snap-start ${isSelected ? 'opacity-100' : 'opacity-50'}`}>
+                  <div className={`w-[180px] sm:w-[200px] shrink-0 relative transition-all snap-start ${isSelected ? 'opacity-100' : 'opacity-50'}`}>
                     <ProductCard product={p as any} />
                     
                     {/* Select Checkbox Button Overlay */}
@@ -219,34 +243,65 @@ export default function FrequentlyBoughtTogether({
         </div>
 
         {/* Summary Bundle Card */}
-        <div className="w-full lg:w-[320px] bg-white border border-zinc-200 p-8 rounded-[2.5rem] flex flex-col justify-between shadow-sm relative overflow-hidden">
-          <div className="relative z-10 space-y-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Bundle Price</p>
-              <h3 className="text-3xl font-black tracking-tight mt-1 text-zinc-900">{formatCurrency(totalPrice)}</h3>
-              <p className="text-xs text-zinc-500 font-medium mt-1">For {selectedProducts.length} selected items</p>
+        <div className="w-full lg:w-[400px] xl:w-[420px] shrink-0 bg-white p-4 flex flex-col gap-6 relative overflow-hidden self-start">
+          <div className="relative z-10 space-y-4">
+            <div className="space-y-3">
+              {allProducts.map((p, idx) => {
+                const isSelected = selectedIds.has(p.id);
+                const isCurrentProduct = p.id === currentProduct.id;
+                
+                return (
+                  <div key={p.id} className="flex justify-between items-start gap-3 text-sm group">
+                    <label className="flex items-start gap-3 cursor-pointer flex-1">
+                      <div className={`mt-0.5 shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'bg-primary border-primary text-white' : 'bg-white border-zinc-300 text-transparent group-hover:border-zinc-400'}`}>
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={`font-medium line-clamp-2 text-left transition-colors ${isSelected ? 'text-zinc-800' : 'text-zinc-400 line-through'}`}>
+                        {isCurrentProduct && <strong className="text-zinc-950 font-bold mr-1">This item:</strong>}
+                        {p.name}
+                      </span>
+                    </label>
+                    <span className={`font-bold shrink-0 transition-colors ${isSelected ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                      {formatCurrency(p.sale_price || p.price)}
+                    </span>
+                    {/* Invisible input to make the label click area work cleanly for accessibility/forms if needed, but onClick on label handles it via bubbling if we use standard inputs. We will just use an onChange input */}
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={isSelected}
+                      onChange={() => toggleSelect(p.id)}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="border-t border-zinc-100 pt-6 space-y-3">
-              {selectedProducts.map((p, idx) => (
-                <div key={p.id} className="flex justify-between items-start gap-4 text-sm">
-                  <span className="text-zinc-600 font-medium line-clamp-1 flex-1 text-left">
-                    {idx + 1}. {p.name}
+            <div className="border-t border-zinc-100 pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Bundle Price</p>
+                {isBundleEligible && (
+                  <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm">
+                    Save {discountPercentage}%
                   </span>
-                  <span className="font-bold text-zinc-900">
-                    {formatCurrency(p.sale_price || p.price)}
-                  </span>
-                </div>
-              ))}
+                )}
+              </div>
+              <div className="flex items-end gap-3 mt-1">
+                <h3 className="text-3xl font-black tracking-tight text-zinc-900">{formatCurrency(totalPrice)}</h3>
+                {isBundleEligible && (
+                  <span className="text-sm text-zinc-400 line-through font-bold mb-1">{formatCurrency(baseTotalPrice)}</span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mt-1">For {selectedProducts.length} selected items</p>
             </div>
           </div>
 
           <button
             onClick={handleAddBundleToCart}
-            className="w-full h-12 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all flex items-center justify-center gap-2 mt-8 shadow-sm active:scale-[0.98]"
+            disabled={selectedProducts.length === 0}
+            className="w-full h-12 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
           >
             <ShoppingCart className="w-4 h-4" />
-            Add Bundle to Cart
+            {selectedProducts.length > 1 ? `Add ${selectedProducts.length} Items to Cart` : selectedProducts.length === 1 ? 'Add to Cart' : 'Select Items'}
           </button>
         </div>
       </div>
