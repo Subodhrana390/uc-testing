@@ -56,7 +56,7 @@ export default function AboutPage() {
       {/* Hero Section */}
       <section className="bg-zinc-950 text-white py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <p className="text-sm font-black uppercase tracking-[0.3em] text-primary">About UC Enterprises</p>
             <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]">{companyTagline}</h1>
@@ -68,7 +68,7 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values & Benefits */}
-      <section className="container mx-auto px-4 py-20 border-b border-zinc-100">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-20 border-b border-zinc-100">
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 text-primary font-black uppercase tracking-widest text-xs">
@@ -101,7 +101,7 @@ export default function AboutPage() {
       </section>
 
       {/* Trusted Brands */}
-      <section className="container mx-auto px-4 py-24 bg-zinc-50/50">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-24 bg-zinc-50/50">
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
           <h2 className="text-4xl font-black text-zinc-950">Our Trusted Partners</h2>
           <p className="text-lg text-zinc-600">We source directly from the world's most reputable manufacturers to guarantee authenticity and performance.</p>

@@ -104,7 +104,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
           categoryName: product.categories?.name,
         })
       ]} />
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8">
         <ProductDetailsClient product={product} attributes={attrData || []} />
 
         {/* Similar Products */}

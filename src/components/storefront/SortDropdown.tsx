@@ -25,7 +25,7 @@ export default function SortDropdown() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="group inline-flex items-center justify-between gap-3 h-10 px-4 bg-white border border-orange-100 text-[10px] font-black uppercase tracking-widest text-zinc-950 transition-all hover:border-primary"
+          className="group inline-flex items-center justify-between gap-3 h-9 px-4 bg-white border border-orange-100 text-[10px] font-black uppercase tracking-widest text-zinc-950 transition-all hover:border-primary"
         >
           <span className="flex items-center gap-2">
             <activeOption.icon className="w-3.5 h-3.5 text-primary" />

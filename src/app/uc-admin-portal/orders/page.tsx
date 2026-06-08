@@ -458,7 +458,7 @@ export default function OrdersPage() {
   if (loading) return <LogoLoader text="Loading orders..." />;
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto w-full px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="space-y-6 sm:space-y-8 w-full px-4 md:px-8 2xl:px-12 mx-auto w-full px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Blue Gradient Banner */}
       <div className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-500 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
         {/* Subtle decorative glows */}

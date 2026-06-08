@@ -171,25 +171,10 @@ export default function FrequentlyBoughtTogether({
 
       <div className="flex flex-col lg:flex-row gap-8 items-stretch">
         {/* Products Grid with Connectors and scroll controls */}
-        <div className="flex-1 relative group">
-          {/* Navigation Buttons */}
-          <button
-            onClick={() => scroll("left")}
-            className="absolute -left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 bg-zinc-950 text-white shadow-xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => scroll("right")}
-            className="absolute -right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 bg-zinc-950 text-white shadow-xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
+        <div className="flex-1 relative group w-full overflow-hidden">
           <div
             ref={scrollContainerRef}
-            className="flex flex-row items-center gap-4 p-4 md:p-6 border border-zinc-100 bg-zinc-50/30 rounded-[2.5rem] overflow-x-auto scrollbar-hide snap-x snap-mandatory py-4 px-4 md:px-6"
+            className="flex flex-row md:flex-wrap items-center justify-start md:justify-center gap-4 p-4 md:p-6 border border-zinc-100 bg-zinc-50/30 rounded-[2.5rem] overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory py-4 px-4 md:px-6"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {/* Current Product Card Wrapper */}

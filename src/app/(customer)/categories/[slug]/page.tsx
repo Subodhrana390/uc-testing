@@ -29,7 +29,7 @@ export async function generateMetadata({
   const supabase = createStaticClient();
   const { data: category } = await supabase
     .from("categories")
-    .select("name, slug, description, image_url, seo_title, seo_description")
+    .select("id, name, slug, description, image_url, seo_title, seo_description")
     .eq("slug", params.slug)
     .single();
 
@@ -41,7 +41,7 @@ export async function generateMetadata({
   const { count } = await supabase
     .from("products")
     .select("id", { count: "exact", head: true })
-    .eq("category_id", category.slug);
+    .eq("category_id", category.id);
 
   return categoryMetadata({
     name: category.seo_title || category.name,
@@ -107,7 +107,7 @@ export default async function CategoryPage({
         ...(safeProducts.length > 0 ? [itemListSchema(safeProducts, category.name, categoryUrl)] : []),
       ]} />
 
-      <section className="container mx-auto px-4 py-10">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-10">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-400">

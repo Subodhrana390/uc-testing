@@ -126,9 +126,9 @@ function SearchInput() {
     <div ref={containerRef} className="relative w-full text-left">
       <form onSubmit={handleFormSubmit} className="relative w-full">
         {loading ? (
-          <Loader2 className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-red-600 animate-spin" />
+          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin" />
         ) : (
-          <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         )}
         <input
           type="text"
@@ -141,7 +141,7 @@ function SearchInput() {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search products, brands..."
-          className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 pl-12 pr-4 text-sm text-left outline-none transition focus:border-primary focus:bg-white"
+          className="h-11 w-full rounded-full border border-zinc-200 bg-zinc-100/50 pl-10 pr-4 text-sm text-left outline-none transition-all hover:bg-zinc-100 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 shadow-inner"
         />
       </form>
 
@@ -196,7 +196,7 @@ function SearchInput() {
 export default function HeaderSearch() {
   return (
     <Suspense fallback={
-      <div className="h-12 w-full rounded-full border border-orange-100 bg-orange-50 animate-pulse" />
+      <div className="h-11 w-full rounded-full border border-zinc-200 bg-zinc-100/50 animate-pulse" />
     }>
       <SearchInput />
     </Suspense>

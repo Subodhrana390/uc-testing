@@ -5,10 +5,12 @@ import Link from "next/link";
 import { ArrowRight, ShoppingBag, BadgePercent, Layers, CheckSquare } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import ProductCard from "@/components/storefront/ProductCard";
+import InfiniteProductList from "@/components/storefront/InfiniteProductList";
 import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
 import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
 import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
+import MobileFloatingActionBar from "@/components/storefront/MobileFloatingActionBar";
 import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters";
 import JsonLd from "@/components/seo/JsonLd";
 import { itemListSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
@@ -132,7 +134,7 @@ export default async function ProductsPage({
           url: `${SITE_URL}/products`,
         }),
       ]} />
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-6 lg:px-8 py-12">
 
         {/* Top Header Grid Section */}
         <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-200/80">
@@ -145,14 +147,14 @@ export default async function ProductsPage({
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+          <div className="flex flex-wrap items-center gap-3 self-start md:self-auto mt-4 md:mt-0 w-full md:w-auto">
             <MobileFilterToggle />
-            <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 py-2 rounded-lg shadow-2xs">
-              Total SKU: <span className="font-semibold text-zinc-900">{count || 0} Items</span>
-            </span>
-            <Suspense fallback={<div className="h-10 w-40 animate-pulse bg-zinc-100 rounded-lg" />}>
+            <Suspense fallback={<div className="h-9 w-40 animate-pulse bg-zinc-100 rounded-lg" />}>
               <SortDropdown />
             </Suspense>
+            <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 h-9 flex items-center rounded-lg shadow-2xs">
+              Total SKU:&nbsp;<span className="font-semibold text-zinc-900">{count || 0} Items</span>
+            </span>
           </div>
         </div>
 
@@ -196,11 +198,11 @@ export default async function ProductsPage({
           {/* Dynamic Interactive Products Module */}
           <div className="lg:col-span-3 space-y-10">
             {sortedProducts.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {sortedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product as any} />
-                ))}
-              </div>
+              <InfiniteProductList
+                initialProducts={sortedProducts}
+                searchParams={searchParams as Record<string, string>}
+                totalPages={totalPages}
+              />
             ) : (
               /* Global Core Empty State container */
               <div className="border border-zinc-200 bg-white rounded-xl py-20 px-4 text-center shadow-2xs max-w-xl mx-auto">
@@ -211,7 +213,7 @@ export default async function ProductsPage({
 
             {/* Pagination Segment Footer */}
             {totalPages > 1 && (
-              <div className="pt-4 border-t border-zinc-200/60">
+              <div className="pt-4 border-t border-zinc-200/60 hidden md:block">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -224,6 +226,10 @@ export default async function ProductsPage({
 
         </div>
       </section>
+
+      {/* Floating Mobile Actions for Infinite Scroll */}
+      <MobileFloatingActionBar />
+
     </div>
   );
 }

@@ -217,7 +217,7 @@ export default function InventoryPage() {
   if (loading) return <LogoLoader text="Loading physical inventory ledger..." />;
 
   return (
-    <div className="space-y-6 p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="space-y-6 p-6 lg:p-8 w-full px-4 md:px-8 2xl:px-12 mx-auto">
 
       {/* Top Controls Bar */}
       {/* Emerald Gradient Banner */}

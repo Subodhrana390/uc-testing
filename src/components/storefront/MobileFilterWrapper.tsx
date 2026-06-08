@@ -1,17 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function MobileFilterWrapper({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
     window.addEventListener("open-mobile-filter", handleOpen);
     return () => window.removeEventListener("open-mobile-filter", handleOpen);
   }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [searchParams]);
 
   return (
     <>

@@ -148,7 +148,7 @@ export default function BannersPage() {
   if (loading) return <LogoLoader text="Loading homepage banners..." />;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative">
+    <div className="space-y-6 w-full px-4 md:px-8 2xl:px-12 mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative">
       {/* Yellow/Amber Gradient Banner */}
       <div className="bg-gradient-to-r from-yellow-500 via-yellow-600 to-amber-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />

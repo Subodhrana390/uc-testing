@@ -132,11 +132,16 @@ export default function ProductReviews({ productId }: { productId: string }) {
             <>
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 {reviews.map((item) => (
-                  <div key={item.id} className="border border-zinc-200 bg-white p-6">
+                  <div key={item.id} className="border border-zinc-100 bg-white p-6 rounded-2xl shadow-sm transition-all hover:shadow-md">
                     <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-bold text-zinc-950">{item.reviewer_name}</p>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{formatDate(item.created_at)}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-100 text-zinc-600 flex items-center justify-center font-bold text-lg uppercase border border-zinc-200">
+                          {item.reviewer_name.charAt(0) || "U"}
+                        </div>
+                        <div>
+                          <p className="font-bold text-zinc-950">{item.reviewer_name}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-0.5">{formatDate(item.created_at)}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 text-amber-500">
                         {Array.from({ length: 5 }).map((_, index) => (
@@ -168,7 +173,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
           )}
         </div>
 
-        <div className="border border-orange-100 bg-orange-50 p-6">
+        <div className="border border-zinc-100 bg-zinc-50 p-6 sm:p-8 rounded-[2rem] shadow-sm h-fit sticky top-24">
           <h3 className="text-xl font-black text-zinc-950">Write a Review</h3>
           <div className="mt-4 flex items-center gap-2">
             {Array.from({ length: 5 }).map((_, index) => (
@@ -183,10 +188,10 @@ export default function ProductReviews({ productId }: { productId: string }) {
               onChange={(e) => setReview(e.target.value)} 
               placeholder="Share your product and buying experience" 
               rows={5} 
-              className="flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-sm"
             />
             <button 
-              className="w-full inline-flex items-center justify-center h-10 px-4 py-2 rounded-md bg-zinc-950 text-white font-bold hover:bg-primary transition-all disabled:opacity-50 disabled:pointer-events-none" 
+              className="w-full inline-flex items-center justify-center h-12 px-6 py-3 rounded-xl bg-zinc-950 text-white font-bold hover:bg-primary transition-all disabled:opacity-50 disabled:pointer-events-none shadow-md active:scale-[0.98]" 
               onClick={handleSubmit} 
               disabled={submitting}
             >

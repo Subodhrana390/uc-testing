@@ -23,7 +23,7 @@ export default function ContactPage() {
         }),
         localBusinessSchema(),
       ]} />
-      <section className="container mx-auto max-w-4xl px-4 py-20">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-4xl px-4 py-20">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-primary mb-3">Contact Us</p>
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-zinc-950 mb-6">Reach our sales and support desk</h1>
         <p className="max-w-2xl text-lg leading-relaxed text-zinc-600 mb-12">

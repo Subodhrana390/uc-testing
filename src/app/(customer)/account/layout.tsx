@@ -78,7 +78,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row gap-6 lg:gap-8 pt-6 sm:pt-8 pb-8">
 
           {/* Sidebar - Desktop Only (Sticky) */}

@@ -47,6 +47,11 @@ export default function Pagination({
   };
 
   const handlePageClick = (page: number, e: React.MouseEvent) => {
+    // Autoscroll to top on mobile view
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    
     if (onPageChange) {
       e.preventDefault();
       onPageChange(page);

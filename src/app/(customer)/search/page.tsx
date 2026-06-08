@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import ProductCard from "@/components/storefront/ProductCard";
 import Pagination from "@/components/storefront/Pagination";
+import MobileFloatingActionBar from "@/components/storefront/MobileFloatingActionBar";
 import { cn } from "@/lib/utils";
 
 export default function SearchPage() {
@@ -53,6 +54,22 @@ export default function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // Listen for custom event from MobileFloatingActionBar
+    const handleOpenFilter = () => setIsMobileFilterOpen(true);
+    window.addEventListener("open-mobile-filter", handleOpenFilter);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener("open-mobile-filter", handleOpenFilter);
+    };
+  }, []);
 
   // Fetch full categories list once for sidebar hierarchy
   useEffect(() => {
@@ -301,13 +318,19 @@ export default function SearchPage() {
   // ─── Pagination ───────────────────────────────────────────────────────────
   const totalPages = Math.ceil(filteredProducts.length / pageSize);
   const paginatedProducts = useMemo(() => {
-    const from = (currentPage - 1) * pageSize;
-    return filteredProducts.slice(from, from + pageSize);
-  }, [filteredProducts, currentPage]);
+    if (isMobile) {
+      return filteredProducts.slice(0, currentPage * pageSize);
+    } else {
+      const from = (currentPage - 1) * pageSize;
+      return filteredProducts.slice(from, from + pageSize);
+    }
+  }, [filteredProducts, currentPage, isMobile]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (!isMobile) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     // Keep URL in sync so refresh / share / Vercel production all work correctly
     const params = new URLSearchParams();
     if (query) params.set("q", query);
@@ -317,6 +340,26 @@ export default function SearchPage() {
     const newUrl = params.toString() ? `/search?${params.toString()}` : "/search";
     router.replace(newUrl, { scroll: false });
   };
+
+  useEffect(() => {
+    if (!isMobile || currentPage >= totalPages || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handlePageChange(currentPage + 1);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    const target = document.getElementById("infinite-scroll-trigger");
+    if (target) observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [isMobile, currentPage, totalPages, loading]);
 
   // ─── Active filter helpers ────────────────────────────────────────────────
   const hasActiveFilters =
@@ -391,7 +434,7 @@ export default function SearchPage() {
   // ─── UI ───────────────────────────────────────────────────────────────────
   return (
     <div className="bg-zinc-50/50 min-h-screen text-zinc-900 antialiased">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-6 lg:px-8 py-10">
 
         {/* Header */}
         <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-zinc-200/80">
@@ -424,9 +467,8 @@ export default function SearchPage() {
             )}
           </div>
 
-          {/* Sort + count */}
           {products.length > 0 && (
-            <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+            <div className="flex flex-wrap items-center gap-3 self-start md:self-auto mt-4 md:mt-0 w-full md:w-auto">
               <button
                 onClick={() => setIsMobileFilterOpen(true)}
                 className="lg:hidden h-9 px-3 bg-white border border-zinc-200 text-xs font-medium text-zinc-700 rounded-lg shadow-xs flex items-center gap-2 hover:bg-zinc-50 transition-colors"
@@ -434,14 +476,11 @@ export default function SearchPage() {
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 Filters
               </button>
-              <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-2 rounded-lg">
-                {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"}
-              </span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
-                  className="h-9 pl-3 pr-8 bg-white border border-zinc-200 text-xs font-medium text-zinc-700 rounded-lg shadow-xs appearance-none outline-hidden focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 cursor-pointer transition-all"
+                  className="h-9 pl-3 pr-8 bg-white border border-zinc-200 text-[10px] font-black uppercase tracking-widest text-zinc-950 rounded-lg shadow-xs appearance-none outline-hidden focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 cursor-pointer transition-all"
                 >
                   <option value="latest">Sort: Newest</option>
                   <option value="price_asc">Price: Low → High</option>
@@ -450,6 +489,9 @@ export default function SearchPage() {
                 </select>
                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
               </div>
+              <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 h-9 flex items-center rounded-lg shadow-2xs">
+                Total SKU:&nbsp;<span className="font-semibold text-zinc-900">{filteredProducts.length} Items</span>
+              </span>
             </div>
           )}
         </div>
@@ -739,17 +781,25 @@ export default function SearchPage() {
 
                   {totalPages > 1 && (
                     <div className="pt-6 border-t border-zinc-200/60">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        baseUrl="/search"
-                        preserveParams={{
-                          q: query || undefined,
-                          main: mainFilter || undefined,
-                          sub: subFilter || undefined,
-                        }}
-                        onPageChange={handlePageChange}
-                      />
+                      {isMobile ? (
+                        currentPage < totalPages && (
+                          <div id="infinite-scroll-trigger" className="w-full py-8 flex justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          </div>
+                        )
+                      ) : (
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          baseUrl="/search"
+                          preserveParams={{
+                            q: query || undefined,
+                            main: mainFilter || undefined,
+                            sub: subFilter || undefined,
+                          }}
+                          onPageChange={handlePageChange}
+                        />
+                      )}
                     </div>
                   )}
                 </>

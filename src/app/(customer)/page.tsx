@@ -76,23 +76,23 @@ export default async function HomePage() {
       <div className="absolute bottom-1/4 right-1/3 w-[800px] h-[800px] bg-amber-500/[0.012] rounded-full blur-[175px] pointer-events-none -z-10" />
 
       {/* Main Banner Slider */}
-      <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-4 bg-transparent">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-4 bg-transparent">
         <BannerCarousel banners={safeBanners} />
       </section>
 
       {/* Interactive Category Selector Selector */}
-      <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4">
         <CategorySelector categories={safeCategories} />
       </section>
 
       {/* Trust & Value Proposition */}
-      <section className="max-w-7xl mx-auto px-4 py-8 mt-4">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
         <WhyChooseUs />
       </section>
 
       {/* Flash Sale Carousel */}
       {safeFlashDeals.length > 0 && (
-        <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
           <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
             <div className="relative pl-4 border-l-4 border-primary">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Flash Sale</p>
@@ -111,7 +111,7 @@ export default async function HomePage() {
 
       {/* Deal 1: After Flash Sale */}
       {safeDeals[0] && (
-        <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
           <div className="hover:scale-[1.005] transition-transform duration-500">
             <DealBanner
               title={safeDeals[0].title}
@@ -127,7 +127,7 @@ export default async function HomePage() {
       }
 
       {/* Primary Category Deck */}
-      <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
         <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
           <div className="relative pl-4 border-l-4 border-primary">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Categories</p>
@@ -183,7 +183,7 @@ export default async function HomePage() {
       {/* Deal 2: After Categories */}
       {
         safeDeals[1] && (
-          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="hover:scale-[1.005] transition-transform duration-500">
               <DealBanner
                 title={safeDeals[1].title}
@@ -202,7 +202,7 @@ export default async function HomePage() {
       {/* Featured Products Segment */}
       {
         safeFeatured.length > 0 && (
-          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
               <div className="relative pl-4 border-l-4 border-primary">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Handpicked</p>
@@ -223,7 +223,7 @@ export default async function HomePage() {
       {/* Deal 3: After Featured */}
       {
         safeDeals[2] && (
-          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="hover:scale-[1.005] transition-transform duration-500">
               <DealBanner
                 title={safeDeals[2].title}
@@ -241,7 +241,7 @@ export default async function HomePage() {
       {/* Best Sellers Segment */}
       {
         safeBestSellers.length > 0 && (
-          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
               <div className="relative pl-4 border-l-4 border-primary">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Popular</p>
@@ -260,14 +260,14 @@ export default async function HomePage() {
       }
 
       {/* Testimonials */}
-      <section className="max-w-7xl mx-auto px-4 py-8 mt-4">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
         <Testimonials />
       </section>
 
       {/* Top Selling Products Segment */}
       {
         safeTopSelling.length > 0 && (
-          <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
               <div className="relative pl-4 border-l-4 border-primary">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Trending Demands</p>
@@ -290,7 +290,7 @@ export default async function HomePage() {
           { products: safeNewArrivals, tag: "Fresh", title: "New Arrivals", href: "/products?filter=new-arrival" },
           { products: safeTrending, tag: "Market Trend", title: "Trending Now", href: "/products?filter=trending" },
         ].map((section, idx) => section.products.length > 0 && (
-          <section key={idx} className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+          <section key={idx} className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
               <div className="relative pl-4 border-l-4 border-primary">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{section.tag}</p>
@@ -309,7 +309,7 @@ export default async function HomePage() {
       }
 
       {/* Personalised sections — only visible to returning visitors */}
-      <section className="container mx-auto px-4">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
         <RecentlyViewedProducts maxItems={8} />
         <RecommendedProducts maxItems={8} />
       </section>
@@ -317,7 +317,7 @@ export default async function HomePage() {
 
 
       {/* FAQ Accordion Section */}
-      <section className="max-w-7xl mx-auto px-4 py-10">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-10">
         <div className="text-center mb-12 space-y-3">
           <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Frequently Asked Questions</h2>
           <p className="text-xs font-medium text-zinc-500 max-w-md mx-auto">
@@ -338,7 +338,7 @@ export default async function HomePage() {
       </section>
 
       {/* Trusted Brands Grid (highly stylized cards) */}
-      <section className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-4 py-8">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
         <div className="text-center mb-16 space-y-3">
           <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Our Trusted Partners</h2>
           <div className="w-12 h-1 bg-primary mx-auto rounded-full" />

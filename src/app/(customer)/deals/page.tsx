@@ -39,7 +39,7 @@ export default async function DealsPage() {
           type: "CollectionPage",
         }),
       ]} />
-      <section className="container mx-auto px-4 py-14">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-14">
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
             <Flame className="w-4 h-4 text-primary" />

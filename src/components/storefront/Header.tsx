@@ -63,7 +63,7 @@ export default function Header({ categories, user }: HeaderProps) {
       <div className="sticky top-0 z-50 w-full">
         {/* Top Bar */}
         <div className="bg-zinc-950 text-zinc-400 overflow-hidden">
-          <div className="container mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider">
+          <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-6">
               <a
                 href={supportPhoneHref}
@@ -88,9 +88,9 @@ export default function Header({ categories, user }: HeaderProps) {
         </div>
 
         <header className="border-b border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm">
-          <div className="container mx-auto px-4">
+          <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
             <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-8 relative">
-              <div className="flex items-center gap-1 sm:gap-4 flex-1 min-w-0">
+              <div className="flex items-center gap-1 sm:gap-4 shrink-0 min-w-0">
                 {/* Mobile Menu Button */}
                 <button
                   className="lg:hidden -ml-2 p-2 shrink-0 text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
@@ -102,7 +102,7 @@ export default function Header({ categories, user }: HeaderProps) {
                 {/* Logo */}
                 <Link
                   href="/"
-                  className="shrink flex items-center gap-2 sm:gap-3 group min-w-0"
+                  className="shrink flex items-center gap-2 sm:gap-3 group min-w-0 pr-4"
                 >
                   <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 overflow-hidden flex items-center justify-center p-1 transition group-hover:border-primary group-hover:scale-105">
                     <Image
@@ -125,7 +125,7 @@ export default function Header({ categories, user }: HeaderProps) {
               </div>
 
               {/* Desktop Search */}
-              <div className="hidden lg:block flex-1 max-w-lg">
+              <div className="hidden lg:block flex-1 w-full max-w-4xl px-4 xl:px-12">
                 <HeaderSearch />
               </div>
 

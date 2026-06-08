@@ -65,7 +65,7 @@ export default async function CategoriesPage({
           type: "CollectionPage",
         }),
       ]} />
-      <section className="container mx-auto px-4 py-16">
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-16">
         <div className="mb-14 flex flex-col md:flex-row md:items-end justify-between gap-6">
           {/* Left Side: Title and Subtitle */}
           <div className="space-y-2">

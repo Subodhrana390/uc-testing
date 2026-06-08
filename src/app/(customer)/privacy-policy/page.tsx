@@ -52,7 +52,7 @@ export default function PrivacyPolicyPage() {
       ]} />
       {/* Header Section */}
       <header className="bg-white border-b border-zinc-200">
-        <div className="container mx-auto max-w-5xl px-6 py-16">
+        <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-5xl px-6 py-16">
           <h1 className="text-5xl font-black tracking-tighter text-zinc-950 uppercase italic">
             Privacy <span className="text-primary">Policy</span>
           </h1>
@@ -63,7 +63,7 @@ export default function PrivacyPolicyPage() {
       </header>
 
       {/* Content Section */}
-      <div className="container mx-auto max-w-5xl px-6 -mt-8">
+      <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-5xl px-6 -mt-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {sections.map((section, index) => (
             <div
@@ -83,7 +83,7 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
       </div>
-      <footer className="container mx-auto max-w-5xl px-6 mt-8">
+      <footer className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-5xl px-6 mt-8">
         <p className="text-zinc-400 text-xs font-medium max-w-md">
           Our practices align with the Digital Personal Data Protection Act (DPDP) 2023.
           We do not sell user data to third-party advertisers.
