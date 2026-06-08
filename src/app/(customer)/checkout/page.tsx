@@ -43,6 +43,7 @@ declare global {
 
 interface CartItemWithTax extends CartItem {
   tax_rate?: number;
+  is_tax_inclusive?: boolean;
 }
 
 export default function CheckoutPage() {
@@ -73,11 +74,28 @@ export default function CheckoutPage() {
     postalCode: "",
   });
 
-  const subtotal = getCartTotal();
+  const totals = items.reduce(
+    (acc, item) => {
+      const rate = item.tax_rate || 0;
+      if (item.is_tax_inclusive) {
+        const basePrice = item.price / (1 + rate / 100);
+        const taxAmount = item.price - basePrice;
+        acc.subtotal += basePrice * item.quantity;
+        acc.taxTotal += taxAmount * item.quantity;
+      } else {
+        const taxAmount = item.price * (rate / 100);
+        acc.subtotal += item.price * item.quantity;
+        acc.taxTotal += taxAmount * item.quantity;
+      }
+      return acc;
+    },
+    { subtotal: 0, taxTotal: 0 }
+  );
+
+  const subtotal = items.length > 0 ? totals.subtotal : getCartTotal();
+  const taxTotal = totals.taxTotal;
 
   const [deliveryCharge, setDeliveryCharge] = useState<number>(50);
-
-  const taxTotal = items.reduce((sum, item) => sum + (item.price * item.quantity * (item.tax_rate || 0) / 100), 0);
 
   const grandTotal = subtotal + taxTotal + deliveryCharge;
 
@@ -106,7 +124,7 @@ export default function CheckoutPage() {
 
       const { data: products } = await supabase
         .from("products")
-        .select("id, tax_rate")
+        .select("id, tax_rate, is_tax_inclusive")
         .in(
           "id",
           cartItems.map((i) => i.id)
@@ -120,6 +138,7 @@ export default function CheckoutPage() {
         return {
           ...item,
           tax_rate: prod?.tax_rate || 0,
+          is_tax_inclusive: prod?.is_tax_inclusive || false,
         };
       });
 
