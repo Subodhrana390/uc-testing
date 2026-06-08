@@ -73,19 +73,34 @@ export async function GET(req: Request) {
           );
         }
         else if (job.type === 'INVOICE') {
-          const invoiceData = {
-            orderId: order.id,
-            date: order.created_at,
-            customerName: order.customer_name,
-            customerEmail: order.customer_email,
-            customerPhone: order.phone,
-            address: order.shipping_address || "N/A",
-            items: items || [],
-            totalAmount: parseFloat(order.total_amount)
-          };
+          // Check if invoice exists and has PDF, otherwise generate it
+          const { data: invoice } = await supabase
+            .from("invoices")
+            .select("id, pdf_url")
+            .eq("order_id", orderId)
+            .single();
+            
+          let finalPdfUrl = invoice?.pdf_url;
+          
+          if (invoice && !finalPdfUrl) {
+            // Generate it now
+            const { generateAndStoreInvoicePDF } = await import("@/app/actions/invoice-generator");
+            const res = await generateAndStoreInvoicePDF(invoice.id);
+            if (res.success) finalPdfUrl = res.pdfUrl;
+          }
 
-          const doc = await generateInvoicePDF(invoiceData);
-          const pdfBase64 = doc.output('datauristring').split(',')[1];
+          let pdfBase64 = "";
+          if (finalPdfUrl) {
+            const { data: fileData, error: fileError } = await supabase.storage.from("invoices").download(finalPdfUrl);
+            if (!fileError && fileData) {
+              const arrayBuffer = await fileData.arrayBuffer();
+              pdfBase64 = Buffer.from(arrayBuffer).toString('base64');
+            }
+          }
+
+          if (!pdfBase64) {
+            throw new Error("Could not retrieve Invoice PDF for email");
+          }
 
           await sendInvoiceEmail(
             order.customer_email,

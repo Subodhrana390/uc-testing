@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import TrackingInitializer from "@/components/TrackingInitializer";
+import AnalyticsScripts from "@/components/AnalyticsScripts";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationSchema, websiteSchema, localBusinessSchema } from "@/lib/jsonld";
 import { baseMetadata } from "@/lib/seo";
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className="h-full flex flex-col">
         {/* Global structured data — injected on every page */}
         <JsonLd data={[organizationSchema(), websiteSchema(), localBusinessSchema()]} />
+        <AnalyticsScripts />
         <TrackingInitializer />
         {children}
         <Toaster position="top-center" />

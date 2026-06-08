@@ -23,7 +23,7 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **Dynamic Catalog**: Browse products across Hardware, Electronics, Chemicals, and General Supplies.
 - **Advanced Search**: Instant product discovery via `HeaderSearch` component.
 - **Inquiry System**: "Bulk Enquiry / Get Quote" functionality for bulk/B2B industrial orders.
-- **User Accounts**: Profile management, order tracking, and dynamic wishlists.
+- **User Accounts & Billing**: Profile management, order tracking, dynamic wishlists, and a secure portal to download GST tax invoices.
 - **Payment Gateway**: Secure online checkout integrated with Razorpay (payment creation, client verification, and secure webhooks).
 - **Responsive Design**: Optimized for Desktop, Tablet, and Mobile devices with a premium glassmorphic aesthetic.
 
@@ -37,6 +37,8 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **Order Operations**: 
   - Manage orders and status tracking.
   - Export orders as **PDF** or **CSV** reports.
+- **Inventory Management**: Native WooCommerce-style inventory tracking with PostgreSQL row-level locks, variant-level stock, atomic ledger transactions, and auto-expiring background cart reservations.
+- **Invoice System**: Fully automated, GST-compliant PDF tax invoice generation, secure Supabase Storage integration, and automatic dispatch via Brevo email queue.
 - **Security & Logs**: Admin security tracking and activity logging.
 
 ### 📈 Marketing & Analytics Attribution
@@ -44,7 +46,7 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **Click Identifiers**: Capture ad-click parameters including Google (`gclid`), Meta (`fbclid`), Microsoft (`msclkid`), and TikTok (`ttclid`).
 - **Attribution Logic**: Retain first-touch attribution (original source) and track latest-touch attribution in local storage and cookies.
 - **URL Decoration**: Outbound relative and same-origin links are automatically appended with active tracking parameters.
-- **Analytics Integration**: Simulated and real analytics tracking with Google Analytics (`gtag`) and Meta Pixel (`fbq`).
+- **Analytics Integration**: Real analytics tracking with Google Analytics (`gtag`) and Meta Pixel (`fbq`).
 
 ## 🛠 Setup & Installation
 
