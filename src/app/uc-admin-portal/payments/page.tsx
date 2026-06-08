@@ -665,6 +665,7 @@ export default function PaymentsPage() {
             <TableHeader className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200">
               <TableRow className="border-b border-zinc-200 hover:bg-transparent">
                 <TableHead className="w-[180px] font-bold text-zinc-500 pl-6 h-12">Transaction Ref</TableHead>
+                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Order ID</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Customer</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Amount</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Status</TableHead>
@@ -675,7 +676,7 @@ export default function PaymentsPage() {
             <TableBody className="divide-y divide-zinc-100">
               {filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-60 text-center text-zinc-500">
+                  <TableCell colSpan={7} className="h-60 text-center text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
                       <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
                         <Search className="w-5 h-5" />
@@ -708,7 +709,18 @@ export default function PaymentsPage() {
                           {payment.transaction_id || payment.id.slice(0, 12).toUpperCase()}
                         </span>
                         <span className="text-xs text-zinc-400 font-mono">
+                          {payment.payment_method || "ONLINE"}
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-sm text-[#18181b] font-mono bg-zinc-100 px-2 py-1 rounded-md w-max">
                           {payment.orders?.id ? getDisplayOrderId(payment.orders.id, payment.orders.created_at) : `ORD-${payment.order_id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]" title={payment.order_id}>
+                          {payment.order_id}
                         </span>
                       </div>
                     </TableCell>
