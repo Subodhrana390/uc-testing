@@ -2,9 +2,7 @@ export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PROCESSING"
-  | "PACKED"
   | "SHIPPED"
-  | "OUT_FOR_DELIVERY"
   | "DELIVERED"
   | "CANCELLED"
   | "RETURN_REQUESTED"
@@ -17,31 +15,27 @@ export type OrderStatus =
 export type ActorType = "customer" | "admin" | "system" | "delivery_agent";
 
 export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ["CONFIRMED", "CANCELLED", "FAILED"],
-  CONFIRMED: ["PROCESSING", "CANCELLED"],
-  PROCESSING: ["PACKED", "CANCELLED"],
-  PACKED: ["SHIPPED"],
-  SHIPPED: ["OUT_FOR_DELIVERY"],
-  OUT_FOR_DELIVERY: ["DELIVERED", "RETURNED"],
-  DELIVERED: ["RETURN_REQUESTED"],
+  PENDING:          ["CONFIRMED", "CANCELLED", "FAILED"],
+  CONFIRMED:        ["PROCESSING", "CANCELLED"],
+  PROCESSING:       ["SHIPPED", "CANCELLED"],
+  SHIPPED:          ["DELIVERED", "RETURNED"],
+  DELIVERED:        ["RETURN_REQUESTED"],
   RETURN_REQUESTED: ["RETURN_APPROVED"],
-  RETURN_APPROVED: ["RETURNED"],
-  RETURNED: ["REFUND_PENDING"],
-  REFUND_PENDING: ["REFUNDED"],
-  CANCELLED: [],
-  REFUNDED: [],
-  FAILED: []
+  RETURN_APPROVED:  ["RETURNED"],
+  RETURNED:         ["REFUND_PENDING"],
+  REFUND_PENDING:   ["REFUNDED"],
+  CANCELLED:        [],
+  REFUNDED:         [],
+  FAILED:           [],
 };
 
 export const ROLE_PERMISSIONS: Record<ActorType, OrderStatus[]> = {
   customer: ["CANCELLED"],
-  delivery_agent: ["OUT_FOR_DELIVERY", "DELIVERED", "RETURNED"],
+  delivery_agent: ["DELIVERED", "RETURNED"],
   admin: [
     "CONFIRMED",
     "PROCESSING",
-    "PACKED",
     "SHIPPED",
-    "OUT_FOR_DELIVERY",
     "DELIVERED",
     "CANCELLED",
     "RETURN_REQUESTED",
@@ -49,15 +43,15 @@ export const ROLE_PERMISSIONS: Record<ActorType, OrderStatus[]> = {
     "RETURNED",
     "REFUND_PENDING",
     "REFUNDED",
-    "FAILED"
+    "FAILED",
   ],
   system: [
     "CONFIRMED",
     "CANCELLED",
     "FAILED",
     "REFUND_PENDING",
-    "REFUNDED"
-  ]
+    "REFUNDED",
+  ],
 };
 
 export function validateTransition(
@@ -74,26 +68,26 @@ export function validateTransition(
 
   const allowed = ALLOWED_TRANSITIONS[cur];
   if (!allowed || !allowed.includes(next)) {
-    return { 
-      isValid: false, 
-      reason: `Invalid status transition from ${cur} to ${next}` 
+    return {
+      isValid: false,
+      reason: `Invalid status transition from ${cur} to ${next}`,
     };
   }
 
   const allowedStatusesForRole = ROLE_PERMISSIONS[actor];
   if (!allowedStatusesForRole || !allowedStatusesForRole.includes(next)) {
-    return { 
-      isValid: false, 
-      reason: `Actor role "${actor}" is not authorized to transition order to status "${next}"` 
+    return {
+      isValid: false,
+      reason: `Actor role "${actor}" is not authorized to transition order to status "${next}"`,
     };
   }
 
   // Customers can only cancel before shipping
   if (actor === "customer" && next === "CANCELLED") {
-    if (["SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"].includes(cur)) {
-      return { 
-        isValid: false, 
-        reason: `Customers cannot cancel orders after they have been shipped.` 
+    if (["SHIPPED", "DELIVERED"].includes(cur)) {
+      return {
+        isValid: false,
+        reason: `Customers cannot cancel orders after they have been shipped.`,
       };
     }
   }

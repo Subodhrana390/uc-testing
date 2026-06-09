@@ -325,24 +325,24 @@ export default function OrderHistoryPage() {
   }, [supabase]);
 
   const STATUS_LABEL: Record<string, string> = {
-    // New place_order_safe statuses
-    pending_payment:    "Awaiting Payment",
-    order_confirmed:    "Confirmed",
-    confirmed:          "Confirmed",
-    processing:         "Processing",
-    ready_to_ship:      "Ready to Ship",
-    shipped:            "Shipped",
-    out_for_delivery:   "Out for Delivery",
-    delivered:          "Delivered",
-    cancelled:          "Cancelled",
-    return_requested:   "Return Requested",
-    return_approved:    "Return Approved",
-    return_rejected:    "Return Rejected",
-    refunded:           "Refunded",
-    // Legacy statuses
-    pending:            "Pending",
-    placed:             "Placed",
-    pending_payment_legacy: "Awaiting Payment",
+    // Current statuses
+    pending_payment:  "Awaiting Payment",
+    order_confirmed:  "Confirmed",
+    pending:          "Pending",
+    confirmed:        "Confirmed",
+    processing:       "Processing",
+    shipped:          "Shipped",
+    delivered:        "Delivered",
+    cancelled:        "Cancelled",
+    return_requested: "Return Requested",
+    return_approved:  "Return Approved",
+    returned:         "Returned",
+    refund_pending:   "Refund Pending",
+    refunded:         "Refunded",
+    failed:           "Failed",
+    // Legacy (kept for old orders still in DB)
+    placed:           "Placed",
+    ready_to_ship:    "Ready to Ship",
   };
 
   const getStatusLabel = (status: string): string => {
@@ -354,11 +354,8 @@ export default function OrderHistoryPage() {
       case "delivered":
         return "default";
       case "shipped":
-      case "out_for_delivery":
-      case "ready_to_ship":
         return "secondary";
       case "cancelled":
-      case "return_rejected":
         return "destructive";
       default:
         return "outline";
@@ -627,7 +624,7 @@ export default function OrderHistoryPage() {
                 </div>
 
                 {/* Shipped banner */}
-                {["shipped", "out_for_delivery"].includes(order.status?.toLowerCase()) && (
+                {order.status?.toLowerCase() === "shipped" && (
                   <div className="mx-4 sm:mx-6 mb-4 mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-indigo-600 rounded-lg shrink-0">
