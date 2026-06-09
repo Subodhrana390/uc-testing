@@ -150,3 +150,91 @@ export async function getLowStockProducts() {
   
   return { success: true, data: lowStock };
 }
+
+export async function getInventoryTransactions({
+  page = 1,
+  pageSize = 10,
+  search = "",
+}: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+} = {}) {
+  const supabase = await createAdminClient();
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let selectString = `
+      id,
+      type,
+      quantity,
+      before_stock,
+      after_stock,
+      notes,
+      created_at,
+      reference_id,
+      reference_type,
+      product_variants (name),
+      created_by
+    `;
+
+    if (search) {
+      selectString += `, products!inner (name)`;
+    } else {
+      selectString += `, products (name)`;
+    }
+
+    let queryBuilder = supabase
+      .from("inventory_transactions")
+      .select(selectString, { count: "exact" });
+
+    if (search) {
+      queryBuilder = queryBuilder.ilike("products.name", `%${search}%`);
+    }
+
+    const { data, count, error } = await queryBuilder
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
+    const txList = (data as any[]) || [];
+
+    // Fetch profile details for in-memory mapping to avoid complex/unreliable RLS/PostgREST joins
+    const creatorIds = Array.from(new Set(txList.map(tx => tx.created_by).filter(Boolean)));
+    const profilesMap: Record<string, { full_name: string; email: string }> = {};
+    if (creatorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", creatorIds);
+      
+      const profileList = (profiles as any[]) || [];
+      profileList.forEach(p => {
+        profilesMap[p.id] = { full_name: p.full_name || "", email: p.email || "" };
+      });
+    }
+
+    const transactionsWithProfiles = txList.map(tx => ({
+      ...tx,
+      creator: tx.created_by ? (profilesMap[tx.created_by] || { full_name: "System", email: "" }) : { full_name: "System", email: "" }
+    }));
+
+    return {
+      success: true,
+      data: transactionsWithProfiles,
+      count: count || 0,
+    };
+  } catch (err: any) {
+    console.error("Failed to fetch inventory transactions:", err);
+    return { success: false, error: err.message || "Failed to fetch transactions" };
+  }
+}
+
