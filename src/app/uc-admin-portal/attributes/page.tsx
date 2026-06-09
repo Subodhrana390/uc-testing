@@ -300,7 +300,7 @@ export default function AttributeManagementPage() {
   if (loading) return <LogoLoader text="Loading specifications..." />;
 
   return (
-    <div className="space-y-6 p-6 lg:p-8 w-full px-4 md:px-8 2xl:px-12 mx-auto">
+    <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8">
       {/* Fuchsia Gradient Banner */}
       <div className="bg-gradient-to-r from-fuchsia-600 via-fuchsia-700 to-pink-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden mb-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />

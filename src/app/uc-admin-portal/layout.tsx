@@ -53,7 +53,7 @@ export default function AdminLayout({
     if (stored === "true") {
       setIsSidebarCollapsed(true);
     }
-    document.body.style.backgroundColor = "#f5f6fa";
+    document.body.style.backgroundColor = "#fafafb";
     return () => {
       document.body.style.backgroundColor = "";
     };
@@ -298,7 +298,7 @@ export default function AdminLayout({
 
   if (pathname === "/uc-admin-portal/login") return <>{children}</>;
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f6fa] text-slate-600 selection:bg-indigo-500 selection:text-white">
+    <div className="flex h-screen overflow-hidden bg-[#fafafb] text-slate-600 selection:bg-indigo-500 selection:text-white">
 
       {/* Desktop Sidebar (Collapsible Solid White Theme) */}
       <aside className={cn(
@@ -469,7 +469,7 @@ export default function AdminLayout({
 
       {/* Main Container */}
       <div className={cn(
-        "flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-y-auto overflow-x-hidden bg-[#f5f6fa]",
+        "flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-y-auto overflow-x-hidden bg-[#fafafb]",
         isSidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
       )}>
         {/* Mobile Header */}

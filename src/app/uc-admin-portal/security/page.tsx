@@ -48,7 +48,7 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="space-y-8 p-6 lg:p-8 w-full px-4 md:px-8 2xl:px-12 mx-auto">
+    <div className="space-y-8 w-full px-4 sm:px-6 lg:px-8">
       {/* Lime Gradient Banner */}
       <div className="bg-gradient-to-r from-lime-600 via-lime-700 to-emerald-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden mb-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />

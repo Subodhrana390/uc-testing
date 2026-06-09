@@ -278,7 +278,7 @@ export default function ProductsPage() {
   if (loading) return <LogoLoader text="Loading products catalog..." />;
 
   return (
-    <div className="space-y-6 w-full px-4 md:px-8 2xl:px-12 mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative">
+    <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8 relative">
       {/* Orange Gradient Banner */}
       <div className="bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8">
         {/* Subtle decorative glows */}

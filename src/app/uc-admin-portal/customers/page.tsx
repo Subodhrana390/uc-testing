@@ -270,7 +270,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-8 w-full px-4 md:px-8 2xl:px-12 mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-8 w-full px-4 sm:px-6 lg:px-8">
       {/* Teal Gradient Banner */}
       <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
         {/* Subtle decorative glows */}

@@ -309,7 +309,7 @@ export default function InventoryPage() {
   if (loading && products.length === 0) return <LogoLoader text="Loading physical inventory ledger..." />;
 
   return (
-    <div className="space-y-6 p-6 lg:p-8 w-full px-4 md:px-8 2xl:px-12 mx-auto">
+    <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8">
 
       {/* Emerald Gradient Banner */}
       <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8">
