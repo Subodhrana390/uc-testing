@@ -325,23 +325,20 @@ export default function OrderHistoryPage() {
   }, [supabase]);
 
   const STATUS_LABEL: Record<string, string> = {
-    // Current statuses
-    pending_payment:  "Awaiting Payment",
-    order_confirmed:  "Confirmed",
-    pending:          "Pending",
-    confirmed:        "Confirmed",
-    processing:       "Processing",
-    shipped:          "Shipped",
-    delivered:        "Delivered",
-    cancelled:        "Cancelled",
+    pending: "Pending",
+    confirmed: "Confirmed",
+    processing: "Processing",
+    shipped: "Shipped",
+    delivered: "Delivered",
+    cancelled: "Cancelled",
     return_requested: "Return Requested",
-    return_approved:  "Return Approved",
-    returned:         "Returned",
-    refund_pending:   "Refund Pending",
-    refunded:         "Refunded",
-    failed:           "Failed",
+    return_approved: "Return Approved",
+    returned: "Returned",
+    refund_pending: "Refund Pending",
+    refunded: "Refunded",
+    failed: "Failed",
     // Legacy (kept for old orders still in DB)
-    placed:           "Placed",
+    placed: "Placed",
   };
 
   const getStatusLabel = (status: string): string => {
@@ -423,198 +420,195 @@ export default function OrderHistoryPage() {
       {/* Orders List */}
       <div className="space-y-4">
         {filteredOrders.map((order) => (
-          <Card key={order.id} className="border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
+          <Card key={order.id} className="group border-zinc-100 overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200">
 
-            {/* Order Meta Info Row */}
+            {/* Order Meta Info Header */}
             <div
               onClick={() => toggleOrderExpand(order.id)}
-              className="bg-gray-50 hover:bg-gray-100 cursor-pointer px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 transition-colors"
+              className="bg-white cursor-pointer px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none transition-colors"
             >
-              <div className="flex flex-wrap gap-4 sm:gap-6">
+              {/* Info Group */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-8">
                 <div>
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Order ID</span>
-                  <span className="text-xs font-semibold text-zinc-900">{getDisplayOrderId(order.id, order.created_at)}</span>
+                  <span className="text-sm font-semibold text-zinc-800">{getDisplayOrderId(order.id, order.created_at)}</span>
                 </div>
+
                 <div>
                   <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Placed On</span>
-                  <span className="text-xs font-medium text-zinc-900">{new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Total</span>
-                  <span className="text-xs font-semibold text-zinc-900">{formatCurrency(order.total_amount)}</span>
-                  <span className="text-[9px] text-zinc-500 block uppercase tracking-tight mt-0.5">
-                    {order.payment_method} • <span className={cn(order.payment_status?.toLowerCase() === "paid" ? "text-emerald-600 font-bold" : "text-amber-600 font-bold")}>{order.payment_status || "Unpaid"}</span>
+                  <span className="text-sm font-medium text-zinc-600">
+                    {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
-                {order.delivery_estimate && order.status?.toLowerCase() !== "delivered" && (
-                  <div>
-                    <span className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider block">Est. Delivery</span>
-                    <span className="text-xs font-medium text-emerald-700 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {order.delivery_estimate}
-                    </span>
-                  </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2">
-                {order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed", "order_confirmed", "pending_payment"].includes(order.status?.toLowerCase()) && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePayOnline(order);
-                    }}
-                    disabled={payingOrderId === order.id}
-                    className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                  >
-                    {payingOrderId === order.id ? (
-                      <><Loader2 className="w-3 h-3 animate-spin mr-1" />Processing</>
-                    ) : "Pay Online"}
-                  </Button>
-                )}
-                {["pending", "placed", "confirmed", "order_confirmed", "pending_payment", "processing"].includes(order.status?.toLowerCase()) && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCancelOrder(order.id);
-                    }}
-                    disabled={cancellingOrderId === order.id}
-                    variant="outline"
-                    className="border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                  >
-                    {cancellingOrderId === order.id ? (
-                      <><Loader2 className="w-3 h-3 animate-spin mr-1" />Cancelling</>
-                    ) : "Cancel"}
-                  </Button>
-                )}
-                {order.status?.toLowerCase() === "delivered" && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenReturnDialog(order);
-                    }}
-                    variant="outline"
-                    className="border-pink-100 text-pink-600 hover:bg-pink-50 hover:text-pink-700 text-[10px] h-7 px-3 rounded-md shadow-sm font-semibold uppercase tracking-wider"
-                  >
-                    Return
-                  </Button>
-                )}
-
-                {/* Single View Progress per order */}
-                <Link
-                  href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="hidden sm:flex"
-                >
-                  <Button variant="outline" size="sm" className="text-[10px] h-7 px-3 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-semibold uppercase tracking-wider">
-                    Track <ChevronRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
-
-                <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
-                  {getStatusLabel(order.status)}
-                </Badge>
-                {order.status?.toLowerCase() === "delivered" ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownloadInvoice(order);
-                    }}
-                    title="Download Invoice"
-                    className="h-7 w-7 rounded-md hover:bg-zinc-200 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-900"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    disabled
-                    title="Invoice will generate after delivery"
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-300 cursor-not-allowed"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
-                <ChevronDown className={cn("w-4.5 h-4.5 text-zinc-400 transition-transform duration-200 shrink-0", expandedOrders[order.id] && "rotate-180")} />
-              </div>
-            </div>
-
-            {/* Accordion content */}
-            {expandedOrders[order.id] && (
-              <div className="border-t border-zinc-100 animate-in fade-in slide-in-from-top-1 duration-200">
-
-                {/* Info grid: Shipping + Fulfillment */}
-                <div className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs bg-zinc-50/60 border-b border-zinc-100">
-                  <div className="space-y-1.5">
-                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Shipping Address</h4>
-                    <p className="font-bold text-zinc-800 text-sm">{order.customer_name}</p>
-                    <p className="text-zinc-500 leading-relaxed">{order.shipping_address}</p>
-                    <p className="text-zinc-500">📞 {order.phone || "N/A"}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Payment</h4>
-                    <p className="font-semibold text-zinc-700">{order.payment_method || "—"}</p>
+                <div>
+                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Total Amount</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm font-bold text-zinc-900">{formatCurrency(order.total_amount)}</span>
                     <span className={cn(
-                      "inline-block text-[10px] font-bold px-2 py-0.5 rounded-full",
+                      "text-[10px] px-1.5 py-0.5 rounded font-medium capitalize",
                       order.payment_status?.toLowerCase() === "paid"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
                     )}>
                       {order.payment_status || "Unpaid"}
                     </span>
                   </div>
-                  <div className="space-y-1.5">
-                    <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px]">Tracking</h4>
-                    {order.tracking_id ? (
-                      <>
-                        <p className="font-mono font-bold text-zinc-800 text-xs">{order.tracking_id}</p>
-                        <p className="text-zinc-500">{order.carrier || "Standard Delivery"}</p>
-                      </>
-                    ) : (
-                      <p className="text-zinc-400 italic text-[11px]">Not yet dispatched</p>
+                </div>
+
+                {order.delivery_estimate && order.status?.toLowerCase() !== "delivered" && (
+                  <div>
+                    <span className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider block">Est. Delivery</span>
+                    <span className="text-sm font-medium text-indigo-600 flex items-center gap-1 mt-0.5">
+                      <Clock className="w-3.5 h-3.5" /> {order.delivery_estimate}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons & Status Group */}
+              <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-zinc-100 sm:border-0">
+                <div className="flex items-center gap-2">
+                  {order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); handlePayOnline(order); }}
+                      disabled={payingOrderId === order.id}
+                      className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs h-8 px-3.5 rounded-lg shadow-sm font-medium transition-colors"
+                    >
+                      {payingOrderId === order.id ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Processing</>
+                      ) : "Pay Online"}
+                    </Button>
+                  )}
+
+                  {["pending", "placed", "confirmed", "processing"].includes(order.status?.toLowerCase()) && (
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id); }}
+                      disabled={cancellingOrderId === order.id}
+                      variant="outline"
+                      className="border-zinc-200 text-zinc-600 hover:bg-red-50 hover:text-red-600 hover:border-red-100 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
+                    >
+                      {cancellingOrderId === order.id ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Cancelling</>
+                      ) : "Cancel"}
+                    </Button>
+                  )}
+
+                  {order.status?.toLowerCase() === "delivered" && (
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); handleOpenReturnDialog(order); }}
+                      variant="outline"
+                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
+                    >
+                      Return
+                    </Button>
+                  )}
+
+                  <Link
+                    href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hidden sm:inline-block"
+                  >
+                    <Button variant="outline" className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors">
+                      Track <ChevronRight className="w-3.5 h-3.5 ml-1 text-zinc-400" />
+                    </Button>
+                  </Link>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Badge variant={getStatusVariant(order.status)} className="text-[11px] font-medium px-2.5 py-0.5 rounded-full capitalize border-0 shadow-none">
+                    {getStatusLabel(order.status)}
+                  </Badge>
+
+                  <button
+                    disabled={order.status?.toLowerCase() !== "delivered"}
+                    onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(order); }}
+                    title={order.status?.toLowerCase() === "delivered" ? "Download Invoice" : "Invoice will generate after delivery"}
+                    className={cn(
+                      "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                      order.status?.toLowerCase() === "delivered"
+                        ? "hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900 active:scale-95"
+                        : "text-zinc-300 cursor-not-allowed"
                     )}
-                    {/* Mobile track button */}
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+
+                  <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform duration-200 shrink-0", expandedOrders[order.id] && "rotate-180")} />
+                </div>
+              </div>
+            </div>
+
+            {/* Accordion Content */}
+            {expandedOrders[order.id] && (
+              <div className="border-t border-zinc-100 bg-zinc-50/40 animate-in fade-in slide-in-from-top-1 duration-200">
+
+                {/* Detail Fields Grid */}
+                <div className="px-4 sm:px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm border-b border-zinc-100">
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Shipping Address</h4>
+                    <p className="font-medium text-zinc-800">{order.customer_name}</p>
+                    <p className="text-zinc-500 text-xs leading-relaxed">{order.shipping_address}</p>
+                    <p className="text-zinc-500 text-xs mt-1">📞 {order.phone || "—"}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Payment Details</h4>
+                    <p className="font-medium text-zinc-700">{order.payment_method || "—"}</p>
+                    <p className="text-zinc-500 text-xs">Status: {order.payment_status || "Unpaid"}</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Logistics & Tracking</h4>
+                    {order.tracking_id ? (
+                      <div>
+                        <p className="font-mono font-medium text-zinc-800 text-xs">{order.tracking_id}</p>
+                        <p className="text-zinc-500 text-xs">{order.carrier || "Standard Delivery"}</p>
+                      </div>
+                    ) : (
+                      <p className="text-zinc-400 italic text-xs">Not yet dispatched</p>
+                    )}
+
                     <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="sm:hidden inline-block mt-1">
-                      <Button variant="outline" size="sm" className="text-[10px] h-7 px-3 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-semibold uppercase tracking-wider">
-                        Track Order <ChevronRight className="w-3 h-3 ml-1" />
+                      <Button variant="outline" className="text-xs h-7 px-3 border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-lg">
+                        Track Order <ChevronRight className="w-3 h-3 ml-0.5 text-zinc-400" />
                       </Button>
                     </Link>
                   </div>
                 </div>
 
-                {/* Items List — clean, compact */}
-                <div className="px-4 sm:px-6 pt-4 pb-2 bg-white">
-                  <h4 className="font-bold text-zinc-400 uppercase tracking-wider text-[9px] mb-3">
+                {/* Modern Compact Items List */}
+                <div className="px-4 sm:px-6 py-4 bg-white">
+                  <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider mb-3">
                     Items ({order.order_items?.length || 0})
                   </h4>
-                  <div className="space-y-3">
+                  <div className="divide-y divide-zinc-50">
                     {order.order_items?.map((item: any) => (
-                      <div key={item.id} className="flex items-center gap-3 sm:gap-4">
-                        <div className="w-12 h-12 bg-gray-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
+                      <div key={item.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="w-12 h-12 bg-zinc-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
                           <Image
                             src={item.products?.image_url || "/images/placeholder.png"}
                             alt={item.products?.name}
                             fill
                             sizes="48px"
-                            className="object-contain p-1.5"
+                            className="object-contain p-1"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-zinc-900 line-clamp-1">{item.products?.name}</h3>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">
-                            Qty: <span className="font-semibold text-zinc-700">{item.quantity}</span>
-                            <span className="mx-1.5 text-zinc-300">·</span>
-                            <span className="font-semibold text-zinc-700">{formatCurrency(item.unit_price)}</span> each
+                          <h3 className="text-xs font-medium text-zinc-800 truncate">{item.products?.name}</h3>
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            Qty: <span className="font-medium text-zinc-700">{item.quantity}</span>
+                            <span className="mx-2 text-zinc-200">|</span>
+                            <span className="font-medium text-zinc-700">{formatCurrency(item.unit_price)}</span> each
                           </p>
                         </div>
                         {order.status?.toLowerCase() === "delivered" && item.products && (
                           <Button
                             variant="outline"
-                            size="sm"
                             onClick={() => handleOpenReviewDialog(item.products)}
-                            className="shrink-0 text-[10px] h-7 px-3 border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold uppercase tracking-wider"
+                            className="shrink-0 text-xs h-7 px-3 border-zinc-200 text-zinc-600 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50/50 rounded-lg transition-all font-medium"
                           >
-                            <Star className="w-3 h-3 mr-1" /> Review
+                            <Star className="w-3 h-3 mr-1 text-zinc-400 group-hover:text-orange-500 fill-current" /> Review
                           </Button>
                         )}
                       </div>
@@ -622,22 +616,24 @@ export default function OrderHistoryPage() {
                   </div>
                 </div>
 
-                {/* Shipped banner */}
+                {/* Clean In-Transit Banner */}
                 {order.status?.toLowerCase() === "shipped" && (
-                  <div className="mx-4 sm:mx-6 mb-4 mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="mx-4 sm:mx-6 mb-4 mt-2 p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-600 rounded-lg shrink-0">
-                        <Truck className="w-4 h-4 text-white" />
+                      <div className="p-2 bg-indigo-500/10 rounded-lg shrink-0">
+                        <Truck className="w-4 h-4 text-indigo-600" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">In Transit</p>
-                        <p className="text-sm font-semibold text-indigo-900 mt-0.5">
-                          {order.carrier || "Standard"} — <span className="font-mono">{order.tracking_id || "Updating..."}</span>
+                        <p className="text-xs font-medium text-indigo-900">
+                          In Transit via {order.carrier || "Standard Carrier"}
+                        </p>
+                        <p className="text-[11px] text-indigo-600/80 font-mono mt-0.5">
+                          Tracking ID: {order.tracking_id || "Updating..."}
                         </p>
                       </div>
                     </div>
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />Live
+                    <span className="flex items-center gap-1.5 text-[10px] font-semibold text-indigo-600 uppercase tracking-wider bg-indigo-100/50 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Live
                     </span>
                   </div>
                 )}
@@ -766,20 +762,20 @@ export default function OrderHistoryPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Bank Name</label>
-                    <Input value={bankDetails.bankName} onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})} placeholder="e.g. State Bank of India" className="rounded-xl border-zinc-200" />
+                    <Input value={bankDetails.bankName} onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })} placeholder="e.g. State Bank of India" className="rounded-xl border-zinc-200" />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Account Holder Name</label>
-                    <Input value={bankDetails.accountName} onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value})} placeholder="Name as per bank account" className="rounded-xl border-zinc-200" />
+                    <Input value={bankDetails.accountName} onChange={(e) => setBankDetails({ ...bankDetails, accountName: e.target.value })} placeholder="Name as per bank account" className="rounded-xl border-zinc-200" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Account Number</label>
-                      <Input type="password" value={bankDetails.accountNumber} onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})} placeholder="Account Number" className="rounded-xl border-zinc-200" />
+                      <Input type="password" value={bankDetails.accountNumber} onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })} placeholder="Account Number" className="rounded-xl border-zinc-200" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">IFSC Code</label>
-                      <Input value={bankDetails.ifscCode} onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value})} placeholder="IFSC Code" className="rounded-xl border-zinc-200 uppercase" />
+                      <Input value={bankDetails.ifscCode} onChange={(e) => setBankDetails({ ...bankDetails, ifscCode: e.target.value })} placeholder="IFSC Code" className="rounded-xl border-zinc-200 uppercase" />
                     </div>
                   </div>
                 </div>

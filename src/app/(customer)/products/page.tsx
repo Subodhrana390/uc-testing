@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShoppingBag, BadgePercent, Layers, CheckSquare } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import ProductCard from "@/components/storefront/ProductCard";
 import InfiniteProductList from "@/components/storefront/InfiniteProductList";
@@ -109,7 +108,7 @@ export default async function ProductsPage({
   if (sortMode === "rating") {
     // For rating sort, we fetch all matching without range because we sort in memory
     const { data: allProducts } = await query;
-    
+
     const sorted = [...(allProducts || [])];
     sorted.sort((a, b) => {
       const aReviews = a.product_reviews || [];
@@ -188,7 +187,7 @@ export default async function ProductsPage({
           <MobileFilterWrapper>
             <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
 
-            <ProductSidebarFilters categories={categoriesList} brands={brandsList} />
+              <ProductSidebarFilters categories={categoriesList} brands={brandsList} />
 
             </aside>
           </MobileFilterWrapper>
@@ -202,10 +201,24 @@ export default async function ProductsPage({
                 totalPages={totalPages}
               />
             ) : (
-              /* Global Core Empty State container */
-              <div className="border border-zinc-200 bg-white rounded-xl py-20 px-4 text-center shadow-2xs max-w-xl mx-auto">
-                <ShoppingBag className="mx-auto h-12 w-12 text-zinc-350 mb-4" />
-                <h3 className="text-md font-bold text-zinc-900 mb-1">No products found</h3>
+              <div className="group border-2 border-dashed border-zinc-100 rounded-2xl py-16 px-6 text-center max-w-sm mx-auto bg-gradient-to-b from-white to-zinc-50/50 shadow-sm transition-all duration-300 hover:border-zinc-200">
+                <div className="mx-auto h-16 w-16 bg-zinc-50 rounded-full flex items-center justify-center mb-5 group-hover:bg-zinc-100/80 transition-colors">
+                  <ShoppingBag className="h-6 w-6 text-zinc-400 group-hover:scale-105 transition-transform duration-300" />
+                </div>
+                <h3 className="text-base font-semibold text-zinc-900 tracking-tight">
+                  No products found
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1.5 max-w-[240px] mx-auto leading-relaxed">
+                  We couldn't find anything matching your current filters or search term.
+                </p>
+                <div className="mt-6">
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center justify-center text-xs font-medium h-9 px-4 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 transition-all shadow-sm"
+                  >
+                    Clear Filters
+                  </Link>
+                </div>
               </div>
             )}
 

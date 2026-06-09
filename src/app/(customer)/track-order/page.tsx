@@ -5,25 +5,12 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-
 import {
-  PackageSearch,
-  Search,
-  Loader2,
-  Package,
-  CheckCircle2,
-  Truck,
-  Clock,
-  MapPin,
-  ReceiptText,
-  ArrowRight,
-  RotateCcw,
-  AlertCircle,
-  HelpCircle,
-  FileDown,
-  Star
+  PackageSearch, Search, Loader2, Package, CheckCircle2,
+  Truck, MapPin, ReceiptText, ArrowRight, RotateCcw,
+  AlertCircle, HelpCircle, FileDown, Star, ShieldCheck,
+  BadgeCheck, Clock3, XCircle, RefreshCcw,
 } from "lucide-react";
-
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
@@ -31,14 +18,60 @@ import { getDisplayOrderId } from "@/lib/order";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
+/* ─────────────────────────── helpers ─────────────────────────── */
+function getStatusStep(status: string) {
+  const s = status.toLowerCase();
+  if (s === "pending" || s === "confirmed") return 0;
+  if (s === "processing") return 1;
+  if (s === "shipped") return 2;
+  if (s === "delivered") return 3;
+  return -1;
+}
+
+function fmtDate(iso: string, hoursToAdd = 0) {
+  const d = new Date(iso);
+  d.setHours(d.getHours() + hoursToAdd);
+  return d.toLocaleString("en-IN", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
+}
+
+function statusColor(s: string) {
+  const sl = s.toLowerCase();
+  if (sl === "delivered") return "emerald";
+  if (sl === "shipped") return "indigo";
+  if (sl === "processing") return "blue";
+  if (sl === "confirmed" || sl === "pending") return "amber";
+  if (sl === "cancelled" || sl === "failed") return "red";
+  if (["returned", "return_requested", "return_approved"].includes(sl)) return "pink";
+  if (["refund_pending", "refunded"].includes(sl)) return "violet";
+  return "zinc";
+}
+
+const COLOR_MAP: Record<string, string> = {
+  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  blue: "bg-blue-50 text-blue-700 border-blue-200",
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  red: "bg-red-50 text-red-700 border-red-200",
+  pink: "bg-pink-50 text-pink-700 border-pink-200",
+  violet: "bg-violet-50 text-violet-700 border-violet-200",
+  zinc: "bg-zinc-50 text-zinc-700 border-zinc-200",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending", confirmed: "Confirmed", processing: "Processing",
+  shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled",
+  failed: "Failed", returned: "Returned", return_requested: "Return Requested",
+  return_approved: "Return Approved", refund_pending: "Refund Pending", refunded: "Refunded",
+};
+
+/* ─────────────────────────── component ─────────────────────────── */
 function TrackOrderContent() {
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,7 +79,6 @@ function TrackOrderContent() {
   const [error, setError] = useState("");
   const [isLive, setIsLive] = useState(false);
 
-  // Review Modal State
   const [reviewProduct, setReviewProduct] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
@@ -56,807 +88,468 @@ function TrackOrderContent() {
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
 
-  const handleDownloadInvoice = async (order: any) => {
+  /* invoice download */
+  const handleDownloadInvoice = async (o: any) => {
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      const invoiceData = {
-        orderId: order.id,
-        date: order.created_at,
-        customerName: order.customer_name,
-        customerEmail: order.customer_email,
-        customerPhone: order.phone,
-        address: order.shipping_address || "N/A",
-        items: order.order_items || [],
-        totalAmount: parseFloat(order.total_amount)
-      };
-      const doc = await generateInvoicePDF(invoiceData);
-      doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
-      toast.success("Invoice downloaded successfully!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to generate/download invoice.");
-    }
+      const doc = await generateInvoicePDF({
+        orderId: o.id, date: o.created_at,
+        customerName: o.customer_name, customerEmail: o.customer_email,
+        customerPhone: o.phone, address: o.shipping_address || "N/A",
+        items: o.order_items || [], totalAmount: parseFloat(o.total_amount),
+      });
+      doc.save(`Invoice_${getDisplayOrderId(o.id, o.created_at)}.pdf`);
+      toast.success("Invoice downloaded!");
+    } catch { toast.error("Failed to download invoice."); }
   };
 
-  const handleOpenReviewDialog = (product: any) => {
-    setReviewProduct(product);
-    setReviewRating(5);
-    setReviewText("");
-    setIsReviewOpen(true);
-  };
-
+  /* review */
   const handleSubmitReview = async () => {
-    if (!reviewText.trim()) {
-      toast.error("Please enter your review comments.");
-      return;
-    }
-
+    if (!reviewText.trim()) { toast.error("Please enter your review."); return; }
     setReviewSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please login to write a review.");
-        setIsReviewOpen(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-
+      if (!user) { toast.error("Please login."); setIsReviewOpen(false); return; }
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
       const reviewerName = profile?.full_name || user.user_metadata?.full_name || user.email || "Customer";
-
-      const { error } = await supabase.from("product_reviews").insert([
-        {
-          product_id: reviewProduct.id,
-          user_id: user.id,
-          reviewer_name: reviewerName,
-          rating: reviewRating,
-          review: reviewText,
-        },
-      ]);
-
+      const { error } = await supabase.from("product_reviews").insert([{
+        product_id: reviewProduct.id, user_id: user.id,
+        reviewer_name: reviewerName, rating: reviewRating, review: reviewText,
+      }]);
       if (error) throw error;
-
-      toast.success("Thank you for your rating & review!");
+      toast.success("Review submitted!");
       setIsReviewOpen(false);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to submit review.");
-    } finally {
-      setReviewSubmitting(false);
-    }
+    } catch (e: any) { toast.error(e.message || "Failed to submit review."); }
+    finally { setReviewSubmitting(false); }
   };
 
+  /* tracking */
   const performTracking = async (id: string) => {
-    setLoading(true);
-    setError("");
-    setOrder(null);
-
+    setLoading(true); setError(""); setOrder(null);
     try {
       const trimmedId = id.trim();
-      const isCustomId = trimmedId.startsWith("OD");
-
-      if (!isCustomId) {
-        setError("Please enter a valid Order ID starting with 'OD'.");
-        return;
-      }
-
-      let query = supabase
+      if (!trimmedId.startsWith("OD")) { setError("Please enter a valid Order ID starting with 'OD'."); return; }
+      const ts = parseInt(trimmedId.substring(2, 15));
+      if (isNaN(ts)) { setError("Invalid Order ID format."); return; }
+      const { data, error: err } = await supabase
         .from("orders")
-        .select(`
-          *,
-          order_items (
-            *,
-            products (name, image_url)
-          ),
-          payments (
-            *
-          )
-        `);
-
-      const tsString = trimmedId.substring(2, 15);
-      const ts = parseInt(tsString);
-
-      if (!isNaN(ts)) {
-        const start = new Date(ts - 5000).toISOString();
-        const end = new Date(ts + 5000).toISOString();
-
-        query = query
-          .gte("created_at", start)
-          .lte("created_at", end);
-      } else {
-        setError("Invalid Order ID format.");
-        return;
-      }
-
-      const { data, error: supabaseError } = await query;
-
-      if (supabaseError) throw supabaseError;
-
-      if (!data || data.length === 0) {
-        setError("We couldn't find an order with that ID. Please check the spelling.");
-        return;
-      }
-
-      const foundOrder = data.find(
-        (o: any) => getDisplayOrderId(o.id, o.created_at) === trimmedId
-      );
-
-      if (!foundOrder) {
-        setError("We couldn't find an order with that ID. Please check the spelling.");
-      } else {
-        setOrder(foundOrder);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+        .select("*, order_items(*, products(name, image_url)), payments(*)")
+        .gte("created_at", new Date(ts - 5000).toISOString())
+        .lte("created_at", new Date(ts + 5000).toISOString());
+      if (err) throw err;
+      const found = data?.find((o: any) => getDisplayOrderId(o.id, o.created_at) === trimmedId);
+      found ? setOrder(found) : setError("We couldn't find an order with that ID.");
+    } catch { setError("An unexpected error occurred. Please try again."); }
+    finally { setLoading(false); }
   };
 
-  // Subscribe to realtime updates once we have an order
+  /* realtime */
   useEffect(() => {
     if (!order?.id) return;
-
-    const channel = supabase
-      .channel(`order-status-${order.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `id=eq.${order.id}`,
-        },
-        (payload) => {
-          setOrder((prev: any) => ({
-            ...prev,
-            ...payload.new,
-            // Preserve joined relations from initial fetch
-            order_items: prev?.order_items,
-            payments: prev?.payments,
-          }));
-        }
-      )
-      .subscribe((status) => {
-        setIsLive(status === "SUBSCRIBED");
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-      setIsLive(false);
-    };
+    const ch = supabase.channel(`order-${order.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${order.id}` },
+        (payload) => setOrder((prev: any) => ({ ...prev, ...payload.new, order_items: prev?.order_items, payments: prev?.payments })))
+      .subscribe((s) => setIsLive(s === "SUBSCRIBED"));
+    return () => { supabase.removeChannel(ch); setIsLive(false); };
   }, [order?.id, supabase]);
 
   useEffect(() => {
-    const urlOrderId = searchParams.get("orderId");
-
-    if (urlOrderId) {
-      setOrderId(urlOrderId);
-      performTracking(urlOrderId);
-    }
+    const id = searchParams.get("orderId");
+    if (id) { setOrderId(id); performTracking(id); }
   }, [searchParams]);
 
-  const handleTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
-    performTracking(orderId);
-  };
+  /* ── timeline steps ── */
+  const STEPS = [
+    { key: "confirmed", label: "Order Confirmed", desc: "Payment received and order verified.", Icon: BadgeCheck },
+    { key: "processing", label: "Processing", desc: "Items picked, inspected and packed.", Icon: Package },
+    { key: "shipped", label: "Shipped", desc: "Package handed to delivery partner.", Icon: Truck },
+    { key: "delivered", label: "Delivered", desc: "Package received successfully.", Icon: ShieldCheck },
+  ];
 
-  const getStatusStep = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === "pending" || s === "pending_payment" || s === "confirmed" || s === "order_confirmed") return 0;
-    if (s === "processing") return 1;
-    if (s === "shipped") return 2;
-    if (s === "delivered") return 3;
-    return -1; // Terminal: Cancelled, Returned, Return_Requested, Return_Approved, Refund_Pending, Refunded, Failed
-  };
-
-  const formatMilestoneDate = (baseDateStr: string, hoursToAdd: number) => {
-    const d = new Date(baseDateStr);
-    d.setHours(d.getHours() + hoursToAdd);
-    return d.toLocaleString("en-IN", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
-  };
-
-  const milestones = useMemo(() => {
-    if (!order) return [];
-    const baseDate = order.created_at;
-    const updatedDate = order.updated_at || baseDate;
-    const statusStep = getStatusStep(order.status);
-    const carrierName = order.carrier || "Delivery Partner";
-    const statusLower = order.status.toLowerCase();
-
-    const list = [];
-
-    // Add Order Placed milestone for all orders
-    list.push({
-      title: "Order Confirmed",
-      description: "Your order details have been successfully saved. Payment authorized.",
-      time: formatMilestoneDate(baseDate, 0),
-      status: "confirmed"
-    });
-
-    if (statusLower === "cancelled") {
-      list.push({
-        title: "Cancelled",
-        description: "This order has been cancelled and will not be processed further.",
-        time: formatMilestoneDate(updatedDate, 0),
-        status: "cancelled"
-      });
-    } else if (statusLower === "return_requested") {
-      list.push({
-        title: "Return Requested",
-        description: "A return has been requested. Our team will review it shortly.",
-        time: formatMilestoneDate(updatedDate, 0),
-        status: "returned"
-      });
-    } else if (statusLower === "return_approved") {
-      list.push({
-        title: "Return Approved",
-        description: "Your return request has been approved. Please ship the item back.",
-        time: formatMilestoneDate(updatedDate, 0),
-        status: "returned"
-      });
-    } else if (statusLower === "returned") {
-      list.push({
-        title: "Returned",
-        description: "This order has been returned to our hub.",
-        time: formatMilestoneDate(updatedDate, 0),
-        status: "returned"
-      });
-    } else if (statusLower === "failed") {
-      list.push({
-        title: "Failed",
-        description: "The order transaction or processing has failed.",
-        time: formatMilestoneDate(updatedDate, 0),
-        status: "failed"
-      });
-    } else {
-      if (statusStep >= 1) {
-        list.push({
-          title: "Processing",
-          description: "Items picked and undergoing quality inspection at Zirakpur hub.",
-          // Use updated_at only if status IS processing (i.e., this is the current step)
-          time: statusStep === 1 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 4),
-          status: "processing"
-        });
-      }
-      if (statusStep >= 2) {
-        list.push({
-          title: "Shipped",
-          description: `Handed over to ${carrierName}. Tracking details generated.`,
-          time: statusStep === 2 ? formatMilestoneDate(updatedDate, 0) : formatMilestoneDate(baseDate, 12),
-          status: "shipped"
-        });
-      }
-      if (statusStep >= 3) {
-        list.push({
-          title: "Delivered",
-          description: "Package received and signed. Transaction complete.",
-          time: formatMilestoneDate(updatedDate, 0),
-          status: "delivered"
-        });
-      }
-    }
-
-    return list.reverse();
-  }, [order]);
+  const sl = (order?.status || "").toLowerCase();
+  const step = getStatusStep(sl);
+  const isTerminal = step === -1;
+  const col = statusColor(sl);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-zinc-50/20 to-white pb-24 font-sans relative overflow-hidden">
-      {/* Decorative blurs */}
-      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-red-500/[0.012] rounded-full blur-[130px] pointer-events-none -z-10" />
-      <div className="absolute bottom-1/4 left-1/4 w-[600px] h-[600px] bg-indigo-500/[0.012] rounded-full blur-[150px] pointer-events-none -z-10" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pb-24">
 
-      {/* Header System */}
-      <section className="border-b border-zinc-100 bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-12 md:py-16 text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-950">
-            Track your order
-          </h1>
-          <p className="text-zinc-500 text-sm md:text-base mt-2 max-w-xl leading-relaxed">
-            Enter your secure Order ID (starting with OD) to retrieve your package's real-time shipment progress and digital invoices.
-          </p>
+      {/* ── Hero header ── */}
+      <div className="bg-white border-b border-zinc-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-1">Shipment Tracker</p>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-950">Track Your Order</h1>
+            <p className="text-zinc-500 text-sm mt-1 max-w-md">Enter your Order ID (starting with OD) for real-time shipment status.</p>
+          </div>
+          <Link href="/account/orders">
+            <button className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors border border-zinc-200 rounded-xl px-4 py-2.5 bg-white hover:bg-zinc-50">
+              <ReceiptText className="w-4 h-4" /> View All Orders
+            </button>
+          </Link>
         </div>
-      </section>
+      </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="grid gap-8 lg:grid-cols-12 items-start">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid gap-6 lg:grid-cols-12 items-start">
 
-          {/* Form Box Column */}
-          <div className="lg:col-span-4 lg:sticky lg:top-8">
-            <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-zinc-50 border border-zinc-200/60 rounded-xl flex items-center justify-center text-zinc-500 shadow-sm">
-                  <Search className="w-4.5 h-4.5" />
+          {/* ── Search sidebar ── */}
+          <div className="lg:col-span-4 lg:sticky lg:top-6 space-y-4">
+
+            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-zinc-950 text-white flex items-center justify-center shrink-0">
+                  <PackageSearch className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-zinc-900 tracking-tight">Locate Shipment</h2>
-                  <p className="text-[10px] font-semibold text-zinc-400">Search secure orders</p>
+                  <p className="text-sm font-bold text-zinc-900">Locate Shipment</p>
+                  <p className="text-[10px] text-zinc-400 font-medium">Real-time tracking</p>
                 </div>
               </div>
 
-              <form onSubmit={handleTrack} className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="track-order-id" className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Secure Order ID
-                  </label>
+              <form onSubmit={(e) => { e.preventDefault(); performTracking(orderId); }} className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                   <Input
-                    id="track-order-id"
                     placeholder="e.g. OD177840830..."
-                    className="h-11 rounded-xl bg-zinc-50/50 border-zinc-200 text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 transition-all placeholder:text-zinc-300 font-bold"
+                    className="pl-9 h-11 rounded-xl border-zinc-200 text-sm font-bold bg-zinc-50 focus-visible:ring-1 focus-visible:ring-zinc-950 focus-visible:border-zinc-950 placeholder:font-normal placeholder:text-zinc-400"
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                     required
                   />
                 </div>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 active:scale-[0.98] text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 shadow-sm"
+                  className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 active:scale-[0.98] text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Locating...
-                    </>
-                  ) : (
-                    <>
-                      <PackageSearch className="w-3.5 h-3.5" />
-                      Track Shipment
-                    </>
-                  )}
+                  {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Tracking...</> : <><PackageSearch className="w-3.5 h-3.5" /> Track Order</>}
                 </button>
               </form>
 
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mt-5 p-4 bg-rose-50/50 text-rose-700 rounded-xl text-xs flex items-start gap-3 border border-rose-100/60"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="mt-4 p-3.5 bg-red-50 text-red-700 rounded-xl text-xs flex items-start gap-2.5 border border-red-100">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <p className="leading-relaxed font-semibold">{error}</p>
+                    <p className="font-semibold leading-relaxed">{error}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Quick Help Box */}
-            <div className="mt-4 p-5 bg-zinc-50 border border-zinc-200/50 rounded-2xl flex items-center gap-3">
-              <HelpCircle className="w-5 h-5 text-zinc-400 shrink-0" />
-              <div className="text-[10px] text-zinc-500 font-medium leading-normal">
-                Forgot your Order ID? Check the confirmation receipt sent to your registered email/phone number.
-              </div>
+            {/* help tip */}
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3 items-start">
+              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                Your Order ID is in the confirmation email sent after placing the order. It starts with <strong>OD</strong>.
+              </p>
             </div>
           </div>
 
-          {/* Results Box Column */}
+          {/* ── Results column ── */}
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
               {order ? (
-                <motion.div
-                  key="results"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="space-y-6"
-                >
-                  {/* Status Banner Card */}
-                  <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                      <div>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                          Secure Shipment Record
-                        </span>
-                        <h3 className="text-lg font-bold text-zinc-950 tracking-tight">
-                          {getDisplayOrderId(order.id, order.created_at)}
-                        </h3>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">
-                          Placed: {new Date(order.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                      </div>
+                <motion.div key="results" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-5">
 
+                  {/* ── Order header card ── */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    {/* top band */}
+                    <div className={cn("px-6 py-3 flex items-center justify-between", COLOR_MAP[col])}>
                       <div className="flex items-center gap-2">
-                        {/* Live indicator - shown when realtime is active */}
+                        <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                          {STATUS_LABEL[sl] ?? order.status.replace(/_/g, " ")}
+                        </span>
                         {isLive && (
-                          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="ml-2 text-[9px] font-black uppercase tracking-widest bg-white/60 px-2 py-0.5 rounded-full border border-current/20">
                             Live
                           </span>
                         )}
-                        <span className={cn(
-                          "text-[10px] font-black px-3 py-1.5 border uppercase tracking-wider rounded-lg flex items-center gap-1.5",
-                          order.status.toLowerCase() === "delivered"
-                            ? "bg-emerald-500/8 text-emerald-700 border-emerald-500/15"
-                            : order.status.toLowerCase() === "shipped"
-                              ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
-                              : order.status.toLowerCase() === "processing"
-                                ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
-                                : ["pending", "pending_payment", "confirmed", "order_confirmed"].includes(order.status.toLowerCase())
-                                  ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
-                                  : ["cancelled", "failed"].includes(order.status.toLowerCase())
-                                    ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
-                                    : ["returned", "return_requested", "return_approved"].includes(order.status.toLowerCase())
-                                      ? "bg-pink-500/8 text-pink-700 border-pink-500/15"
-                                      : ["refund_pending", "refunded"].includes(order.status.toLowerCase())
-                                        ? "bg-violet-500/8 text-violet-700 border-violet-500/15"
-                                        : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
-                        )}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                          {order.status.replace(/_/g, " ")}
-                        </span>
-
-                        <button
-                          onClick={() => {
-                            setOrderId("");
-                            setOrder(null);
-                          }}
-                          className="w-8 h-8 rounded-lg hover:bg-zinc-50 border border-zinc-200/60 flex items-center justify-center text-zinc-400 hover:text-zinc-650 transition-colors"
-                          title="Reset Tracker"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
                       </div>
+                      <button onClick={() => { setOrderId(""); setOrder(null); }}
+                        className="w-7 h-7 rounded-lg hover:bg-black/10 flex items-center justify-center text-current/60 hover:text-current transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    {/* Terminal Status Alert Banner */}
-                    {getStatusStep(order.status) === -1 && (
-                      <div className={cn(
-                        "p-4 mb-6 rounded-2xl border flex items-center gap-3",
-                        order.status.toLowerCase() === "cancelled" && "bg-red-50 border-red-200 text-red-800",
-                        (order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved") && "bg-amber-50 border-amber-200 text-amber-800",
-                        order.status.toLowerCase() === "failed" && "bg-rose-50 border-rose-200 text-rose-800"
-                      )}>
-                        <AlertCircle className="w-5 h-5 shrink-0" />
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wider">Order {order.status.replace(/_/g, " ")}</p>
-                          <p className="text-[11px] font-medium opacity-90 mt-0.5">
-                            {order.status.toLowerCase() === "cancelled" && "This order has been cancelled and cannot be tracked further."}
-                            {order.status.toLowerCase() === "returned" && "This order has been returned to our warehouse."}
-                            {order.status.toLowerCase() === "return_requested" && "Your return request has been received. Our team will review it shortly."}
-                            {order.status.toLowerCase() === "return_approved" && "Your return has been approved. Please ship the item back to us."}
-                            {order.status.toLowerCase() === "failed" && "This order payment or transaction has failed."}
-                          </p>
+                    <div className="px-6 py-5 grid grid-cols-2 sm:grid-cols-4 gap-4 border-b border-zinc-100">
+                      {[
+                        { label: "Order ID", value: getDisplayOrderId(order.id, order.created_at) },
+                        { label: "Placed On", value: new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) },
+                        { label: "Total", value: `₹${parseFloat(order.total_amount).toLocaleString("en-IN")}` },
+                        { label: "Payment", value: order.payment_status || "Unpaid" },
+                        { label: "Payment Method", value: order.payment_method || "Unpaid" },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{item.label}</p>
+                          <p className="text-sm font-bold text-zinc-900 mt-0.5 truncate">{item.value}</p>
                         </div>
+                      ))}
+                    </div>
+
+                    <div className="md:col-span-2 shadow-sm p-5">
+                      <div className="flex items-center gap-2 mb-4 pb-3">
+                        <ReceiptText className="w-4 h-4 text-zinc-400" />
+                        <h4 className="text-sm font-bold text-zinc-900">Order Items</h4>
+                        <span className="ml-auto text-[10px] font-black text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
+                          {order.order_items?.length ?? 0}
+                        </span>
                       </div>
-                    )}
-
-                    {/* Timeline Progress */}
-                    {getStatusStep(order.status) !== -1 && (
-                      <div className="relative py-4 mb-6">
-                        {/* Background track line */}
-                        <div className="absolute top-[28px] left-[12.5%] right-[12.5%] h-0.5 bg-zinc-100 z-0" />
-
-                        {/* Active progress line */}
-                        <div
-                          className="absolute top-[28px] left-[12.5%] h-0.5 bg-zinc-900 z-0 transition-all duration-700 ease-out"
-                          style={{
-                            width: `${(getStatusStep(order.status) / 3) * 75}%`,
-                          }}
-                        />
-
-                        <div className="relative z-10 flex justify-between">
-                          {[
-                            { icon: Clock, label: "Confirmed" },
-                            { icon: Package, label: "Processing" },
-                            { icon: Truck, label: "Shipped" },
-                            { icon: CheckCircle2, label: "Delivered" },
-                          ].map((step, idx) => {
-                            const isCompleted = getStatusStep(order.status) >= idx;
-                            const isCurrent = getStatusStep(order.status) === idx;
-                            const Icon = step.icon;
-
-                            return (
-                              <div key={step.label} className="flex flex-col items-center gap-2.5 w-1/4">
-                                <div
-                                  className={cn(
-                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 border bg-white",
-                                    isCompleted
-                                      ? "border-zinc-950 text-zinc-950 shadow-sm"
-                                      : "border-zinc-200 text-zinc-300",
-                                    isCurrent && "ring-4 ring-zinc-900/5 bg-zinc-950 border-zinc-950 text-white"
-                                  )}
-                                >
-                                  <Icon className="w-4 h-4" />
-                                </div>
-                                <span
-                                  className={cn(
-                                    "text-[10px] font-black uppercase tracking-wider text-center select-none",
-                                    isCompleted ? "text-zinc-800" : "text-zinc-400"
-                                  )}
-                                >
-                                  {step.label}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Carrier Info */}
-                    {order.tracking_id && (
-                      <div className="mt-8 p-5 bg-blue-50/50 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-blue-200 shadow-sm text-blue-600">
-                            <Truck className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-blue-600/70 uppercase tracking-widest">
-                              Carrier: {order.carrier || "Delivery Partner"}
-                            </p>
-                            <p className="text-sm font-bold text-zinc-900 mt-0.5">
-                              Tracking Number: <span className="font-mono bg-white px-2 py-1 rounded border border-zinc-200 ml-1">{order.tracking_id}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
-                          Track on Carrier Website
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Visual Transit Logs & Item list Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-
-                    {/* Visual Transit Log Updates */}
-                    <div className="md:col-span-3 bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-                      <div className="flex items-center gap-2 mb-6 border-b border-zinc-100 pb-4">
-                        <MapPin className="w-4.5 h-4.5 text-zinc-400" />
-                        <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Transit Logs</h4>
-                      </div>
-
-                      <div className="space-y-0">
-                        {milestones.map((milestone, idx) => (
-                          <div key={idx} className="flex gap-4">
-                            <div className="w-24 shrink-0 pt-1 text-right">
-                              <div className="text-xs font-bold text-zinc-900">{milestone.time.split(',')[0]}</div>
-                              <div className="text-[10px] text-zinc-500 font-semibold">{milestone.time.split(',')[1]}</div>
+                      <div className="space-y-3">
+                        {order.order_items?.map((item: any) => (
+                          <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-colors">
+                            <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 relative">
+                              {item.products?.image_url
+                                ? <Image src={item.products.image_url} alt={item.products.name} fill sizes="48px" className="object-contain p-1" />
+                                : <Package className="w-5 h-5 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />}
                             </div>
-                            <div className="relative flex flex-col items-center">
-                              <span className={cn(
-                                "w-3 h-3 rounded-full border-2 bg-white z-10 shrink-0",
-                                idx === 0 ? "border-emerald-500 ring-4 ring-emerald-50" : "border-zinc-300"
-                              )} />
-                              {idx !== milestones.length - 1 && (
-                                <div className="w-px flex-1 bg-zinc-200 my-1" style={{ minHeight: '2rem' }} />
-                              )}
-                            </div>
-                            <div className="pb-8 pt-0.5">
-                              <h5 className={cn(
-                                "text-sm font-bold",
-                                idx === 0 ? "text-emerald-700" : "text-zinc-700"
-                              )}>
-                                {milestone.title}
-                              </h5>
-                              <p className="text-xs text-zinc-500 font-medium mt-1 leading-relaxed">
-                                {milestone.description}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-zinc-900 truncate">{item.products?.name}</p>
+                              <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
+                                Qty: <span className="text-zinc-700 font-bold">{item.quantity}</span>
+                                {item.unit_price && <span className="ml-2">· ₹{parseFloat(item.unit_price).toLocaleString("en-IN")} each</span>}
                               </p>
                             </div>
+                            {order.status?.toLowerCase() === "delivered" && item.products && (
+                              <button
+                                onClick={() => { setReviewProduct(item.products); setReviewRating(5); setReviewText(""); setIsReviewOpen(true); }}
+                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95"
+                              >
+                                <Star className="w-3 h-3" /> Review
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Order Value & Invoice Card */}
-                    <div className="md:col-span-2 space-y-6">
-                      {/* Total Card */}
-                      <div className="bg-zinc-950 p-6 md:p-8 rounded-3xl shadow-xl text-white flex flex-col justify-between relative overflow-hidden min-h-[180px]">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-
-                        <div className="relative z-10">
-                          <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest">
-                            Total Order Value
-                          </span>
-                          <h4 className="text-3xl font-black tracking-tight mt-2 text-white">
-                            ₹{order.total_amount.toLocaleString("en-IN")}
-                          </h4>
-                          <span className={cn(
-                            "text-[10px] font-bold mt-1.5 block uppercase tracking-wider",
-                            order.payment_status?.toLowerCase() === "paid" ? "text-emerald-400" : "text-amber-400"
-                          )}>
-                            {order.payment_status?.toLowerCase() === "paid" ? "Paid" : (order.payment_status || "Unpaid")} via {order.payment_method || "ONLINE"}
-                          </span>
-                          {order.payments?.[0] && (
-                            <div className="mt-2 text-[9px] text-zinc-400 font-mono tracking-tight uppercase space-y-0.5">
-                              <div>Status: {order.payments[0].status}</div>
-                              {order.payments[0].transaction_id && (
-                                <div className="truncate">TXID: {order.payments[0].transaction_id}</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {order.status?.toLowerCase() === "delivered" ? (
-                          <button
-                            onClick={() => handleDownloadInvoice(order)}
-                            className="relative z-10 mt-6 flex items-center justify-between w-full p-4 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 active:scale-95 transition-all text-xs font-bold uppercase tracking-wider group cursor-pointer"
-                          >
-                            Download Invoice
-                            <FileDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                          </button>
-                        ) : (
-                          <div
-                            title="Invoice will generate after delivery"
-                            className="relative z-10 mt-6 p-4 bg-white/5 rounded-2xl border border-dashed border-white/10 text-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider"
-                          >
-                            Invoice generated after delivery
+                    <div className="px-6 py-4 flex items-center justify-between gap-4 border-b border-zinc-100">
+                      {order.shipping_address && (
+                        <div className="flex items-start gap-3 flex-1">
+                          <MapPin className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                              Shipping To
+                            </p>
+                            <p className="text-xs font-semibold text-zinc-700">
+                              {order.shipping_address}
+                            </p>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Return CTA */}
-                      <div className="p-5 border border-zinc-200/80 rounded-2xl bg-white flex items-center justify-between gap-4">
-                        <div>
-                          <h5 className="text-xs font-bold text-zinc-900">Need to cancel or return?</h5>
-                          <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">Sensitive items return rule apply</p>
                         </div>
-                        <Link
-                          href="/contact"
-                          className="w-8 h-8 rounded-lg bg-zinc-50 hover:bg-zinc-950 hover:text-white flex items-center justify-center text-zinc-400 transition-all border border-zinc-200/50"
-                        >
-                          <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    </div>
+                      )}
 
+                      {order.status?.toLowerCase() === "delivered" ? (
+                        <button
+                          onClick={() => handleDownloadInvoice(order)}
+                          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 active:scale-95 transition-all text-xs font-bold uppercase tracking-wider group"
+                        >
+                          Download Invoice
+                          <FileDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                        </button>
+                      ) : (
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-dashed border-white/10 rounded-xl px-3 py-2 whitespace-nowrap">
+                          Invoice after delivery
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* carrier */}
+                    {order.tracking_id && (
+                      <div className="px-6 py-4 flex items-center justify-between gap-4 bg-indigo-50/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                            <Truck className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{order.carrier || "Delivery Partner"}</p>
+                            <p className="text-xs font-bold text-zinc-900 font-mono">{order.tracking_id}</p>
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-full">In Transit</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Items Summary Card */}
-                  <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-                    <div className="flex items-center gap-2 mb-6 border-b border-zinc-100 pb-4">
-                      <ReceiptText className="w-4.5 h-4.5 text-zinc-400" />
-                      <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Order Items</h4>
-                    </div><div className="grid gap-3.5 sm:grid-cols-2">
-                      {order.order_items?.map((item: any) => (
-                        <div
-                          key={item.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-2xl border border-zinc-150/70 hover:bg-zinc-50 hover:border-zinc-250 transition-all duration-300 w-full"
-                        >
-                          <div className="flex items-center gap-4 min-w-0 w-full sm:flex-1">
-                            <div className="w-14 h-14 rounded-xl bg-zinc-50 border border-zinc-200 overflow-hidden flex-shrink-0 relative">
-                              {item.products?.image_url ? (
-                                <Image
-                                  src={item.products.image_url}
-                                  alt={item.products.name}
-                                  fill
-                                  sizes="56px"
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <Package className="w-5 h-5 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                              )}
-                            </div>
-
-                            <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
-                              <p className="text-xs font-bold text-zinc-850 truncate leading-snug">
-                                {item.products?.name}
-                              </p>
-                              <p className="text-[10px] text-zinc-450 font-bold uppercase mt-1">
-                                Quantity: <span className="text-zinc-650">{item.quantity}</span>
-                              </p>
-                            </div>
-                          </div>
-
-                          {order.status?.toLowerCase() === "delivered" && item.products && (
-                            <button
-                              onClick={() => handleOpenReviewDialog(item.products)}
-                              className="shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95 w-full sm:w-auto text-center"
-                            >
-                              Give Review
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                  {/* ── Visual Timeline card ── */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Clock3 className="w-4 h-4 text-zinc-400" />
+                      <h3 className="text-sm font-bold text-zinc-900">Order Progress</h3>
                     </div>
+
+                    {!isTerminal ? (
+                      <div className="relative">
+                        {STEPS.map((st, idx) => {
+                          const isDone = step > idx;
+                          const isCurrent = step === idx;
+                          const isPending = step < idx;
+                          const { Icon } = st;
+                          const isLast = idx === STEPS.length - 1;
+
+                          return (
+                            <div key={st.key} className="flex gap-4">
+                              {/* ─ left column: dot + line ─ */}
+                              <div className="flex flex-col items-center w-10 shrink-0">
+                                <motion.div
+                                  initial={false}
+                                  animate={isCurrent ? { scale: [1, 1.12, 1] } : {}}
+                                  transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                                  className={cn(
+                                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10 shrink-0",
+                                    isDone && "bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100",
+                                    isCurrent && "bg-zinc-950 border-zinc-950 text-white shadow-lg ring-4 ring-zinc-900/10",
+                                    isPending && "bg-white border-zinc-200 text-zinc-300"
+                                  )}
+                                >
+                                  {isDone
+                                    ? <CheckCircle2 className="w-5 h-5" />
+                                    : <Icon className="w-4.5 h-4.5" />}
+                                </motion.div>
+                                {!isLast && (
+                                  <div className="relative w-0.5 flex-1 my-1 overflow-hidden rounded-full bg-zinc-100" style={{ minHeight: "2.5rem" }}>
+                                    <motion.div
+                                      className="absolute inset-x-0 top-0 bg-emerald-400 rounded-full"
+                                      initial={{ height: "0%" }}
+                                      animate={{ height: isDone ? "100%" : "0%" }}
+                                      transition={{ duration: 0.5, delay: idx * 0.1 }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* ─ right column: content ─ */}
+                              <div className={cn("pb-7 pt-1.5 flex-1 min-w-0", isLast && "pb-0")}>
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className={cn(
+                                    "text-sm font-bold",
+                                    isDone && "text-emerald-700",
+                                    isCurrent && "text-zinc-950",
+                                    isPending && "text-zinc-300"
+                                  )}>
+                                    {st.label}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="text-[9px] font-black uppercase tracking-widest bg-zinc-950 text-white px-2 py-0.5 rounded-full animate-pulse">
+                                      Current
+                                    </span>
+                                  )}
+                                  {isDone && (
+                                    <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                      ✓ Done
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className={cn("text-xs leading-relaxed", isPending ? "text-zinc-300" : "text-zinc-500")}>
+                                  {idx === 2 && order.carrier ? `Handed to ${order.carrier}. In transit.` : st.desc}
+                                </p>
+
+                                {(isDone || isCurrent) && (
+                                  <p className="text-[10px] font-mono text-zinc-400 mt-1.5">
+                                    {idx === 0
+                                      ? fmtDate(order.created_at)
+                                      : isCurrent
+                                        ? fmtDate(order.updated_at || order.created_at)
+                                        : fmtDate(order.created_at, [0, 4, 12, 36][idx])}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* terminal statuses */
+                      <div className={cn(
+                        "flex items-start gap-4 p-4 rounded-xl border",
+                        ["cancelled", "failed"].includes(sl) && "bg-red-50 border-red-200",
+                        ["returned", "return_requested", "return_approved"].includes(sl) && "bg-amber-50 border-amber-200",
+                        ["refund_pending", "refunded"].includes(sl) && "bg-violet-50 border-violet-200",
+                      )}>
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center border-2 shrink-0",
+                          ["cancelled", "failed"].includes(sl) && "bg-red-100 border-red-300 text-red-600",
+                          ["returned", "return_requested", "return_approved"].includes(sl) && "bg-amber-100 border-amber-300 text-amber-600",
+                          ["refund_pending", "refunded"].includes(sl) && "bg-violet-100 border-violet-300 text-violet-600",
+                        )}>
+                          {["cancelled", "failed"].includes(sl) ? <XCircle className="w-5 h-5" />
+                            : ["refund_pending", "refunded"].includes(sl) ? <RefreshCcw className="w-5 h-5" />
+                              : <RotateCcw className="w-5 h-5" />}
+                        </div>
+                        <div className="pt-0.5">
+                          <p className="text-sm font-bold text-zinc-900 capitalize">
+                            {STATUS_LABEL[sl] ?? order.status.replace(/_/g, " ")}
+                          </p>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            {sl === "cancelled" && "This order has been cancelled and will not be processed."}
+                            {sl === "failed" && "The order or payment has failed."}
+                            {sl === "returned" && "Order returned to our warehouse."}
+                            {sl === "return_requested" && "Return request received. We'll review it shortly."}
+                            {sl === "return_approved" && "Return approved. Please ship the item back."}
+                            {sl === "refund_pending" && "Refund is being processed."}
+                            {sl === "refunded" && "Refund has been completed."}
+                          </p>
+                          <p className="text-[10px] font-mono text-zinc-400 mt-1.5">
+                            {fmtDate(order.updated_at || order.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ) : (
-                /* Empty Awaiting Details State */
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="h-full min-h-[460px] bg-white border-2 border-dashed border-zinc-200/80 rounded-3xl flex flex-col items-center justify-center text-center p-8 md:p-12 shadow-[0_8px_30px_rgba(0,0,0,0.005)]"
-                >
-                  <div className="w-16 h-16 bg-zinc-50 border border-zinc-200/60 rounded-2xl flex items-center justify-center mb-5 shadow-sm text-zinc-450">
-                    <PackageSearch className="w-6 h-6 animate-pulse" />
+                <motion.div key="empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+                  className="min-h-[420px] bg-white border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center text-center p-10">
+                  <div className="w-16 h-16 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-4 text-zinc-400">
+                    <PackageSearch className="w-7 h-7" />
                   </div>
-                  <h3 className="text-base font-bold text-zinc-900 tracking-tight">
-                    Awaiting tracking inputs
-                  </h3>
-                  <p className="text-xs font-medium text-zinc-450 max-w-xs mt-2 leading-relaxed">
-                    Input your secure shipment reference or Order ID in the locator sidebar to inspect transit histories and log files.
+                  <h3 className="text-base font-bold text-zinc-900">Enter your Order ID</h3>
+                  <p className="text-sm text-zinc-400 max-w-xs mt-2 leading-relaxed">
+                    Use the search box to track your shipment in real-time.
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-
         </div>
       </div>
 
+      {/* ── Review Dialog ── */}
       <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-md bg-white border border-zinc-150 p-6 rounded-3xl shadow-xl">
+        <DialogContent className="sm:max-w-md bg-white p-6 rounded-2xl shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-zinc-900">Write a Review</DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500">
-              Share your feedback for {reviewProduct?.name}
-            </DialogDescription>
+            <DialogDescription className="text-xs text-zinc-500">Share your feedback for {reviewProduct?.name}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-3">
             {reviewProduct?.image_url && (
-              <div className="flex justify-center mb-2">
-                <div className="w-16 h-16 bg-gray-50 border border-zinc-100 rounded-xl overflow-hidden relative animate-in zoom-in-95 duration-200">
-                  <Image
-                    src={reviewProduct.image_url}
-                    alt={reviewProduct.name}
-                    fill
-                    sizes="64px"
-                    className="object-contain p-2"
-                  />
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-zinc-50 border border-zinc-100 rounded-xl overflow-hidden relative">
+                  <Image src={reviewProduct.image_url} alt={reviewProduct.name} fill sizes="64px" className="object-contain p-2" />
                 </div>
               </div>
             )}
             <div className="flex justify-center gap-2">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setReviewRating(index + 1)}
-                  className="text-amber-500 transition-transform hover:scale-110 active:scale-95"
-                >
-                  <Star className={`h-8 w-8 ${index < reviewRating ? "fill-current" : "text-zinc-200"}`} />
+              {Array.from({ length: 5 }).map((_, i) => (
+                <button key={i} type="button" onClick={() => setReviewRating(i + 1)} className="text-amber-400 transition-transform hover:scale-110 active:scale-95">
+                  <Star className={`h-8 w-8 ${i < reviewRating ? "fill-current" : "text-zinc-200"}`} />
                 </button>
               ))}
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Your Review</label>
-              <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your experience using this product..."
-                rows={4}
-                className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-              />
-            </div>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="Share your experience..."
+              rows={4}
+              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 resize-none"
+            />
           </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsReviewOpen(false)}
-              className="w-full sm:w-auto rounded-xl border-zinc-200"
-              disabled={reviewSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitReview}
-              className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl"
-              disabled={reviewSubmitting}
-            >
-              {reviewSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting
-                </>
-              ) : (
-                "Submit Review"
-              )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsReviewOpen(false)} disabled={reviewSubmitting} className="rounded-xl border-zinc-200">Cancel</Button>
+            <Button onClick={handleSubmitReview} disabled={reviewSubmitting} className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold">
+              {reviewSubmitting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Submitting</> : "Submit Review"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -867,13 +560,7 @@ function TrackOrderContent() {
 
 export default function TrackOrderPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-zinc-50">
-          <Loader2 className="w-6 h-6 animate-spin text-red-600" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
       <TrackOrderContent />
     </Suspense>
   );

@@ -63,7 +63,7 @@ export default function CartPage() {
         {/* Empty Cart */}
         {!items.length ? (
           <div className="space-y-12 pb-12">
-            <div className="border border-zinc-100 bg-white p-12 sm:p-16 text-center rounded-3xl shadow-sm max-w-2xl mx-auto mt-4">
+            <div className="p-12 sm:p-16 text-center mx-auto mt-4">
               <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <PackageSearch className="h-10 w-10" />
               </div>

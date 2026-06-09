@@ -155,11 +155,9 @@ export async function POST(req: Request) {
           .eq("order_id", orderId);
       }
 
-      // If customer successfully paid online, transition order status to CONFIRMED using state machine
-      if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && 
-          (existingOrder.status.toUpperCase() === "PENDING" || 
-           existingOrder.status.toUpperCase() === "PENDING_PAYMENT" || 
-           existingOrder.status.toUpperCase() === "PLACED")) {
+      // If customer successfully paid online, transition order status to CONFIRMED
+      if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" &&
+          ["PENDING", "PLACED"].includes(existingOrder.status.toUpperCase())) {
         
         // Transition to ORDER_CONFIRMED directly (works for both PENDING_PAYMENT and PENDING initial states)
         const targetConfirmedStatus = existingOrder.status.toUpperCase() === "PENDING_PAYMENT"
@@ -205,7 +203,7 @@ export async function POST(req: Request) {
           order = refreshedOrder;
         }
 
-        if (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PENDING_PAYMENT") {
+        if (existingOrder.status.toUpperCase() === "PENDING") {
           await serviceRoleSupabase.from('email_queue').insert({
             type: 'ORDER_CONFIRMATION',
             payload: { orderId: orderId }
