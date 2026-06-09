@@ -24,6 +24,7 @@ type Props = {
     sale_price?: number | string | null;
     image_url?: string | null;
     moq?: number | null;
+    stock_quantity?: number;
   };
 
   quantity?: number;
@@ -60,9 +61,12 @@ export default function AddToCartButton({
       );
   }, [product.id]);
 
+  const isOutOfStock = product.stock_quantity === 0;
+
   return (
     <button
       type="button"
+      disabled={isOutOfStock}
       onClick={() => {
         console.log(
           "Add to Cart clicked",
@@ -105,20 +109,24 @@ export default function AddToCartButton({
         font-semibold text-sm
         transition-all duration-200
         active:scale-95
-        ${isAdded
+        ${isOutOfStock 
+          ? "bg-zinc-200 hover:bg-zinc-200 text-zinc-500 cursor-not-allowed"
+          : isAdded
           ? "bg-emerald-600 hover:bg-emerald-700 text-white"
           : "bg-black hover:bg-zinc-800 text-white"
         }
         ${className || ""}
       `}
     >
-      {isAdded ? (
+      {isOutOfStock ? null : isAdded ? (
         <CheckCircle2 className="mr-2 h-4 w-4" />
       ) : (
         <ShoppingCart className="mr-2 h-4 w-4" />
       )}
 
-      {isAdded
+      {isOutOfStock 
+        ? "Out of Stock" 
+        : isAdded
         ? allowRemove
           ? "Remove from Cart"
           : "Added to Cart"

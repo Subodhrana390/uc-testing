@@ -236,12 +236,18 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="px-2.5 pb-2.5 mt-auto">
         <button
           onClick={toggleCart}
-          className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${inCart
-            ? "bg-emerald-600 text-white"
-            : "bg-primary text-white hover:bg-zinc-950"
+          disabled={product.stock_quantity === 0}
+          className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${
+            product.stock_quantity === 0
+              ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
+              : inCart
+              ? "bg-emerald-600 text-white"
+              : "bg-primary text-white hover:bg-zinc-950"
             }`}
         >
-          {inCart ? (
+          {product.stock_quantity === 0 ? (
+            <>Out of Stock</>
+          ) : inCart ? (
             <>In Cart <Check className="w-4 h-4" /></>
           ) : (
             <>Add To Cart <ShoppingCart className="w-4 h-4" /></>

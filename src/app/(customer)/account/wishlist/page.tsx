@@ -152,9 +152,15 @@ export default function WishlistPage() {
                   <span className="text-base sm:text-lg font-bold text-zinc-900">
                     {formatCurrency(item.products?.price)}
                   </span>
-                  <Badge variant="outline" className="text-[10px] uppercase text-emerald-700 bg-emerald-50 border-emerald-200">
-                    <Package className="w-3 h-3 mr-1" /> In Stock
-                  </Badge>
+                  {item.products?.stock_quantity === 0 ? (
+                    <Badge variant="outline" className="text-[10px] uppercase text-zinc-500 bg-zinc-100 border-zinc-200">
+                      Out of Stock
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] uppercase text-emerald-700 bg-emerald-50 border-emerald-200">
+                      <Package className="w-3 h-3 mr-1" /> In Stock
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -162,11 +168,13 @@ export default function WishlistPage() {
               <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto shrink-0 mt-4 md:mt-0">
                 <Button
                   onClick={() => handleAddToCart(item)}
-                  disabled={addingToCart === item.id}
-                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm w-full md:w-[150px] flex items-center justify-center gap-2"
+                  disabled={addingToCart === item.id || item.products?.stock_quantity === 0}
+                  className={`h-10 px-6 rounded-lg font-medium text-sm w-full md:w-[150px] flex items-center justify-center gap-2 ${item.products?.stock_quantity === 0 ? "bg-zinc-200 text-zinc-500 hover:bg-zinc-200" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
                 >
                   {addingToCart === item.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : item.products?.stock_quantity === 0 ? (
+                    <>Out of Stock</>
                   ) : (
                     <>
                       <ShoppingCart className="w-4 h-4" />

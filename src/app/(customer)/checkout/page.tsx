@@ -15,6 +15,7 @@ import {
   Truck,
   Lock,
   Check,
+  AlertCircle,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
   getCartItems,
   getCartTotal,
   clearCart,
+  removeCartItem,
   type CartItem,
 } from "@/lib/cart";
 
@@ -44,6 +46,7 @@ declare global {
 interface CartItemWithTax extends CartItem {
   tax_rate?: number;
   is_tax_inclusive?: boolean;
+  stock_quantity?: number;
 }
 
 export default function CheckoutPage() {
@@ -124,7 +127,7 @@ export default function CheckoutPage() {
 
       const { data: products } = await supabase
         .from("products")
-        .select("id, tax_rate, is_tax_inclusive")
+        .select("id, tax_rate, is_tax_inclusive, stock_quantity")
         .in(
           "id",
           cartItems.map((i) => i.id)
@@ -139,11 +142,33 @@ export default function CheckoutPage() {
           ...item,
           tax_rate: prod?.tax_rate || 0,
           is_tax_inclusive: prod?.is_tax_inclusive || false,
+          stock_quantity: prod?.stock_quantity || 0,
         };
       });
 
-      setItems(itemsWithTax);
+      const availableItems = itemsWithTax.filter(item => item.stock_quantity > 0);
+      const outOfStockItems = itemsWithTax.filter(item => item.stock_quantity === 0);
 
+      if (outOfStockItems.length > 0) {
+        const wishlistInserts = outOfStockItems.map(item => ({
+          user_id: user.id,
+          product_id: item.id
+        }));
+
+        const { error } = await supabase.from('wishlist').upsert(wishlistInserts, { onConflict: 'user_id,product_id' });
+        
+        if (!error) {
+          outOfStockItems.forEach(item => removeCartItem(item.id));
+          toast.error(`${outOfStockItems.length} out-of-stock item(s) were automatically moved to your wishlist.`, { duration: 5000 });
+        }
+      }
+
+      setItems(availableItems);
+
+      if (availableItems.length === 0) {
+        router.push("/cart");
+        return;
+      }
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, email, phone")

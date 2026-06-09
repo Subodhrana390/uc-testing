@@ -248,6 +248,8 @@ export default function ProductDetailsClient({
     }
   };
 
+  const isOutOfStock = product?.stock_quantity === 0;
+
   return (
     <>
       <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-8">
@@ -388,7 +390,7 @@ export default function ProductDetailsClient({
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex items-center shrink-0">
+                <div className={`flex items-center shrink-0 ${isOutOfStock ? "opacity-50 pointer-events-none" : ""}`}>
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="h-10 w-10 flex items-center justify-center border border-zinc-200 rounded-l-xl hover:bg-zinc-50 text-zinc-600 active:bg-zinc-100 transition-colors"
@@ -417,11 +419,12 @@ export default function ProductDetailsClient({
                 <AddToCartButton
                   product={product}
                   quantity={quantity}
-                  className="h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl bg-zinc-950 px-4 sm:px-8 text-xs font-bold text-white hover:bg-zinc-800 shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap"
+                  className={`h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl px-4 sm:px-8 text-xs font-bold text-white shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200" : "bg-zinc-950 hover:bg-zinc-800"}`}
                 />
                 <button
                   onClick={handleBuyNow}
-                  className="h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl bg-primary px-4 sm:px-8 text-xs font-bold text-white hover:bg-red-700 shadow-md shadow-red-100 transition-all active:scale-[0.98] whitespace-nowrap"
+                  disabled={isOutOfStock}
+                  className={`h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl px-4 sm:px-8 text-xs font-bold text-white shadow-md shadow-red-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200 shadow-none" : "bg-primary hover:bg-red-700"}`}
                 >
                   Buy Now
                 </button>
