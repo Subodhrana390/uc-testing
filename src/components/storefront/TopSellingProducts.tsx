@@ -23,7 +23,6 @@ export default function TopSellingProducts({ currentProductId }: { currentProduc
             image_url, 
             status, 
             stock_quantity, 
-            moq, 
             categories (id, name, slug, parent_id),
             product_reviews (rating)
           `);

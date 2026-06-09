@@ -20,7 +20,6 @@ interface ProductCardProps {
     image_url: string | null;
     status: string | null;
     stock_quantity: number;
-    moq?: number | null;
     categories?: {
       name: string;
       slug: string;

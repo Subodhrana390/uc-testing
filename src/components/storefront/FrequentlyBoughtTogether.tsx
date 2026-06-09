@@ -17,7 +17,6 @@ interface Product {
   image_url: string | null;
   status: string | null;
   stock_quantity: number;
-  moq?: number | null;
   images: string[];
   categories?: {
     name: string;

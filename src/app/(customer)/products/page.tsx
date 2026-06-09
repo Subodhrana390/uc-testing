@@ -79,7 +79,7 @@ export default async function ProductsPage({
   // Build the base query for non-rating sort
   // We need to use inner join for brands if we want to filter by brand name
   let query = supabase.from("products")
-    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)", { count: "exact" })
+    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)", { count: "exact" })
     .eq("status", "Active");
 
   if (categoryIds.length > 0) {

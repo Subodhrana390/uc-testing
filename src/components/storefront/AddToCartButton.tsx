@@ -23,7 +23,6 @@ type Props = {
     price: number | string;
     sale_price?: number | string | null;
     image_url?: string | null;
-    moq?: number | null;
     stock_quantity?: number;
   };
 

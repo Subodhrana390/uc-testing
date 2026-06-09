@@ -129,7 +129,6 @@ export default function RecentlyViewedProducts({
                     image_url: item.image_url,
                     status: "Active",
                     stock_quantity: 10,
-                    moq: 1,
                     categories: item.category_name
                       ? { name: item.category_name, slug: "" }
                       : null,

@@ -186,9 +186,6 @@ export async function returnOrder(orderId: string, reason: string, bankDetails?:
       return { success: false, error: result.error || 'Failed to return order' }
     }
 
-    // Update payment status to Refund Pending
-    // We only want to set it to Refund Pending if it was paid, but setting it universally 
-    // for returned items lets the admin know they need to verify if a refund is due.
     const updateData: any = { payment_status: 'Refund Pending' };
     if (bankDetails) {
       updateData.refund_bank_details = bankDetails;

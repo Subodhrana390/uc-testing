@@ -161,36 +161,38 @@ export async function POST(req: Request) {
            existingOrder.status.toUpperCase() === "PENDING_PAYMENT" || 
            existingOrder.status.toUpperCase() === "PLACED")) {
         
-        // If status is PENDING or PENDING_PAYMENT, first transition to PLACED (which also generates the invoice)
-        if (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PENDING_PAYMENT") {
-          const { error: placedError } = await serviceRoleSupabase.rpc(
-            "transition_order_status",
-            {
-              p_order_id: orderId,
-              p_new_status: "PLACED",
-              p_actor_type: "system",
-              p_actor_id: user.id,
-              p_remarks: "Paid online via Razorpay (verified) - PLACED"
-            }
-          );
-          if (placedError) {
-            console.error("Failed transition to PLACED:", placedError.message);
-          }
-        }
+        // Transition to ORDER_CONFIRMED directly (works for both PENDING_PAYMENT and PENDING initial states)
+        const targetConfirmedStatus = existingOrder.status.toUpperCase() === "PENDING_PAYMENT"
+          ? "ORDER_CONFIRMED"
+          : "CONFIRMED";
 
-        // Then transition to CONFIRMED
-        const { error: confirmedError } = await serviceRoleSupabase.rpc(
+        const { data: confirmedResult, error: confirmedError } = await serviceRoleSupabase.rpc(
           "transition_order_status",
           {
             p_order_id: orderId,
-            p_new_status: "CONFIRMED",
+            p_new_status: targetConfirmedStatus,
             p_actor_type: "system",
             p_actor_id: user.id,
             p_remarks: "Paid online via Razorpay (verified)"
           }
         );
-        if (confirmedError) {
-          console.error("Failed transition to CONFIRMED:", confirmedError.message);
+
+        // If ORDER_CONFIRMED failed, try CONFIRMED as fallback
+        if (confirmedError || !(confirmedResult as any)?.success) {
+          console.warn(`Transition to ${targetConfirmedStatus} failed, trying CONFIRMED:`, confirmedError?.message || (confirmedResult as any)?.error);
+          const { error: fallbackError } = await serviceRoleSupabase.rpc(
+            "transition_order_status",
+            {
+              p_order_id: orderId,
+              p_new_status: "CONFIRMED",
+              p_actor_type: "system",
+              p_actor_id: user.id,
+              p_remarks: "Paid online via Razorpay (verified) - fallback"
+            }
+          );
+          if (fallbackError) {
+            console.error("Fallback transition to CONFIRMED also failed:", fallbackError.message);
+          }
         }
 
         // Refresh order status

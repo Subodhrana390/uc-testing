@@ -116,7 +116,7 @@ export default async function CategoryPage({
   let query = supabase
     .from("products")
     .select(
-      "id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)",
+      "id, name, slug, price, sale_price, image_url, status, stock_quantity, categories(name, slug, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)",
       { count: "exact" }
     )
     .in("category_id", categoryIds)

@@ -324,13 +324,41 @@ export default function OrderHistoryPage() {
     fetchOrders();
   }, [supabase]);
 
+  const STATUS_LABEL: Record<string, string> = {
+    // New place_order_safe statuses
+    pending_payment:    "Awaiting Payment",
+    order_confirmed:    "Confirmed",
+    confirmed:          "Confirmed",
+    processing:         "Processing",
+    ready_to_ship:      "Ready to Ship",
+    shipped:            "Shipped",
+    out_for_delivery:   "Out for Delivery",
+    delivered:          "Delivered",
+    cancelled:          "Cancelled",
+    return_requested:   "Return Requested",
+    return_approved:    "Return Approved",
+    return_rejected:    "Return Rejected",
+    refunded:           "Refunded",
+    // Legacy statuses
+    pending:            "Pending",
+    placed:             "Placed",
+    pending_payment_legacy: "Awaiting Payment",
+  };
+
+  const getStatusLabel = (status: string): string => {
+    return STATUS_LABEL[status?.toLowerCase()] ?? status;
+  };
+
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "delivered":
         return "default";
       case "shipped":
+      case "out_for_delivery":
+      case "ready_to_ship":
         return "secondary";
       case "cancelled":
+      case "return_rejected":
         return "destructive";
       default:
         return "outline";
@@ -338,9 +366,9 @@ export default function OrderHistoryPage() {
   };
 
   const filteredOrders = orders.filter((order) => {
-    const isTabMatch = activeTab === "current"
-      ? order.status !== "Delivered" && order.status !== "Cancelled"
-      : order.status === "Delivered" || order.status === "Cancelled";
+    const s = order.status?.toLowerCase();
+    const isArchived = s === "delivered" || s === "cancelled" || s === "refunded";
+    const isTabMatch = activeTab === "current" ? !isArchived : isArchived;
 
     if (!isTabMatch) return false;
     if (!searchQuery) return true;
@@ -422,7 +450,7 @@ export default function OrderHistoryPage() {
                     {order.payment_method} • <span className={cn(order.payment_status?.toLowerCase() === "paid" ? "text-emerald-600 font-bold" : "text-amber-600 font-bold")}>{order.payment_status || "Unpaid"}</span>
                   </span>
                 </div>
-                {order.delivery_estimate && order.status !== "Delivered" && (
+                {order.delivery_estimate && order.status?.toLowerCase() !== "delivered" && (
                   <div>
                     <span className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider block">Est. Delivery</span>
                     <span className="text-xs font-medium text-emerald-700 flex items-center gap-1">
@@ -433,7 +461,7 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                {order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed", "order_confirmed", "pending_payment"].includes(order.status?.toLowerCase()) && (
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -447,7 +475,7 @@ export default function OrderHistoryPage() {
                     ) : "Pay Online"}
                   </Button>
                 )}
-                {["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
+                {["pending", "placed", "confirmed", "order_confirmed", "pending_payment", "processing"].includes(order.status?.toLowerCase()) && (
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -487,7 +515,7 @@ export default function OrderHistoryPage() {
                 </Link>
 
                 <Badge variant={getStatusVariant(order.status)} className="text-[10px] uppercase tracking-wider">
-                  {order.status}
+                  {getStatusLabel(order.status)}
                 </Badge>
                 {order.status?.toLowerCase() === "delivered" ? (
                   <button
@@ -599,7 +627,7 @@ export default function OrderHistoryPage() {
                 </div>
 
                 {/* Shipped banner */}
-                {order.status === "Shipped" && (
+                {["shipped", "out_for_delivery"].includes(order.status?.toLowerCase()) && (
                   <div className="mx-4 sm:mx-6 mb-4 mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-indigo-600 rounded-lg shrink-0">
