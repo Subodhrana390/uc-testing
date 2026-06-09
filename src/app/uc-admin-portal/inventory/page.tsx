@@ -23,6 +23,7 @@ import {
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { Pagination } from "@/components/ui/pagination";
 
 // Server Actions
 import { adjustStock, getInventoryDashboardStats, getLowStockProducts } from "@/app/actions/inventory";
@@ -56,6 +57,8 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [activeTab, setActiveTab] = useState<string>("ledger");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<number>(0);
@@ -188,6 +191,16 @@ export default function InventoryPage() {
       return matchesSearch && matchesFilter;
     });
   }, [products, searchQuery, statusFilter]);
+
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(startIndex, startIndex + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   // Chart Analytics Dataset 1: Structural Categorization Breakdown
   const distributionDataset = useMemo(() => {
@@ -388,7 +401,7 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {filteredProducts.map((product) => {
+                  {paginatedProducts.map((product) => {
                     const status = getStockStatus(product.stock_quantity, product.threshold);
                     const uniqueId = product.variant_id || product.id;
                     
@@ -499,6 +512,14 @@ export default function InventoryPage() {
                 </div>
               )}
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredProducts.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              variantColor="emerald"
+            />
           </Card>
         </TabsContent>
 

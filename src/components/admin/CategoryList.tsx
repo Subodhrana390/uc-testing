@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Plus,
@@ -24,6 +24,7 @@ import LogoLoader from "@/components/ui/LogoLoader";
 import SingleImageUpload from "./SingleImageUpload";
 import Image from "next/image";
 import { toggleCategoryStatus } from "@/app/actions/admin";
+import { Pagination } from "@/components/ui/pagination";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -60,18 +61,24 @@ interface CategoryListProps {
 }
 
 export default function CategoryList({ type }: CategoryListProps) {
-  const [categories, setCategories] = useState<any[]>([]);
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedParent, setSelectedParent] = useState("All");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [tableCategories, setTableCategories] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -86,11 +93,11 @@ export default function CategoryList({ type }: CategoryListProps) {
 
   const supabase = useMemo(() => createClient(), []);
 
-  const fetchCategories = async () => {
+  const fetchAllCategories = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name, parent_id, status")
         .order("display_order", { ascending: true });
 
       if (error) throw error;
@@ -101,31 +108,86 @@ export default function CategoryList({ type }: CategoryListProps) {
       }));
 
       setAllCategories(mappedData);
-
-      if (type === "main") {
-        setCategories(mappedData.filter((c: any) => !c.parent_id));
-      } else {
-        setCategories(mappedData.filter((c: any) => c.parent_id));
-      }
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("Error fetching all categories:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
+
+  const fetchTableCategories = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("categories")
+        .select("*", { count: "exact" });
+
+      if (type === "main") {
+        q = q.is("parent_id", null);
+      } else {
+        q = q.not("parent_id", "is", null);
+      }
+
+      if (debouncedSearchQuery) {
+        q = q.or(`name.ilike.%${debouncedSearchQuery}%,slug.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (type === "sub" && selectedParent !== "All") {
+        q = q.eq("parent_id", selectedParent);
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("display_order", { ascending: true })
+        .range(start, end);
+
+      if (error) throw error;
+      
+      const mappedData = (data || []).map((c: any) => ({
+        ...c,
+        is_active: c.status === true
+      }));
+
+      setTableCategories(mappedData);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table categories:", error);
+      toast.error("Failed to load categories table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, type, currentPage, pageSize, debouncedSearchQuery, selectedParent]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [supabase, type]);
+    fetchAllCategories();
+  }, [fetchAllCategories]);
 
-  const filteredCategories = useMemo(() => {
-    return categories.filter(c => {
-      const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.slug.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesParent = selectedParent === "All" || c.parent_id === selectedParent;
-      return matchesSearch && matchesParent;
-    });
-  }, [categories, searchQuery, selectedParent]);
+  useEffect(() => {
+    fetchTableCategories();
+  }, [fetchTableCategories]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, selectedParent]);
+
+  const typeCategories = useMemo(() => {
+    if (type === "main") {
+      return allCategories.filter((c: any) => !c.parent_id);
+    } else {
+      return allCategories.filter((c: any) => c.parent_id);
+    }
+  }, [allCategories, type]);
 
   const handleOpenDrawer = (category?: any) => {
     if (category) {
@@ -148,7 +210,7 @@ export default function CategoryList({ type }: CategoryListProps) {
         description: "",
         image_url: "",
         is_active: true,
-        display_order: categories.length,
+        display_order: totalItems,
         parent_id: type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null),
         tax_rate: 0
       });
@@ -198,7 +260,8 @@ export default function CategoryList({ type }: CategoryListProps) {
         toast.success("Category created successfully");
       }
       setIsDrawerOpen(false);
-      fetchCategories();
+      fetchAllCategories();
+      fetchTableCategories();
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -212,9 +275,10 @@ export default function CategoryList({ type }: CategoryListProps) {
     try {
       const { error } = await supabase.from("categories").delete().eq("id", categoryToDelete.id);
       if (error) throw error;
-      setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
       toast.success("Category successfully removed");
       setCategoryToDelete(null);
+      fetchAllCategories();
+      fetchTableCategories();
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -231,7 +295,10 @@ export default function CategoryList({ type }: CategoryListProps) {
         throw new Error(result.error);
       }
       
-      setCategories(prev => prev.map(c => 
+      setTableCategories(prev => prev.map(c => 
+        c.id === category.id ? { ...c, is_active: result.newStatus, status: result.newStatus } : c
+      ));
+      setAllCategories(prev => prev.map(c => 
         c.id === category.id ? { ...c, is_active: result.newStatus, status: result.newStatus } : c
       ));
       toast.success(`Category is now ${result.newStatus ? "Active" : "Archived"}`, { id: toastId });
@@ -279,10 +346,10 @@ export default function CategoryList({ type }: CategoryListProps) {
         {/* Analytics Summary Matrix */}
         <div className="grid gap-5 grid-cols-2 md:grid-cols-4 relative z-10">
           {[
-            { title: "Total Groups", value: categories.length, label: "Registered listings" },
-            { title: "Active Status", value: categories.filter(c => c.is_active).length, label: "Live in storefront" },
-            { title: "Archived", value: categories.filter(c => !c.is_active).length, label: "Hidden items" },
-            { title: "Max Order", value: categories.length > 0 ? Math.max(...categories.map(c => c.display_order || 0)) : 0, label: "Layout priority max" }
+            { title: "Total Groups", value: typeCategories.length, label: "Registered listings" },
+            { title: "Active Status", value: typeCategories.filter(c => c.is_active).length, label: "Live in storefront" },
+            { title: "Archived", value: typeCategories.filter(c => !c.is_active).length, label: "Hidden items" },
+            { title: "Max Order", value: typeCategories.length > 0 ? Math.max(...typeCategories.map(c => c.display_order || 0)) : 0, label: "Layout priority max" }
           ].map((c, i) => (
             <Card key={i} className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
               <CardHeader className="p-5 pb-2 space-y-0">
@@ -371,96 +438,119 @@ export default function CategoryList({ type }: CategoryListProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredCategories.map((category) => (
-                <tr key={category.id} className="hover:bg-zinc-50/40 transition-all group">
-                  <td className="px-6 py-4 pl-8">
-                    <div className="w-12 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shrink-0 shadow-sm">
-                      {category.image_url ? (
-                        <Image src={category.image_url} alt="" width={48} height={48} unoptimized className="w-full h-full object-contain mix-blend-multiply" />
-                      ) : (
-                        <FolderTree className="w-4 h-4 text-zinc-400" />
-                      )}
+              {tableLoading ? (
+                <tr>
+                  <td colSpan={type === "sub" ? 6 : 5} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                      <p className="text-xs font-semibold">Loading categories...</p>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-0.5">
-                      <span className="text-sm font-medium text-zinc-700 block">{category.name}</span>
-                      <span className="text-xs text-zinc-400 block line-clamp-1">{category.description || "No description provided"}</span>
-                    </div>
-                  </td>
-                  {type === "sub" && (
-                    <td className="px-6 py-4">
-                      <span className="text-[11px] font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg inline-block">
-                        {allCategories.find(c => c.id === category.parent_id)?.name || "Unknown"}
-                      </span>
-                    </td>
-                  )}
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-medium text-teal-700 bg-teal-50 border border-teal-150 px-2 py-0.5 rounded-lg inline-block font-mono">
-                      /{category.slug}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleToggleStatus(category)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 hover:opacity-80",
-                          category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                        )}
-                      >
-                        {category.is_active && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
-                        {category.is_active ? "Active" : "Archived"}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right pr-8 relative">
-                    <button
-                      onClick={() => setActiveDropdown(activeDropdown === category.id ? null : category.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all ml-auto border border-zinc-200 bg-white"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-
-                    {activeDropdown === category.id && (
-                      <div className="absolute right-6 top-12 w-52 bg-white border border-zinc-200 shadow-lg rounded-xl z-50 p-1.5 text-left">
-                        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Category Actions</div>
-                        <button
-                          onClick={() => handleOpenDrawer(category)}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg"
-                        >
-                          <Edit className="w-4 h-4 text-zinc-400" /> Edit Category
-                        </button>
-                        <div className="h-px bg-zinc-100 my-1 mx-1" />
-                        <button
-                          onClick={() => {
-                            setCategoryToDelete(category);
-                            setActiveDropdown(null);
-                          }}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" /> Delete Category
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
-              ))}
+              ) : tableCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={type === "sub" ? 6 : 5} className="p-16 text-center text-zinc-500 bg-white">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100 text-zinc-300">
+                        <FolderTree className="w-8 h-8" />
+                      </div>
+                      <div className="max-w-xs">
+                        <h3 className="text-sm font-bold text-zinc-800">No {type} Categories Found</h3>
+                        <p className="text-xs text-zinc-400 mt-1 leading-relaxed">Adjust your filtration schema or add a new category to get started.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                tableCategories.map((category) => (
+                  <tr key={category.id} className="hover:bg-zinc-50/40 transition-all group">
+                    <td className="px-6 py-4 pl-8">
+                      <div className="w-12 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shrink-0 shadow-sm">
+                        {category.image_url ? (
+                          <Image src={category.image_url} alt="" width={48} height={48} unoptimized className="w-full h-full object-contain mix-blend-multiply" />
+                        ) : (
+                          <FolderTree className="w-4 h-4 text-zinc-400" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-0.5">
+                        <span className="text-sm font-medium text-zinc-700 block">{category.name}</span>
+                        <span className="text-xs text-zinc-400 block line-clamp-1">{category.description || "No description provided"}</span>
+                      </div>
+                    </td>
+                    {type === "sub" && (
+                      <td className="px-6 py-4">
+                        <span className="text-[11px] font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg inline-block">
+                          {allCategories.find(c => c.id === category.parent_id)?.name || "Unknown"}
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-teal-700 bg-teal-50 border border-teal-150 px-2 py-0.5 rounded-lg inline-block font-mono">
+                        /{category.slug}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleToggleStatus(category)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95 hover:opacity-80",
+                            category.is_active ? "bg-teal-50 text-teal-700 border-teal-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                          )}
+                        >
+                          {category.is_active && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
+                          {category.is_active ? "Active" : "Archived"}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right pr-8 relative">
+                      <button
+                        onClick={() => setActiveDropdown(activeDropdown === category.id ? null : category.id)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-455 hover:text-zinc-800 transition-all ml-auto border border-zinc-200 bg-white"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+
+                      {activeDropdown === category.id && (
+                        <div className="absolute right-6 top-12 w-52 bg-white border border-zinc-200 shadow-lg rounded-xl z-50 p-1.5 text-left">
+                          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Category Actions</div>
+                          <button
+                            onClick={() => handleOpenDrawer(category)}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg"
+                          >
+                            <Edit className="w-4 h-4 text-zinc-400" /> Edit Category
+                          </button>
+                          <div className="h-px bg-zinc-100 my-1 mx-1" />
+                          <button
+                            onClick={() => {
+                              setCategoryToDelete(category);
+                              setActiveDropdown(null);
+                            }}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-400" /> Delete Category
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Table Edge State Fallback Empty View */}
-        {filteredCategories.length === 0 && (
-          <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
-            <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100">
-              <FolderTree className="w-8 h-8 text-zinc-300" />
-            </div>
-            <div className="max-w-xs">
-              <h3 className="text-sm font-bold text-zinc-800">No {type} Categories Found</h3>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">Adjust your filtration schema metric parameter or construct a new configuration log.</p>
-            </div>
-          </div>
+        {!tableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="purple"
+          />
         )}
       </Card>
 

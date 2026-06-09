@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getAdminInvoices, getInvoiceStats, resendInvoiceEmail } from "@/app/actions/invoice-admin";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { getInvoiceStats, resendInvoiceEmail } from "@/app/actions/invoice-admin";
 import {
   FileText,
   Search,
@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { createClient } from "@/utils/supabase/client";
+import { Pagination } from "@/components/ui/pagination";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -25,35 +26,96 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function InvoiceAdminPage() {
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const [tableInvoices, setTableInvoices] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
-  const fetchDashboardData = async () => {
+  const supabase = useMemo(() => createClient(), []);
+
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const [invRes, statsRes] = await Promise.all([
-        getAdminInvoices(),
-        getInvoiceStats()
-      ]);
-
-      if (invRes.success) setInvoices(invRes.data || []);
+      const statsRes = await getInvoiceStats();
       if (statsRes.success) setStats(statsRes.data);
     } catch (error: any) {
-      toast.error("Failed to fetch invoice data");
+      toast.error("Failed to fetch invoice stats");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const fetchTableInvoices = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("invoices")
+        .select("*, orders(customer_name, customer_email)", { count: "exact" });
+
+      if (debouncedSearchQuery) {
+        q = supabase
+          .from("invoices")
+          .select("*, orders!inner(customer_name, customer_email)", { count: "exact" });
+        q = q.or(`invoice_number.ilike.%${debouncedSearchQuery}%,orders.customer_name.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (statusFilter !== "all") {
+        q = q.eq("status", statusFilter);
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("created_at", { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      setTableInvoices(data || []);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table invoices:", error);
+      toast.error("Failed to load invoices table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery, statusFilter]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    fetchTableInvoices();
+  }, [fetchTableInvoices]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter]);
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchDashboardData(),
+      fetchTableInvoices()
+    ]);
+  };
 
   const handleDownloadPDF = async (pdfUrl: string) => {
     if (!pdfUrl) return toast.error("PDF has not been generated yet.");
@@ -90,14 +152,7 @@ export default function InvoiceAdminPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (inv.orders?.customer_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = statusFilter === "all" || inv.status === statusFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  if (loading && invoices.length === 0) return <LogoLoader text="Loading financial records..." />;
+  if (loading && !stats) return <LogoLoader text="Loading financial records..." />;
 
   return (
     <div className="space-y-6 p-6 lg:p-8 w-full px-4 md:px-8 2xl:px-12 mx-auto">
@@ -109,7 +164,7 @@ export default function InvoiceAdminPage() {
             <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Invoice Management</h1>
             <p className="text-sm font-medium text-blue-100 mt-1">GST-compliant financial records, PDF generation, and billing history</p>
           </div>
-          <Button onClick={fetchDashboardData} variant="secondary" className="gap-2 bg-white/20 hover:bg-white/30 text-white border-0">
+          <Button onClick={handleRefresh} variant="secondary" className="gap-2 bg-white/20 hover:bg-white/30 text-white border-0">
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> Refresh Data
           </Button>
         </div>
@@ -206,62 +261,84 @@ export default function InvoiceAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-zinc-50/50 transition-all duration-200">
-                  <td className="px-6 py-4 pl-8">
-                    <div className="font-bold text-zinc-800">{inv.invoice_number}</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">{new Date(inv.issued_at).toLocaleDateString()}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-zinc-700">{inv.orders?.customer_name || "N/A"}</div>
-                    <div className="text-[11px] text-zinc-400">{inv.orders?.customer_email || "N/A"}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-zinc-800">₹{parseFloat(inv.total_amount).toFixed(2)}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={cn(
-                      "px-2.5 py-1 text-xs font-semibold rounded-lg border",
-                      inv.status === 'PAID' ? "bg-green-50 text-green-700 border-green-200" :
-                      inv.status === 'PENDING_PAYMENT' ? "bg-amber-50 text-amber-700 border-amber-200" :
-                      inv.status === 'REFUNDED' ? "bg-violet-50 text-violet-700 border-violet-200" :
-                      "bg-zinc-100 text-zinc-600 border-zinc-200"
-                    )}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right pr-8">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!inv.pdf_url}
-                        onClick={() => handleDownloadPDF(inv.pdf_url)}
-                        className="h-8 text-xs gap-1.5"
-                      >
-                        <Download className="w-3.5 h-3.5" /> PDF
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={processingId === inv.order_id}
-                        onClick={() => handleResendEmail(inv.order_id)}
-                        className="h-8 text-xs gap-1.5"
-                      >
-                        {processingId === inv.order_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />} Email
-                      </Button>
+              {tableLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                      <p className="text-xs font-semibold">Loading invoices...</p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : tableInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-16 text-center text-zinc-500">
+                    No invoices match your search criteria.
+                  </td>
+                </tr>
+              ) : (
+                tableInvoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-zinc-50/50 transition-all duration-200">
+                    <td className="px-6 py-4 pl-8">
+                      <div className="font-bold text-zinc-800">{inv.invoice_number}</div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">{new Date(inv.issued_at).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-zinc-700">{inv.orders?.customer_name || "N/A"}</div>
+                      <div className="text-[11px] text-zinc-400">{inv.orders?.customer_email || "N/A"}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-zinc-800">₹{parseFloat(inv.total_amount).toFixed(2)}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "px-2.5 py-1 text-xs font-semibold rounded-lg border",
+                        inv.status === 'PAID' ? "bg-green-50 text-green-700 border-green-200" :
+                        inv.status === 'PENDING_PAYMENT' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        inv.status === 'REFUNDED' ? "bg-violet-50 text-violet-700 border-violet-200" :
+                        "bg-zinc-100 text-zinc-600 border-zinc-200"
+                      )}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right pr-8">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!inv.pdf_url}
+                          onClick={() => handleDownloadPDF(inv.pdf_url)}
+                          className="h-8 text-xs gap-1.5"
+                        >
+                          <Download className="w-3.5 h-3.5" /> PDF
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={processingId === inv.order_id}
+                          onClick={() => handleResendEmail(inv.order_id)}
+                          className="h-8 text-xs gap-1.5"
+                        >
+                          {processingId === inv.order_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />} Email
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          {filteredInvoices.length === 0 && (
-            <div className="p-16 text-center text-zinc-500">
-              No invoices match your search criteria.
-            </div>
-          )}
         </div>
+        {!tableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="indigo"
+          />
+        )}
       </Card>
     </div>
   );

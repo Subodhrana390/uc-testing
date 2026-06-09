@@ -24,6 +24,7 @@ import toast from "react-hot-toast";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { Pagination } from "@/components/ui/pagination";
 
 // Recharts imports
 import {
@@ -76,14 +77,21 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [productToDelete, setProductToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState({
     status: "All",
     category: "All",
     stock: "All"
   });
+
+  const [tableProducts, setTableProducts] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -91,7 +99,7 @@ export default function ProductsPage() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*, categories(name)")
+        .select("id, status, stock_quantity, created_at, categories(name)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -104,28 +112,77 @@ export default function ProductsPage() {
     }
   }, [supabase]);
 
+  const fetchTableProducts = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("products")
+        .select("*, categories(name)", { count: "exact" });
+
+      if (filters.category !== "All") {
+        q = supabase
+          .from("products")
+          .select("*, categories!inner(name)", { count: "exact" })
+          .eq("categories.name", filters.category);
+      }
+
+      if (debouncedSearchQuery) {
+        q = q.or(`name.ilike.%${debouncedSearchQuery}%,sku.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (filters.status !== "All") {
+        q = q.eq("status", filters.status);
+      }
+
+      if (filters.stock !== "All") {
+        if (filters.stock === "Out of Stock") {
+          q = q.eq("stock_quantity", 0);
+        } else if (filters.stock === "Low Stock") {
+          q = q.gt("stock_quantity", 0).lte("stock_quantity", 10);
+        } else if (filters.stock === "In Stock") {
+          q = q.gt("stock_quantity", 10);
+        }
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("created_at", { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      setTableProducts(data || []);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table products:", error);
+      toast.error("Failed to load products table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery, filters]);
+
   useEffect(() => {
     setIsMounted(true);
     fetchProducts();
   }, [fetchProducts]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.sku || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.categories?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    fetchTableProducts();
+  }, [fetchTableProducts]);
 
-      const matchesStatus = filters.status === "All" || p.status === filters.status;
-      const matchesCategory = filters.category === "All" || p.categories?.name === filters.category;
-      const matchesStock = filters.stock === "All" ||
-        (filters.stock === "Out of Stock" && p.stock_quantity === 0) ||
-        (filters.stock === "Low Stock" && p.stock_quantity > 0 && p.stock_quantity <= 10) ||
-        (filters.stock === "In Stock" && p.stock_quantity > 10);
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-      return matchesSearch && matchesStatus && matchesCategory && matchesStock;
-    });
-  }, [products, searchQuery, filters]);
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, filters]);
 
   const stats = useMemo(() => {
     const total = products.length;
@@ -189,7 +246,8 @@ export default function ProductsPage() {
         .eq("id", productToDelete.id);
 
       if (error) throw error;
-      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      fetchProducts();
+      fetchTableProducts();
       toast.success("Product deleted successfully");
       setProductToDelete(null);
     } catch (error: any) {
@@ -597,7 +655,16 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredProducts.length === 0 ? (
+              {tableLoading ? (
+                <tr>
+                  <td colSpan={6} className="h-60 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                      <p className="text-xs font-semibold">Loading products...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : tableProducts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="h-60 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
@@ -623,7 +690,7 @@ export default function ProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => {
+                tableProducts.map((product) => {
                   const stockColor = getStockColor(product.stock_quantity);
                   const stockPercent = Math.min((product.stock_quantity / 100) * 100, 100);
 
@@ -727,8 +794,8 @@ export default function ProductsPage() {
             </tbody>
           </table>
 
-          {filteredProducts.length === 0 && (
-            <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
+            {!tableLoading && tableProducts.length === 0 && (
+              <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
               <div className="w-16 h-16 bg-zinc-50 border border-zinc-150 flex items-center justify-center rounded-2xl">
                 <Package className="w-8 h-8 text-zinc-300" />
               </div>
@@ -740,10 +807,21 @@ export default function ProductsPage() {
           )}
         </div>
 
+        {!tableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="orange"
+          />
+        )}
+
         {/* Bottom Metadata Info Ledger */}
         <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50">
           <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-            Audit Log: {filteredProducts.length} assets matching query criteria
+            Audit Log: {totalItems} assets matching query criteria
           </p>
         </div>
       </Card>

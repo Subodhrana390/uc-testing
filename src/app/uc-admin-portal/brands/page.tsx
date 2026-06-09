@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import SingleImageUpload from "@/components/admin/SingleImageUpload";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { toggleBrandStatus } from "@/app/actions/admin";
+import { Pagination } from "@/components/ui/pagination";
 
 // Recharts imports
 import {
@@ -72,6 +73,8 @@ export default function BrandsPage() {
   const [brandToDelete, setBrandToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -144,6 +147,15 @@ export default function BrandsPage() {
       (b.category || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [brands, searchQuery]);
+
+  const paginatedBrands = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBrands.slice(start, start + pageSize);
+  }, [filteredBrands, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleOpenDrawer = (brand?: any) => {
     if (brand) {
@@ -470,7 +482,7 @@ export default function BrandsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredBrands.map((brand) => (
+              {paginatedBrands.map((brand) => (
                 <tr key={brand.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
                   <td className="px-6 py-4 pl-8">
                      <div className="flex items-center gap-3">
@@ -533,6 +545,17 @@ export default function BrandsPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredBrands.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredBrands.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="blue"
+          />
+        )}
 
         {/* Empty Fallback State */}
         {filteredBrands.length === 0 && (

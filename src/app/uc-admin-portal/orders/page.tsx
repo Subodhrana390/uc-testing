@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { getDisplayOrderId } from "@/lib/order";
+import { Pagination } from "@/components/ui/pagination";
 
 // Recharts imports
 import {
@@ -128,8 +129,15 @@ export default function OrdersPage() {
   const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
   const [carriers, setCarriers] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [tableOrders, setTableOrders] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -137,13 +145,7 @@ export default function OrdersPage() {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select(`
-          *,
-          items:order_items (
-            *,
-            products (name)
-          )
-        `)
+        .select("id, status, created_at, total_amount")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -155,6 +157,45 @@ export default function OrdersPage() {
       setLoading(false);
     }
   }, [supabase]);
+
+  const fetchTableOrders = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("orders")
+        .select(`
+          *,
+          items:order_items (
+            *,
+            products (name)
+          )
+        `, { count: "exact" });
+
+      if (debouncedSearchQuery) {
+        q = q.or(`customer_name.ilike.%${debouncedSearchQuery}%,id.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (statusFilter !== "All") {
+        q = q.eq("status", statusFilter);
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("created_at", { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      setTableOrders(data || []);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table orders:", error);
+      toast.error("Failed to load orders table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery, statusFilter]);
 
   const fetchCarriers = useCallback(async () => {
     try {
@@ -176,6 +217,18 @@ export default function OrdersPage() {
     fetchCarriers();
   }, [fetchOrders, fetchCarriers]);
 
+  useEffect(() => {
+    fetchTableOrders();
+  }, [fetchTableOrders]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   // Realtime subscription — picks up customer payments and any order field changes instantly
   useEffect(() => {
     const channel = supabase
@@ -185,6 +238,13 @@ export default function OrdersPage() {
         { event: "UPDATE", schema: "public", table: "orders" },
         (payload) => {
           setOrders((prev) =>
+            prev.map((o) =>
+              o.id === payload.new.id
+                ? { ...o, ...payload.new }
+                : o
+            )
+          );
+          setTableOrders((prev) =>
             prev.map((o) =>
               o.id === payload.new.id
                 ? { ...o, ...payload.new, items: o.items } // preserve joined items
@@ -197,8 +257,8 @@ export default function OrdersPage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "orders" },
         () => {
-          // Refetch to get the full joined order on new inserts
           fetchOrders();
+          fetchTableOrders();
         }
       )
       .subscribe();
@@ -206,7 +266,7 @@ export default function OrdersPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, fetchOrders]);
+  }, [supabase, fetchOrders, fetchTableOrders]);
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -222,6 +282,7 @@ export default function OrdersPage() {
       }
 
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      setTableOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       toast.success(`Order marked as ${status}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -240,6 +301,7 @@ export default function OrdersPage() {
       );
       await Promise.all(promises);
       setOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status } : o));
+      setTableOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status } : o));
       toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`);
       setSelectedOrders([]);
     } catch (error: any) {
@@ -261,6 +323,7 @@ export default function OrdersPage() {
       }
 
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
+      setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
       toast.success(`Payment marked as ${paymentStatus}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -281,6 +344,7 @@ export default function OrdersPage() {
         
         toast.success("Refund processed successfully via Razorpay");
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Refunded" } : o));
+        setTableOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Refunded" } : o));
         setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
       } catch (error: any) {
         toast.error(error.message);
@@ -308,6 +372,7 @@ export default function OrdersPage() {
       }
 
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
+      setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       toast.success("Logistics updated");
       setIsTrackingOpen(false);
       setSelectedOrder(null);
@@ -367,17 +432,10 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      const matchesSearch =
-        (o.customer_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (o.id || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (o.id && o.created_at && getDisplayOrderId(o.id, o.created_at).toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesStatus =
-        statusFilter === "All" || (o.status && o.status.toLowerCase() === statusFilter.toLowerCase());
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, searchQuery, statusFilter]);
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter]);
 
   const stats = useMemo(() => {
     const total = orders.length;
@@ -834,9 +892,9 @@ export default function OrdersPage() {
                     <input 
                       type="checkbox" 
                       className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer mt-1"
-                      checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                      checked={tableOrders.length > 0 && selectedOrders.length === tableOrders.length}
                       onChange={(e) => {
-                        if (e.target.checked) setSelectedOrders(filteredOrders.map(o => o.id));
+                        if (e.target.checked) setSelectedOrders(tableOrders.map(o => o.id));
                         else setSelectedOrders([]);
                       }}
                     />
@@ -850,9 +908,18 @@ export default function OrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-zinc-100">
-                {filteredOrders.length === 0 ? (
+                {tableLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-60 text-center">
+                    <TableCell colSpan={7} className="h-60 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                        <p className="text-xs font-semibold">Loading orders...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : tableOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-60 text-center">
                       <div className="flex flex-col items-center justify-center gap-2 py-8">
                         <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
                           <Search className="w-5 h-5" />
@@ -876,7 +943,7 @@ export default function OrdersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOrders.map((order) => (
+                  tableOrders.map((order) => (
                     <TableRow key={order.id} className={cn("hover:bg-zinc-50 transition-all duration-200", selectedOrders.includes(order.id) ? "bg-blue-50/40" : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm")}>
                       <TableCell className="text-center">
                         <input 
@@ -889,41 +956,33 @@ export default function OrdersPage() {
                           }}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-xs font-bold text-zinc-500">
+                      <TableCell className="font-bold font-mono text-zinc-700 text-xs">
                         {getDisplayOrderId(order.id, order.created_at)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className={cn("w-8 h-8 rounded-full border border-white/50 flex items-center justify-center text-xs font-bold shadow-sm", getAvatarBg(order.customer_name))}>
+                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", getAvatarBg(order.customer_name))}>
                             {getInitials(order.customer_name)}
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-[#18181b]">{order.customer_name}</span>
-                            <span className="text-xs text-zinc-500">{order.customer_email}</span>
+                          <div className="space-y-0.5">
+                            <span className="text-sm font-semibold text-[#18181b] block">{order.customer_name}</span>
+                            <span className="text-[11px] text-zinc-400 block line-clamp-1">{order.customer_email}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-zinc-600">
-                        {new Date(order.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <TableCell className="text-xs font-medium text-zinc-500">
+                        {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       </TableCell>
-                      <TableCell className="text-sm text-[#18181b]">
-                        <div className="font-bold">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</div>
-                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-tight mt-0.5">
-                          {order.payment_method} • <span className={cn(
-                            order.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600 font-bold' :
-                              order.payment_status === 'Refund Pending' ? 'text-orange-650 font-bold animate-pulse' :
-                                order.payment_status === 'Refunded' ? 'text-indigo-600 font-bold' :
-                                  'text-amber-600 font-bold'
-                          )}>{order.payment_status || 'Unpaid'}</span>
-                        </div>
+                      <TableCell className="font-bold text-sm text-[#18181b]">
+                        ₹{parseFloat(order.total_amount || 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(order.status)}
                       </TableCell>
-                      <TableCell className="text-right pr-6">
+                      <TableCell className="text-right pr-6 relative">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all ml-auto">
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -1005,6 +1064,16 @@ export default function OrdersPage() {
               </TableBody>
             </Table>
           </ScrollArea>
+          {!tableLoading && totalItems > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              variantColor="blue"
+            />
+          )}
         </div>
       </Card>
 

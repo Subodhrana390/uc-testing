@@ -17,10 +17,12 @@ import {
   TrendingUp,
   Receipt,
   X,
+  Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
+import { Pagination } from "@/components/ui/pagination";
 // Recharts imports
 import {
   ResponsiveContainer,
@@ -85,7 +87,14 @@ export default function PaymentsPage() {
 
   // Modals & Controls
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [tablePayments, setTablePayments] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
@@ -98,7 +107,7 @@ export default function PaymentsPage() {
     try {
       const { data, error } = await supabase
         .from("payments")
-        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)")
+        .select("id, amount, status, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -111,10 +120,55 @@ export default function PaymentsPage() {
     }
   }, [supabase]);
 
+  const fetchTablePayments = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("payments")
+        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)", { count: "exact" });
+
+      if (debouncedSearchQuery) {
+        q = q.or(`transaction_id.ilike.%${debouncedSearchQuery}%,order_id.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (statusFilter !== "All") {
+        q = q.eq("status", statusFilter);
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("created_at", { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      setTablePayments(data || []);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table payments:", error);
+      toast.error("Failed to load payments table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery, statusFilter]);
+
   useEffect(() => {
     setIsMounted(true);
     fetchPayments();
   }, [fetchPayments]);
+
+  useEffect(() => {
+    fetchTablePayments();
+  }, [fetchTablePayments]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
 
   const updateStatus = async (paymentId: string, orderId: string, status: string) => {
@@ -126,6 +180,7 @@ export default function PaymentsPage() {
       });
       if (!response.ok) throw new Error("Update failed");
       setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, status } : o));
+      setTablePayments(prev => prev.map(o => o.id === paymentId ? { ...o, status } : o));
       toast.success(`Order marked as ${status}`);
     } catch (error: any) {
       toast.error(error.message);
@@ -142,6 +197,7 @@ export default function PaymentsPage() {
       if (!response.ok) throw new Error("Refund failed");
 
       setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
+      setTablePayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
       toast.success(`Refund issued successfully`);
     } catch (error: any) {
       toast.error(error.message);
@@ -157,6 +213,7 @@ export default function PaymentsPage() {
       });
       if (!response.ok) throw new Error("Tracking update failed");
       setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
+      setTablePayments(prev => prev.map(o => o.id === paymentId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       toast.success("Logistics updated");
       setIsTrackingOpen(false);
     } catch (error: any) {
@@ -164,36 +221,51 @@ export default function PaymentsPage() {
     }
   };
 
-  const downloadCSV = () => {
-    const headers = ["Payment ID", "Custom Order ID", "System Order ID (UUID)", "Amount", "Method", "Status", "Date"];
-    const rows = filteredPayments.map(p => {
-      const customOrderId = p.orders?.id ? getDisplayOrderId(p.orders.id, p.orders.created_at) : `ORD-${p.order_id.slice(0, 8).toUpperCase()}`;
-      return [
-        p.id, customOrderId, p.order_id, p.amount, p.payment_method, p.status, new Date(p.created_at).toLocaleDateString()
-      ];
-    });
-    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `payments_log_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadCSV = async () => {
+    try {
+      toast.loading("Exporting payments log...");
+      let q = supabase
+        .from("payments")
+        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)");
+
+      if (debouncedSearchQuery) {
+        q = q.or(`transaction_id.ilike.%${debouncedSearchQuery}%,order_id.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      if (statusFilter !== "All") {
+        q = q.eq("status", statusFilter);
+      }
+
+      const { data, error } = await q.order("created_at", { ascending: false });
+
+      if (error) throw error;
+      toast.dismiss();
+
+      const headers = ["Payment ID", "Custom Order ID", "System Order ID (UUID)", "Amount", "Method", "Status", "Date"];
+      const rows = (data || []).map(p => {
+        const customOrderId = p.orders?.id ? getDisplayOrderId(p.orders.id, p.orders.created_at) : `ORD-${p.order_id.slice(0, 8).toUpperCase()}`;
+        return [
+          p.id, customOrderId, p.order_id, p.amount, p.payment_method, p.status, new Date(p.created_at).toLocaleDateString()
+        ];
+      });
+      let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `payments_log_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Failed to export payments");
+    }
   };
 
-  const filteredPayments = useMemo(() => {
-    return payments.filter(p => {
-      const searchStr = searchQuery.toLowerCase();
-      const matchesSearch =
-        (p.transaction_id || "").toLowerCase().includes(searchStr) ||
-        p.order_id.toLowerCase().includes(searchStr) ||
-        (p.orders?.customer_email || "").toLowerCase().includes(searchStr) ||
-        (p.orders?.customer_name || "").toLowerCase().includes(searchStr);
-      const matchesStatus = statusFilter === "All" || p.status.toLowerCase() === statusFilter.toLowerCase();
-      return matchesSearch && matchesStatus;
-    });
-  }, [payments, searchQuery, statusFilter]);
+  // Reset page to 1 when filters or query change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter]);
 
   const stats = useMemo(() => {
     const completed = payments.filter(p => p.status.toLowerCase() === "completed");
@@ -670,7 +742,16 @@ export default function PaymentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-zinc-100">
-              {filteredPayments.length === 0 ? (
+              {tableLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-60 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                      <p className="text-xs font-semibold">Loading transactions...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : tablePayments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-60 text-center text-zinc-500">
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
@@ -696,7 +777,7 @@ export default function PaymentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPayments.map((payment) => (
+                tablePayments.map((payment) => (
                   <TableRow key={payment.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm border-zinc-200">
 
                     <TableCell className="pl-6 py-4">
@@ -783,6 +864,16 @@ export default function PaymentsPage() {
             </TableBody>
           </Table>
         </ScrollArea>
+        {!tableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="amber"
+          />
+        )}
       </Card>
 
       {/* --- DIALOGS --- */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Truck,
   MapPin,
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import toast from "react-hot-toast";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { Pagination } from "@/components/ui/pagination";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -69,11 +70,13 @@ export default function DeliveryManagementPage() {
   });
 
   // --- PINCODES STATE ---
-  const [pincodes, setPincodes] = useState<any[]>([]);
+  const [pincodesCount, setPincodesCount] = useState(0);
   const [pincodeSearchQuery, setPincodeSearchQuery] = useState("");
   const [isPincodeDrawerOpen, setIsPincodeDrawerOpen] = useState(false);
   const [editingPincode, setEditingPincode] = useState<any>(null);
   const [pincodeToDelete, setPincodeToDelete] = useState<any>(null);
+  const [pincodeCurrentPage, setPincodeCurrentPage] = useState(1);
+  const [pincodePageSize, setPincodePageSize] = useState(10);
   const [isBulkPincodeDialogOpen, setIsBulkPincodeDialogOpen] = useState(false);
   const [pincodeFormData, setPincodeFormData] = useState({
     pincode: "",
@@ -86,6 +89,11 @@ export default function DeliveryManagementPage() {
     zone_id: "",
     estimate_override: ""
   });
+
+  const [tablePincodes, setTablePincodes] = useState<any[]>([]);
+  const [tablePincodesLoading, setTablePincodesLoading] = useState(true);
+  const [totalPincodesItems, setTotalPincodesItems] = useState(0);
+  const [debouncedPincodeSearchQuery, setDebouncedPincodeSearchQuery] = useState("");
 
   // --- CARRIERS STATE ---
   const [carriers, setCarriers] = useState<any[]>([]);
@@ -119,13 +127,12 @@ export default function DeliveryManagementPage() {
       if (zonesError) throw zonesError;
       setZones(zonesData || []);
 
-      // Fetch pincodes with joined zone name
-      const { data: pincodesData, error: pincodesError } = await supabase
+      // Fetch pincodes count
+      const { count: pincodesCountVal, error: pincodesCountError } = await supabase
         .from("delivery_pincodes")
-        .select("*, delivery_zones(name)")
-        .order("pincode", { ascending: true });
-      if (pincodesError) throw pincodesError;
-      setPincodes(pincodesData || []);
+        .select("*", { count: "exact", head: true });
+      if (pincodesCountError) throw pincodesCountError;
+      setPincodesCount(pincodesCountVal || 0);
 
       // Fetch carriers
       const { data: carriersData, error: carriersError } = await supabase
@@ -156,9 +163,59 @@ export default function DeliveryManagementPage() {
     }
   };
 
+  const fetchTablePincodes = useCallback(async () => {
+    setTablePincodesLoading(true);
+    try {
+      let q;
+      if (debouncedPincodeSearchQuery) {
+        q = supabase
+          .from("delivery_pincodes")
+          .select("*, delivery_zones!inner(name)", { count: "exact" })
+          .or(`pincode.ilike.%${debouncedPincodeSearchQuery}%,estimate_override.ilike.%${debouncedPincodeSearchQuery}%,delivery_zones.name.ilike.%${debouncedPincodeSearchQuery}%`);
+      } else {
+        q = supabase
+          .from("delivery_pincodes")
+          .select("*, delivery_zones(name)", { count: "exact" });
+      }
+
+      const start = (pincodeCurrentPage - 1) * pincodePageSize;
+      const end = start + pincodePageSize - 1;
+
+      const { data, count, error } = await q
+        .order("pincode", { ascending: true })
+        .range(start, end);
+
+      if (error) throw error;
+      setTablePincodes(data || []);
+      setTotalPincodesItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table pincodes:", error);
+      toast.error("Failed to load pincodes exceptions");
+    } finally {
+      setTablePincodesLoading(false);
+    }
+  }, [supabase, pincodeCurrentPage, pincodePageSize, debouncedPincodeSearchQuery]);
+
   useEffect(() => {
     fetchAllData();
   }, [supabase]);
+
+  useEffect(() => {
+    fetchTablePincodes();
+  }, [fetchTablePincodes]);
+
+  // Debounce pincode search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedPincodeSearchQuery(pincodeSearchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [pincodeSearchQuery]);
+
+  // Reset page to 1 when search query changes
+  useEffect(() => {
+    setPincodeCurrentPage(1);
+  }, [debouncedPincodeSearchQuery]);
 
   // --- FILTERED LISTS ---
   const filteredZones = useMemo(() => {
@@ -168,14 +225,6 @@ export default function DeliveryManagementPage() {
       (z.estimate || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [zones, searchQuery]);
-
-  const filteredPincodes = useMemo(() => {
-    return pincodes.filter(p =>
-      p.pincode.includes(pincodeSearchQuery) ||
-      (p.delivery_zones?.name || "").toLowerCase().includes(pincodeSearchQuery.toLowerCase()) ||
-      (p.estimate_override || "").toLowerCase().includes(pincodeSearchQuery.toLowerCase())
-    );
-  }, [pincodes, pincodeSearchQuery]);
 
 
   // --- ZONES OPERATIONS ---
@@ -326,6 +375,7 @@ export default function DeliveryManagementPage() {
       }
       setIsPincodeDrawerOpen(false);
       fetchAllData();
+      fetchTablePincodes();
     } catch (error: any) {
       toast.error(error.message || "Failed to save pincode override");
     } finally {
@@ -345,6 +395,7 @@ export default function DeliveryManagementPage() {
       toast.success("Pincode override deleted");
       setPincodeToDelete(null);
       fetchAllData();
+      fetchTablePincodes();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete pincode override");
     } finally {
@@ -361,6 +412,7 @@ export default function DeliveryManagementPage() {
       if (error) throw error;
       toast.success(`Pincode ${pincodeItem.active ? 'deactivated' : 'activated'}`);
       fetchAllData();
+      fetchTablePincodes();
     } catch (error: any) {
       toast.error(error.message || "Failed to update pincode status");
     }
@@ -402,6 +454,7 @@ export default function DeliveryManagementPage() {
       setIsBulkPincodeDialogOpen(false);
       setBulkPincodeFormData({ pincodesText: "", zone_id: "", estimate_override: "" });
       fetchAllData();
+      fetchTablePincodes();
     } catch (error: any) {
       toast.error(error.message || "Failed to bulk import pincodes");
     } finally {
@@ -609,7 +662,7 @@ export default function DeliveryManagementPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
           {[
             { label: "Active Zones", value: String(zones.filter(z => z.active).length).padStart(2, "0"), icon: <MapPin className="w-5 h-5" />, tag: "Fulfillment active" },
-            { label: "Pincode Exceptions", value: String(pincodes.length).padStart(2, "0"), icon: <Globe className="w-5 h-5" />, tag: "Custom rules active" },
+            { label: "Pincode Exceptions", value: String(pincodesCount).padStart(2, "0"), icon: <Globe className="w-5 h-5" />, tag: "Custom rules active" },
             { label: "Logistics Carriers", value: String(carriers.length).padStart(2, "0"), icon: <Truck className="w-5 h-5" />, tag: "Integrated networks" }
           ].map((c, i) => (
             <div key={i} className="p-5 rounded-2xl border border-white/10 flex items-center justify-between shadow-sm relative overflow-hidden bg-white/10 text-white">
@@ -760,55 +813,12 @@ export default function DeliveryManagementPage() {
               </div>
 
               <div className="grid gap-4">
-                {filteredPincodes.map((item) => (
-                  <div key={item.id} className="p-5 border border-zinc-150 rounded-2xl hover:bg-zinc-50/10 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-zinc-50 border border-zinc-200/60 rounded-xl flex items-center justify-center text-zinc-455">
-                        <Globe className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Pincode: {item.pincode}</h4>
-                        <p className="text-[10px] font-semibold text-zinc-400 mt-1 flex items-center gap-1.5">
-                          Mapped Zone: <span className="text-zinc-700 font-bold">{item.delivery_zones?.name || "None"}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-6 md:gap-12 ml-0 md:ml-auto">
-                      <div className="min-w-[100px]">
-                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Custom Override</p>
-                        <p className="text-xs font-bold text-zinc-800">{item.estimate_override || "Using Zone Default"}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleTogglePincodeActive(item)}
-                          className={cn(
-                            "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all mr-2",
-                            item.active
-                              ? "bg-teal-50 text-teal-700 border-teal-100"
-                              : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                          )}
-                        >
-                          {item.active ? "Active" : "Disabled"}
-                        </button>
-                        <button
-                          onClick={() => handleOpenPincodeDrawer(item)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-all text-zinc-400 hover:text-zinc-700"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setPincodeToDelete(item)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-all text-rose-450 hover:text-rose-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
+                {tablePincodesLoading ? (
+                  <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-zinc-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+                    <p className="text-xs font-semibold">Loading pincode overrides...</p>
                   </div>
-                ))}
-
-                {filteredPincodes.length === 0 && (
+                ) : tablePincodes.length === 0 ? (
                   <div className="py-20 text-center flex flex-col items-center justify-center space-y-4">
                     <div className="w-16 h-16 bg-zinc-50 border border-zinc-100 flex items-center justify-center rounded-2xl text-zinc-300">
                       <Globe className="w-8 h-8" />
@@ -818,8 +828,69 @@ export default function DeliveryManagementPage() {
                       <p className="text-xs font-medium text-zinc-500 mt-1 leading-relaxed">No pincode exceptions found. All pincodes utilize defaults from global zones.</p>
                     </div>
                   </div>
+                ) : (
+                  tablePincodes.map((item) => (
+                    <div key={item.id} className="p-5 border border-zinc-150 rounded-2xl hover:bg-zinc-50/10 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-zinc-50 border border-zinc-200/60 rounded-xl flex items-center justify-center text-zinc-455">
+                          <Globe className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-zinc-900 tracking-tight">Pincode: {item.pincode}</h4>
+                          <p className="text-[10px] font-semibold text-zinc-400 mt-1 flex items-center gap-1.5">
+                            Mapped Zone: <span className="text-zinc-700 font-bold">{item.delivery_zones?.name || "None"}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-6 md:gap-12 ml-0 md:ml-auto">
+                        <div className="min-w-[100px]">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Custom Override</p>
+                          <p className="text-xs font-bold text-zinc-800">{item.estimate_override || "Using Zone Default"}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleTogglePincodeActive(item)}
+                            className={cn(
+                              "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all mr-2",
+                              item.active
+                                ? "bg-teal-50 text-teal-700 border-teal-100"
+                                : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                            )}
+                          >
+                            {item.active ? "Active" : "Disabled"}
+                          </button>
+                          <button
+                            onClick={() => handleOpenPincodeDrawer(item)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-all text-zinc-400 hover:text-zinc-700"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setPincodeToDelete(item)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-all text-rose-450 hover:text-rose-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
+
+              {!tablePincodesLoading && totalPincodesItems > 0 && (
+                <div className="mt-6 border border-zinc-150 rounded-2xl overflow-hidden bg-white">
+                  <Pagination
+                    currentPage={pincodeCurrentPage}
+                    totalItems={totalPincodesItems}
+                    pageSize={pincodePageSize}
+                    onPageChange={setPincodeCurrentPage}
+                    onPageSizeChange={setPincodePageSize}
+                    variantColor="rose"
+                  />
+                </div>
+              )}
             </div>
           )}
 

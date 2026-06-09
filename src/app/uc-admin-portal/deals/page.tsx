@@ -25,6 +25,7 @@ import { createAdminClient as createClient } from "@/utils/supabase/admin-client
 import { cn } from "@/lib/utils";
 import SingleImageUpload from "@/components/admin/SingleImageUpload";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { Pagination } from "@/components/ui/pagination";
 
 // Recharts imports
 import {
@@ -109,6 +110,8 @@ export default function DealsAdminPage() {
   const [dealToDelete, setDealToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -156,6 +159,15 @@ export default function DealsAdminPage() {
       (d.products?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [deals, searchQuery]);
+
+  const paginatedDeals = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredDeals.slice(start, start + pageSize);
+  }, [filteredDeals, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const searchProducts = async (q: string) => {
     if (!q) { setProducts([]); return; }
@@ -505,7 +517,7 @@ export default function DealsAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredDeals.map((deal) => {
+              {paginatedDeals.map((deal) => {
                 const status = getDealStatus(deal);
                 return (
                   <tr key={deal.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
@@ -589,6 +601,17 @@ export default function DealsAdminPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredDeals.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredDeals.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="pink"
+          />
+        )}
 
         {/* Empty Fallback State */}
         {filteredDeals.length === 0 && (

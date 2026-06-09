@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
+import { Pagination } from "@/components/ui/pagination";
 
 // shadcn/ui primitives
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,8 @@ export default function BannersPage() {
   const [bannerToDelete, setBannerToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -91,6 +94,15 @@ export default function BannersPage() {
       (b.subtitle || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [banners, searchQuery]);
+
+  const paginatedBanners = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBanners.slice(start, start + pageSize);
+  }, [filteredBanners, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleOpenDrawer = (banner?: any) => {
     if (banner) {
@@ -248,7 +260,7 @@ export default function BannersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredBanners.map((banner) => (
+              {paginatedBanners.map((banner) => (
                 <tr key={banner.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
                   <td className="px-6 py-4 pl-8">
                     <div className="w-20 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden transition-all flex items-center justify-center shrink-0">
@@ -330,6 +342,17 @@ export default function BannersPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredBanners.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredBanners.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="yellow"
+          />
+        )}
 
         {/* Empty Fallback State */}
         {filteredBanners.length === 0 && (

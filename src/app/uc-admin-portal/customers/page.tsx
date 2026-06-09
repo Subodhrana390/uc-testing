@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Users,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { Pagination } from "@/components/ui/pagination";
 
 import {
   DropdownMenu,
@@ -60,6 +61,13 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [tableCustomers, setTableCustomers] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [orderHistoryCustomer, setOrderHistoryCustomer] = useState<any>(null);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
@@ -76,7 +84,7 @@ export default function CustomersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, created_at")
         .eq("role", "customer")
         .order("created_at", { ascending: false });
 
@@ -89,6 +97,36 @@ export default function CustomersPage() {
       setLoading(false);
     }
   };
+
+  const fetchTableCustomers = useCallback(async () => {
+    setTableLoading(true);
+    try {
+      let q = supabase
+        .from("profiles")
+        .select("*", { count: "exact" })
+        .eq("role", "customer");
+
+      if (debouncedSearchQuery) {
+        q = q.or(`full_name.ilike.%${debouncedSearchQuery}%,email.ilike.%${debouncedSearchQuery}%,phone.ilike.%${debouncedSearchQuery}%`);
+      }
+
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      const { data, count, error } = await q
+        .order("created_at", { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      setTableCustomers(data || []);
+      setTotalItems(count || 0);
+    } catch (error) {
+      console.error("Error fetching table customers:", error);
+      toast.error("Failed to load customers table");
+    } finally {
+      setTableLoading(false);
+    }
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery]);
 
   const fetchOrderHistory = async (customer: any) => {
     setOrderHistoryCustomer(customer);
@@ -133,7 +171,8 @@ export default function CustomersPage() {
       const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', customer.id);
       if (error) throw error;
       
-      setCustomers(customers.map(c => c.id === customer.id ? { ...c, status: newStatus } : c));
+      setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, status: newStatus } : c));
+      setTableCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, status: newStatus } : c));
       toast.success(`Account ${newStatus === 'suspended' ? 'suspended' : 'activated'}`);
     } catch (error: any) {
       toast.error(`Update failed. The database schema might lack a 'status' column on profiles.`);
@@ -144,6 +183,23 @@ export default function CustomersPage() {
     setIsMounted(true);
     fetchCustomers();
   }, [supabase]);
+
+  useEffect(() => {
+    fetchTableCustomers();
+  }, [fetchTableCustomers]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Reset page to 1 on search
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
   const chartData = useMemo(() => {
     if (!customers.length) return [];
@@ -185,10 +241,22 @@ export default function CustomersPage() {
     });
   }, [customers]);
 
-  const filteredCustomers = customers.filter(c =>
-    (c.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c =>
+      (c.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [customers, searchQuery]);
+
+  // Reset page to 1 when query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const paginatedCustomers = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredCustomers.slice(startIndex, startIndex + pageSize);
+  }, [filteredCustomers, currentPage, pageSize]);
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.length;
@@ -429,7 +497,16 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredCustomers.length === 0 ? (
+              {tableLoading ? (
+                <tr>
+                  <td colSpan={6} className="h-60 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                      <Loader2 className="w-6 h-6 animate-spin text-teal-650" />
+                      <p className="text-xs font-semibold">Loading customers...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : tableCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="h-60 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
@@ -452,7 +529,7 @@ export default function CustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((customer) => (
+                tableCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -554,6 +631,16 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
+        {!tableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            variantColor="teal"
+          />
+        )}
       </div>
 
       {/* Dialog for Order History */}
