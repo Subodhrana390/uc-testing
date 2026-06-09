@@ -140,6 +140,7 @@ export default function OrdersPage() {
   const [tableOrders, setTableOrders] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
+  const [activeView, setActiveView] = useState<"analytics" | "table">("table");
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -561,10 +562,36 @@ export default function OrdersPage() {
             </Button>
           </div>
         </div>
+        {/* View Switcher Tabs */}
+        <div className="flex border-b border-zinc-200 gap-6 mt-4">
+          <button
+            onClick={() => setActiveView("analytics")}
+            className={cn(
+              "pb-3 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer",
+              activeView === "analytics"
+                ? "border-primary text-zinc-950"
+                : "border-transparent text-zinc-400 hover:text-zinc-655"
+            )}
+          >
+            📊 Analytics & Trends
+          </button>
+          <button
+            onClick={() => setActiveView("table")}
+            className={cn(
+              "pb-3 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer",
+              activeView === "table"
+                ? "border-primary text-zinc-950"
+                : "border-transparent text-zinc-400 hover:text-zinc-655"
+            )}
+          >
+            📋 Order Database Table
+          </button>
+        </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+      {activeView === "analytics" && (
+        /* Charts Grid */
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Order Status Distribution Donut Chart */}
         <Card className="min-w-0 bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-4 sm:p-6 flex flex-col justify-between text-[#18181b]">
           <div>
@@ -695,11 +722,12 @@ export default function OrdersPage() {
               </div>
             )}
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
 
-      {/* Main Table Area */}
-      <Card className="overflow-hidden bg-white shadow-sm border border-zinc-200 text-[#18181b]">
+      {activeView === "table" && (
+        /* Main Table Area */
+        <Card className="overflow-hidden bg-white shadow-sm border border-zinc-200 text-[#18181b]">
 
         {/* Top Controls: Search & Filters */}
         <div className="p-4 border-b border-zinc-200 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white">
@@ -975,6 +1003,7 @@ export default function OrdersPage() {
           )}
         </div>
       </Card>
+      )}
 
       {/* Tracking Dialog */}
       <Dialog open={isTrackingOpen} onOpenChange={setIsTrackingOpen}>
