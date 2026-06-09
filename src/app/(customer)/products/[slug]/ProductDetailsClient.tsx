@@ -44,7 +44,6 @@ export default function ProductDetailsClient({
         name: product.name,
         price,
         image_url: product.image_url,
-        moq: product.moq || 1,
       },
       quantity
     );
@@ -411,11 +410,7 @@ export default function ProductDetailsClient({
                   </button>
                 </div>
 
-                {product.moq > 1 && (
-                  <span className="text-xs font-black text-zinc-500 whitespace-nowrap">
-                    MOQ: {product.moq} {product.unit || "Units"}
-                  </span>
-                )}
+
               </div>
 
               <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">

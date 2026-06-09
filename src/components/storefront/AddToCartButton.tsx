@@ -91,7 +91,6 @@ export default function AddToCartButton({
             price,
             image_url:
               product.image_url,
-            moq: product.moq || 1,
           },
           quantity
         );

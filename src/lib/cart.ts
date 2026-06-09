@@ -5,7 +5,6 @@ export type CartItem = {
   price: number;
   image_url?: string | null;
   quantity: number;
-  moq: number;
 };
 
 const CART_STORAGE_KEY = "uce_cart_items";
@@ -35,28 +34,22 @@ export function addCartItem(item: Omit<CartItem, "quantity">, quantity?: number)
   const items = getCartItems();
   const existing = items.find((entry) => entry.id === item.id);
 
-  // If no explicit quantity is provided, we add the MOQ amount.
-  const amountToAdd = quantity ?? item.moq;
+  const amountToAdd = quantity ?? 1;
 
   if (existing) {
     existing.quantity += amountToAdd;
-    // ensure quantity is at least moq
-    if (existing.quantity < existing.moq) existing.quantity = existing.moq;
     saveCartItems([...items]);
     return;
   }
 
-  const initialQty = Math.max(amountToAdd, item.moq);
-  saveCartItems([...items, { ...item, quantity: initialQty }]);
+  saveCartItems([...items, { ...item, quantity: amountToAdd }]);
 }
 
 export function updateCartItemQuantity(id: string, quantity: number) {
   const items = getCartItems()
     .map((item) => {
       if (item.id === id) {
-        // Enforce MOQ floor if quantity is greater than 0
-        const newQty = quantity > 0 && quantity < item.moq ? item.moq : quantity;
-        return { ...item, quantity: newQty };
+        return { ...item, quantity };
       }
       return item;
     })

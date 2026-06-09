@@ -116,7 +116,7 @@ export const faqItems = [
     id: "ordering-process",
     category: "Ordering",
     question: "How do I place an order for laboratory or industrial supplies?",
-    answer: "To place an order, browse our categories or search for specific products. Adjust the quantity (keeping in mind the Minimum Order Quantity, or MOQ) and click 'Add to Cart'. You can complete checkout securely using credit/debit cards, net banking, or UPI.",
+    answer: "To place an order, browse our categories or search for specific products. Adjust the quantity and click 'Add to Cart'. You can complete checkout securely using credit/debit cards, net banking, or UPI.",
   },
   {
     id: "shipping-timelines",

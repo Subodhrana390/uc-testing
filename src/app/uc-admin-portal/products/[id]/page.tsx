@@ -295,7 +295,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           category_id: formData.category_id,
           stock_quantity: parseInt(formData.stock_quantity),
           unit: formData.unit,
-          moq: parseInt(formData.moq),
+          moq: 1,
           short_description: formData.short_description,
           long_description: formData.long_description,
           specification: formData.specification,
@@ -641,7 +641,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="stock">Stock Quantity</label>
                   <input
@@ -659,16 +659,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     className={inputClass}
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="moq">MOQ</label>
-                  <input
-                    id="moq"
-                    type="number"
-                    className={inputClass}
-                    value={formData.moq}
-                    onChange={(e) => setFormData({ ...formData, moq: e.target.value })}
                   />
                 </div>
               </div>

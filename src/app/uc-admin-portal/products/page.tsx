@@ -730,7 +730,6 @@ export default function ProductsPage() {
                             <div className={cn("w-1.5 h-1.5 rounded-full", stockColor.bar)} />
                             {product.stock_quantity === 0 ? "Out of Stock" : `${product.stock_quantity} units`}
                           </span>
-                          <span className="text-[11px] text-zinc-500 whitespace-nowrap">MOQ: {product.moq || 1}</span>
                         </div>
                         <div className="w-full h-1 bg-zinc-150 rounded-full overflow-hidden">
                           <div

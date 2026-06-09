@@ -164,8 +164,7 @@ export default function FrequentlyBoughtTogether({
         name: p.name,
         price: finalPrice,
         image_url: p.image_url || (p.images && p.images[0]) || null,
-        moq: p.moq || 1,
-      }, p.moq || 1);
+      }, 1);
     });
     
     if (isBundleEligible) {
