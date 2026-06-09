@@ -122,26 +122,26 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
             )}
 
             {/* Banner Layout Content */}
-            <div className="relative z-10 h-full flex flex-col justify-center p-6 md:p-12 max-w-2xl">
+            <div className="relative z-10 h-full flex flex-col justify-center px-12 py-6 sm:p-12 max-w-2xl">
               <span className="inline-flex self-start rounded-md bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 border border-amber-500/20 mb-3">
                 UC Enterprises Exclusive
               </span>
 
-              <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl lg:text-5xl leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
+              <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
                 {banner.title}
               </h2>
 
               {banner.subtitle && (
-                <p className="mt-3 text-sm leading-relaxed text-slate-300 md:text-base opacity-95 max-w-lg line-clamp-3">
+                <p className="mt-3 text-xs sm:text-sm leading-relaxed text-slate-300 md:text-base opacity-95 max-w-lg line-clamp-3">
                   {banner.subtitle}
                 </p>
               )}
 
               {banner.link_url && (
-                <div className="mt-6 md:mt-8">
+                <div className="mt-4 sm:mt-6 md:mt-8">
                   <Link
                     href={banner.link_url}
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-md shadow-amber-500/10 hover:bg-amber-400 hover:shadow-lg transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 sm:px-5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-950 shadow-md shadow-amber-500/10 hover:bg-amber-400 hover:shadow-lg transition-all"
                   >
                     {banner.link_text || "Order Now"}
                     <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -159,16 +159,16 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
           <button
             onClick={prevBanner}
             aria-label="Previous Banner"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
+            className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
           >
-            <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>
           <button
             onClick={nextBanner}
             aria-label="Next Banner"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
+            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
           >
-            <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>
         </>
       )}

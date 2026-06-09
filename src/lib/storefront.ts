@@ -93,6 +93,7 @@ export const primaryNavLinks = [
   { href: "/products?promo=true", label: "Deals & Offers" },
   { href: "/categories", label: "Categories" },
   { href: "/products", label: "All Products" },
+  { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact Us" },
   { href: "/track-order", label: "Track Order" },
 ];

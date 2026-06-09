@@ -191,7 +191,6 @@ export default function AdminLayout({
     );
   };
 
-  // Helper to map each menu item to its own premium vibrant color style dynamically (adapted for crisp bright white background)
   const getMenuItemStyles = (label: string, isActive: boolean) => {
     let activeBg = "bg-indigo-50 border-indigo-200 text-indigo-700";
     let inactiveText = "text-slate-600 hover:text-slate-900 hover:bg-slate-50/80";
@@ -432,7 +431,7 @@ export default function AdminLayout({
               />
             ) : (
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-500 to-indigo-500 text-white flex items-center justify-center font-black text-xs shadow-md shadow-cyan-500/10 select-none shrink-0">
-                {getInitials(adminProfile?.full_name || "Admin User")}
+                {getInitials(adminProfile?.full_name || "")}
               </div>
             )}
             {!isSidebarCollapsed && (
@@ -440,7 +439,6 @@ export default function AdminLayout({
                 <span className="text-xs font-bold text-slate-800 truncate leading-none">
                   {adminProfile?.full_name || "Admin User"}
                 </span>
-                <span className="text-[9px] font-bold text-[#06b6d4] uppercase tracking-wider mt-1.5 leading-none">Active Admin</span>
               </div>
             )}
           </div>

@@ -88,10 +88,10 @@ export default async function CategoryPage({
     // Current category is a subcategory
     const { data: parent } = await supabase.from("categories").select("*").eq("id", category.parent_id).single();
     activeParentCategory = parent;
-    
+
     const { data: siblings } = await supabase.from("categories").select("id, name, slug").eq("parent_id", category.parent_id).order("name");
     activeSiblingCategories = siblings || [];
-    
+
     categoryIds = [category.id];
   } else {
     // Current category is a top-level parent
@@ -99,7 +99,7 @@ export default async function CategoryPage({
 
     const { data: subs } = await supabase.from("categories").select("id, name, slug").eq("parent_id", category.id).order("name");
     activeSiblingCategories = subs || [];
-    
+
     categoryIds = [category.id, ...activeSiblingCategories.map(s => s.id)];
   }
 
@@ -149,7 +149,7 @@ export default async function CategoryPage({
   const safeProducts = products || [];
   const safeTotalCount = totalCount || 0;
   const totalPages = Math.ceil(safeTotalCount / 12);
-  
+
   const { data: brandsResult } = await brandsPromise;
   const brandsList = brandsResult || [];
 
@@ -198,14 +198,14 @@ export default async function CategoryPage({
           {!category.parent_id && activeSiblingCategories && activeSiblingCategories.length > 0 && (
             <div className="mt-8 pt-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Explore Subcategories</p>
-              <div 
+              <div
                 className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {activeSiblingCategories.map((sub) => (
-                  <Link 
-                    key={sub.id} 
-                    href={`/categories/${sub.slug}`} 
+                  <Link
+                    key={sub.id}
+                    href={`/categories/${sub.slug}`}
                     className="shrink-0 bg-white border border-zinc-200/80 px-4 py-2 rounded-full text-[11px] font-bold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 hover:border-zinc-300 transition-all shadow-2xs"
                   >
                     {sub.name}
@@ -217,12 +217,12 @@ export default async function CategoryPage({
         </div>
 
         <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8 items-start">
-          
+
           <MobileFilterWrapper>
             <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
-              <ProductSidebarFilters 
-                categories={categoriesList} 
-                brands={brandsList} 
+              <ProductSidebarFilters
+                categories={categoriesList}
+                brands={brandsList}
                 currentCategorySlug={category.slug}
                 activeParentCategory={activeParentCategory}
                 activeSiblingCategories={activeSiblingCategories}
@@ -242,14 +242,38 @@ export default async function CategoryPage({
             />
 
             {!safeProducts.length && (
-              <div className="border border-zinc-200/80 bg-white p-16 rounded-xl shadow-2xs text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mb-4 border border-zinc-100">
-                  <span className="text-2xl">📦</span>
+              <div className="space-y-12 w-full">
+                {/* No Products Found */}
+                <div className="border border-zinc-200/80 bg-white p-16 rounded-xl shadow-2xs text-center flex flex-col items-center justify-center">
+                  <h3 className="text-lg font-bold text-zinc-900 mb-2">No products found</h3>
+                  <p className="text-sm font-medium text-zinc-500 max-w-sm">
+                    We couldn't find any published products in this category matching your current filters.
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-zinc-900 mb-2">No products found</h3>
-                <p className="text-sm font-medium text-zinc-500 max-w-sm">
-                  We couldn't find any published products in this category matching your current filters.
-                </p>
+
+                {/* Browse Other Categories */}
+                {categoriesList.length > 0 && (
+                  <div className="space-y-6 pt-4">
+                    <div className="border-b border-zinc-100 pb-4">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">Browse Other Departments</h4>
+                    </div>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                      {categoriesList
+                        .filter(c => c.slug !== category.slug)
+                        .slice(0, 6)
+                        .map((otherCat) => (
+                          <Link
+                            key={otherCat.id}
+                            href={`/categories/${otherCat.slug}`}
+                            className="flex items-center justify-between p-5 rounded-2xl bg-white border border-zinc-200/80 hover:border-primary/30 hover:shadow-sm transition-all group animate-fade-in"
+                          >
+                            <span className="font-bold text-sm text-zinc-800 group-hover:text-primary transition-colors">{otherCat.name}</span>
+                            <span className="text-zinc-400 group-hover:text-primary transition-colors">→</span>
+                          </Link>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

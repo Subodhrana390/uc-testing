@@ -97,7 +97,7 @@ export default function AdminLoginPage() {
             <div className="text-center space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 uppercase">
                 Admin{" "}
-                <span className="text-indigo-600">
+                <span className="text-red-600">
                   Portal
                 </span>
               </h1>

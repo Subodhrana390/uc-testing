@@ -141,13 +141,13 @@ export default function ProductDetailsClient({
     switch (tabId) {
       case "description":
         return (
-          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
         );
       case "specification":
         return (
           <div className="space-y-12">
             {product.specification && (
-              <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
+              <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
               />
             )}
@@ -204,13 +204,13 @@ export default function ProductDetailsClient({
         );
       case "manufacturing":
         return (
-          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
           />
         );
       case "warranty":
         return (
-          <div className="prose prose-base max-w-none text-zinc-700 leading-relaxed"
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
           />
         );
@@ -464,7 +464,7 @@ export default function ProductDetailsClient({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-4 text-sm font-semibold transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
+              className={`pb-4 text-base font-semibold transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
                 ? "border-primary text-zinc-900"
                 : "border-transparent text-zinc-500 hover:text-zinc-700"
                 }`}
@@ -483,7 +483,7 @@ export default function ProductDetailsClient({
             { id: "shipping", label: "Shipping & Delivery" }
           ].map((tab) => (
             <div key={tab.id} className="w-full border-b border-zinc-100 pb-8 last:border-0 last:pb-0">
-              <h3 className="text-xl font-bold text-zinc-900 mb-4">
+              <h3 className="text-lg font-bold text-zinc-900 mb-4">
                 {tab.label}
               </h3>
               <div className="pt-2">

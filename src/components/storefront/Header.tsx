@@ -364,7 +364,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         key={link.href}
                         href={link.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center px-4 py-3 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-medium text-base"
+                        className="flex items-center px-4 py-3 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-semibold text-sm"
                       >
                         {link.label}
                       </Link>
