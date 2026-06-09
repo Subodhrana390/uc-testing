@@ -63,7 +63,7 @@ export default function MyInvoicesPage() {
     <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-          <Receipt className="w-6 h-6 text-emerald-600" />
+          <FileText className="w-6 h-6 text-emerald-600" />
           My Invoices
         </h1>
         <p className="text-zinc-500 text-sm mt-1">View and download your tax-compliant invoices and billing history.</p>

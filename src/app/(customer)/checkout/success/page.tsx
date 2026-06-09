@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, ShoppingBag, ArrowRight, Calendar, Receipt } from "lucide-react";
+import { CheckCircle2, ShoppingBag, ArrowRight, Calendar, Package } from "lucide-react";
 import { getDisplayOrderId } from "@/lib/order";
 
 export default function OrderSuccessPage() {
@@ -71,7 +71,7 @@ export default function OrderSuccessPage() {
         <div className="flex flex-col gap-3 pt-2">
           <Link href="/account/orders" className="w-full">
             <button className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md">
-              <Receipt className="w-4 h-4" />
+              <Package className="w-4 h-4" />
               View My Orders
             </button>
           </Link>

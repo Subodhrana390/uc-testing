@@ -157,8 +157,29 @@ export async function POST(req: Request) {
 
       // If customer successfully paid online, transition order status to CONFIRMED using state machine
       if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" && 
-          (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PLACED")) {
-        await serviceRoleSupabase.rpc(
+          (existingOrder.status.toUpperCase() === "PENDING" || 
+           existingOrder.status.toUpperCase() === "PENDING_PAYMENT" || 
+           existingOrder.status.toUpperCase() === "PLACED")) {
+        
+        // If status is PENDING or PENDING_PAYMENT, first transition to PLACED (which also generates the invoice)
+        if (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PENDING_PAYMENT") {
+          const { error: placedError } = await serviceRoleSupabase.rpc(
+            "transition_order_status",
+            {
+              p_order_id: orderId,
+              p_new_status: "PLACED",
+              p_actor_type: "system",
+              p_actor_id: user.id,
+              p_remarks: "Paid online via Razorpay (verified) - PLACED"
+            }
+          );
+          if (placedError) {
+            console.error("Failed transition to PLACED:", placedError.message);
+          }
+        }
+
+        // Then transition to CONFIRMED
+        const { error: confirmedError } = await serviceRoleSupabase.rpc(
           "transition_order_status",
           {
             p_order_id: orderId,
@@ -168,6 +189,10 @@ export async function POST(req: Request) {
             p_remarks: "Paid online via Razorpay (verified)"
           }
         );
+        if (confirmedError) {
+          console.error("Failed transition to CONFIRMED:", confirmedError.message);
+        }
+
         // Refresh order status
         const { data: refreshedOrder } = await serviceRoleSupabase
           .from("orders")
@@ -178,10 +203,10 @@ export async function POST(req: Request) {
           order = refreshedOrder;
         }
 
-        if (existingOrder.status.toUpperCase() === "PENDING") {
+        if (existingOrder.status.toUpperCase() === "PENDING" || existingOrder.status.toUpperCase() === "PENDING_PAYMENT") {
           await serviceRoleSupabase.from('email_queue').insert({
             type: 'ORDER_CONFIRMATION',
-            payload: { orderId: order.id }
+            payload: { orderId: orderId }
           });
         }
       }

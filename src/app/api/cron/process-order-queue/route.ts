@@ -89,10 +89,16 @@ export async function GET(req: Request) {
         if (razorpayPaymentId) updatePayload.razorpay_payment_id = razorpayPaymentId;
         if (signature) updatePayload.razorpay_signature = signature;
 
-        if (targetPaymentStatus === "Paid" && order.status === "Pending") {
-          updatePayload.status = "Placed";
+        const statusUpper = order.status ? order.status.toUpperCase() : "";
+        let shouldTransition = false;
+        let transitionTo = "";
+
+        if (targetPaymentStatus === "Paid" && (statusUpper === "PENDING" || statusUpper === "PENDING_PAYMENT")) {
+          shouldTransition = true;
+          transitionTo = "PLACED";
         } else if (targetPaymentStatus === "Failed") {
-          updatePayload.status = "Failed";
+          shouldTransition = true;
+          transitionTo = "FAILED";
         }
 
         const { data: updatedOrder, error: updateError } = await supabase
@@ -106,8 +112,30 @@ export async function GET(req: Request) {
           throw new Error(`Database update failed: ${updateError.message}`);
         }
 
+        if (shouldTransition) {
+          const { data: transitionResult, error: rpcError } = await supabase.rpc(
+            "transition_order_status",
+            {
+              p_order_id: order.id,
+              p_new_status: transitionTo,
+              p_actor_type: "system",
+              p_actor_id: order.user_id,
+              p_remarks: `Payment processed: ${targetPaymentStatus}`
+            }
+          );
+
+          if (rpcError) {
+            console.error(`Status transition to ${transitionTo} failed via RPC:`, rpcError.message);
+          } else {
+            const resData = transitionResult as any;
+            if (!resData.success) {
+              console.error(`Status transition to ${transitionTo} failed:`, resData.error);
+            }
+          }
+        }
+
         // Send email if confirmed
-        if (targetPaymentStatus === "Paid" && order.status === "Pending") {
+        if (targetPaymentStatus === "Paid" && (statusUpper === "PENDING" || statusUpper === "PENDING_PAYMENT")) {
           // Instead of sending synchronously, just push to email_queue
           await supabase.from('email_queue').insert({
             type: 'ORDER_CONFIRMATION',
