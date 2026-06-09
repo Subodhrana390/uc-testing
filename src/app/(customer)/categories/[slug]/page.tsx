@@ -20,7 +20,7 @@ export async function generateStaticParams() {
   const { data: categories } = await supabase
     .from("categories")
     .select("slug")
-    .eq("status", "Active");
+    .eq("status", true);
   return (categories || []).map((c) => ({ slug: c.slug }));
 }
 
@@ -111,7 +111,7 @@ export default async function CategoryPage({
   const brandFilter = searchParams.brand;
 
   const brandsPromise = supabase.from("brands").select("id, name").order("name");
-  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", "Active").order("name");
+  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", true).order("name");
 
   let query = supabase
     .from("products")

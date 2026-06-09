@@ -76,7 +76,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 function getDealStatus(deal: any): { label: string; color: string } {
-  if (!deal.is_active) return { label: "Suspended", color: "bg-zinc-100 text-zinc-500 border-zinc-200" };
+  if (!deal.status) return { label: "Suspended", color: "bg-zinc-100 text-zinc-500 border-zinc-200" };
   const now = new Date();
   if (deal.start_date && new Date(deal.start_date) > now) return { label: "Upcoming", color: "bg-blue-50 text-blue-600 border-blue-100" };
   if (deal.end_date && new Date(deal.end_date) < now) return { label: "Expired", color: "bg-red-50 text-red-600 border-red-100" };
@@ -101,7 +101,7 @@ export default function DealsAdminPage() {
     start_date: "",
     end_date: "",
     position: 0,
-    is_active: true,
+    status: true,
     product_id: ""
   });
   const [productSearch, setProductSearch] = useState("");
@@ -199,13 +199,13 @@ export default function DealsAdminPage() {
         start_date: deal.start_date ? new Date(deal.start_date).toISOString().split('T')[0] : "",
         end_date: deal.end_date ? new Date(deal.end_date).toISOString().split('T')[0] : "",
         position: deal.position,
-        is_active: deal.is_active,
+        status: deal.status,
         product_id: deal.product_id || ""
       });
       setProductSearch(deal.products?.name || "");
     } else {
       setEditingDeal(null);
-      setFormData({ title: "", description: "", badge_text: "", image_url: "", link_url: "", discount_percentage: "", start_date: "", end_date: "", position: deals.length, is_active: true, product_id: "" });
+      setFormData({ title: "", description: "", badge_text: "", image_url: "", link_url: "", discount_percentage: "", start_date: "", end_date: "", position: deals.length, status: true, product_id: "" });
       setProductSearch("");
     }
     setIsDrawerOpen(true);
@@ -238,7 +238,7 @@ export default function DealsAdminPage() {
         toast.success("Deal created");
       }
 
-      await syncProductSalePrice(payload.product_id, payload.discount_percentage, payload.is_active);
+      await syncProductSalePrice(payload.product_id, payload.discount_percentage, payload.status);
 
       setIsDrawerOpen(false);
       fetchDeals();
@@ -251,14 +251,14 @@ export default function DealsAdminPage() {
 
   const handleToggleActive = async (deal: any) => {
     try {
-      const newStatus = !deal.is_active;
-      const { error } = await supabase.from("deals").update({ is_active: newStatus }).eq("id", deal.id);
+      const newStatus = !deal.status;
+      const { error } = await supabase.from("deals").update({ status: newStatus }).eq("id", deal.id);
       if (error) throw error;
       
       await syncProductSalePrice(deal.product_id, deal.discount_percentage, newStatus);
       
-      setDeals(deals.map(d => d.id === deal.id ? { ...d, is_active: newStatus } : d));
-      toast.success(deal.is_active ? "Deal suspended" : "Deal reactivated");
+      setDeals(deals.map(d => d.id === deal.id ? { ...d, status: newStatus } : d));
+      toast.success(newStatus ? "Deal reactivated" : "Deal suspended");
     } catch (error: any) { toast.error(error.message); }
   };
 
@@ -542,7 +542,7 @@ export default function DealsAdminPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Switch
-                          checked={deal.is_active}
+                          checked={deal.status}
                           onCheckedChange={() => handleToggleActive(deal)}
                         />
                         <span className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border inline-flex items-center gap-1.5", status.color)}>
@@ -570,8 +570,8 @@ export default function DealsAdminPage() {
                             onClick={() => handleToggleActive(deal)}
                             className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                           >
-                            {deal.is_active ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
-                            {deal.is_active ? "Suspend" : "Activate"}
+                            {deal.status ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
+                            {deal.status ? "Suspend" : "Activate"}
                           </DropdownMenuItem>
                           <div className="h-px bg-zinc-100 my-1 mx-1" />
                           <DropdownMenuItem

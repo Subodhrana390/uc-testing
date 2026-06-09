@@ -38,8 +38,8 @@ export default async function HomePage() {
       .eq("status", "Active")
       .or("is_featured.eq.true,is_best_seller.eq.true,is_new_arrival.eq.true,is_trending.eq.true,sale_price.not.is.null"),
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", true).order("name", { ascending: true }),
-    supabase.from("banners").select("*").eq("is_active", true).order("position", { ascending: true }),
-    supabase.from("deals").select("*").eq("is_active", true).order("position", { ascending: true }),
+    supabase.from("banners").select("*").eq("status", true).order("position", { ascending: true }),
+    supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true }),
     supabase.from("top_selling_products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, moq, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").limit(12),
   ]);
 

@@ -15,7 +15,7 @@ export default async function DealsPage() {
   const { data } = await supabase
     .from("deals")
     .select("*")
-    .eq("is_active", true)
+    .eq("status", true)
     .order("position", { ascending: true });
 
   // Filter: show deals that are currently active (within date range or no dates set)

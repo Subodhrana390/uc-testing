@@ -25,7 +25,7 @@ DECLARE
     v_cod_rejections int := 0;
     v_order_status text := 'PENDING_PAYMENT';
     v_payment_status text := 'Unpaid';
-    v_expires_at timestamptz := now() + interval '15 minutes';
+    v_expires_at timestamptz := now() + interval '30 minutes';
     v_price numeric;
 BEGIN
     -- 1. Idempotency Check

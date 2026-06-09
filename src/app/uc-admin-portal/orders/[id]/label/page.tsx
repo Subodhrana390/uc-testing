@@ -1,10 +1,13 @@
-import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
+import { createAdminClient as createClient } from "@/utils/supabase/admin-server";
 import { Printer, MapPin, Package, Phone } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getDisplayOrderId } from "@/lib/order";
+
+import { PrintButton } from "./PrintButton";
 
 export default async function ShippingLabelPage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: order, error } = await supabase
     .from("orders")
     .select("*, order_items(*, products(*))")
@@ -14,13 +17,6 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
   if (error || !order) {
     return notFound();
   }
-
-  const getDisplayOrderId = (id: string, dateStr: string) => {
-    const date = new Date(dateStr);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `UC-${year}${month}-${id.substring(0, 6).toUpperCase()}`;
-  };
 
   return (
     <div className="min-h-screen bg-zinc-100 p-8 flex flex-col items-center">
@@ -34,13 +30,7 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
           <Link href="/uc-admin-portal/orders" className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
             Back to Orders
           </Link>
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Print Label
-          </button>
+          <PrintButton />
         </div>
       </div>
 
@@ -65,10 +55,10 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest mb-1">From:</p>
             <div className="text-xs leading-tight">
-              <p className="font-bold">Your Store Name</p>
-              <p>123 Commerce Way</p>
-              <p>Warehouse District, City, 10001</p>
-              <p>support@store.com</p>
+              <p className="font-bold">UC Enterprises</p>
+              <p>Zirakpur, Punjab</p>
+              <p>India, 140603</p>
+              <p>+91 98888 63377</p>
             </div>
           </div>
 
@@ -83,6 +73,19 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
               <p className="mt-2 font-mono font-bold flex items-center gap-1">
                 <Phone className="w-3 h-3" /> {order.phone || "No Phone"}
               </p>
+            </div>
+          </div>
+
+          {/* Items */}
+          <div className="mt-2 pt-4 border-t border-gray-200">
+            <p className="text-[9px] font-black uppercase tracking-widest mb-2 text-gray-500">Items included:</p>
+            <div className="text-[10px] space-y-1.5 leading-snug max-h-[100px] overflow-hidden">
+              {order.order_items?.map((item: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-start">
+                  <span className="font-semibold pr-2 line-clamp-2">{item.products?.name || "Unknown Item"}</span>
+                  <span className="font-mono font-bold whitespace-nowrap bg-gray-100 px-1 rounded">Qty: {item.quantity}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

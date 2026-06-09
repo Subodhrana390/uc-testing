@@ -64,7 +64,7 @@ export default function BannersPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
-  const [formData, setFormData] = useState({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: 0, is_active: true });
+  const [formData, setFormData] = useState({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: 0, status: true });
   const [bannerToDelete, setBannerToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,10 +95,10 @@ export default function BannersPage() {
   const handleOpenDrawer = (banner?: any) => {
     if (banner) {
       setEditingBanner(banner);
-      setFormData({ title: banner.title, subtitle: banner.subtitle || "", image_url: banner.image_url || "", link_url: banner.link_url || "", link_text: banner.link_text || "", position: banner.position, is_active: banner.is_active });
+      setFormData({ title: banner.title, subtitle: banner.subtitle || "", image_url: banner.image_url || "", link_url: banner.link_url || "", link_text: banner.link_text || "", position: banner.position, status: banner.status });
     } else {
       setEditingBanner(null);
-      setFormData({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: banners.length, is_active: true });
+      setFormData({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: banners.length, status: true });
     }
     setIsDrawerOpen(true);
   };
@@ -128,9 +128,9 @@ export default function BannersPage() {
 
   const handleToggleActive = async (id: string, current: boolean) => {
     try {
-      const { error } = await supabase.from("banners").update({ is_active: !current }).eq("id", id);
+      const { error } = await supabase.from("banners").update({ status: !current }).eq("id", id);
       if (error) throw error;
-      setBanners(banners.map(b => b.id === id ? { ...b, is_active: !current } : b));
+      setBanners(banners.map(b => b.id === id ? { ...b, status: !current } : b));
       toast.success(current ? "Banner hidden" : "Banner activated");
     } catch (error: any) { toast.error(error.message); }
   };
@@ -191,7 +191,7 @@ export default function BannersPage() {
             </CardHeader>
             <CardContent className="p-5 pt-0">
               <div className="text-2xl font-black tracking-tight text-white">
-                {banners.filter(b => b.is_active).length}
+                {banners.filter(b => b.status).length}
               </div>
               <p className="text-[11px] text-yellow-200/70 mt-1">Live in store hero slider</p>
             </CardContent>
@@ -204,7 +204,7 @@ export default function BannersPage() {
             </CardHeader>
             <CardContent className="p-5 pt-0">
               <div className="text-2xl font-black tracking-tight text-white">
-                {banners.filter(b => !b.is_active).length}
+                {banners.filter(b => !b.status).length}
               </div>
               <p className="text-[11px] text-yellow-200/70 mt-1">Draft or suspended</p>
             </CardContent>
@@ -276,20 +276,20 @@ export default function BannersPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Switch
-                        checked={banner.is_active}
-                        onCheckedChange={() => handleToggleActive(banner.id, banner.is_active)}
+                        checked={banner.status}
+                        onCheckedChange={() => handleToggleActive(banner.id, banner.status)}
                         className="data-[state=checked]:bg-yellow-500"
                       />
                       <span
                         className={cn(
                           "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all inline-flex items-center gap-1.5",
-                          banner.is_active
+                          banner.status
                             ? "bg-yellow-50 text-yellow-800 border-yellow-100"
                             : "bg-zinc-100 text-zinc-500 border-zinc-200"
                         )}
                       >
-                        {banner.is_active && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />}
-                        {banner.is_active ? "Active" : "Hidden"}
+                        {banner.status && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />}
+                        {banner.status ? "Active" : "Hidden"}
                       </span>
                     </div>
                   </td>
@@ -309,11 +309,11 @@ export default function BannersPage() {
                           <Edit className="w-4 h-4 text-zinc-400" /> Edit Content
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleToggleActive(banner.id, banner.is_active)}
+                          onClick={() => handleToggleActive(banner.id, banner.status)}
                           className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                         >
-                          {banner.is_active ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
-                          {banner.is_active ? "Hide Banner" : "Show Banner"}
+                          {banner.status ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
+                          {banner.status ? "Hide Banner" : "Show Banner"}
                         </DropdownMenuItem>
                         <div className="h-px bg-zinc-100 my-1 mx-1" />
                         <DropdownMenuItem

@@ -50,7 +50,7 @@ export default async function ProductsPage({
     orderOptions = { ascending: false };
   }
 
-  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", "Active").order("name");
+  const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", true).order("name");
 
   let productsData: any[] = [];
   let totalCount = 0;

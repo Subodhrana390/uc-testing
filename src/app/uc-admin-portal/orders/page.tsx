@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Search,
@@ -980,9 +981,11 @@ export default function OrdersPage() {
 
                               <DropdownMenuSeparator />
 
-                              <DropdownMenuItem onClick={() => window.open(`/uc-admin-portal/orders/${order.id}/label`, '_blank')}>
-                                <Printer className="w-4 h-4 mr-2 text-zinc-600" />
-                                Print Label
+                              <DropdownMenuItem className="p-0 cursor-pointer">
+                                <Link href={`/uc-admin-portal/orders/${order.id}/label`} target="_blank" className="flex items-center w-full px-2 py-1.5">
+                                  <Printer className="w-4 h-4 mr-2 text-zinc-600" />
+                                  Print Label
+                                </Link>
                               </DropdownMenuItem>
 
                               <DropdownMenuItem onClick={() => {
@@ -1058,9 +1061,11 @@ export default function OrdersPage() {
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="sm:max-w-[600px] gap-0 p-0 bg-white border border-zinc-200 shadow-xl rounded-2xl overflow-hidden">
           <DialogHeader className="p-6 pb-4 border-b border-zinc-150">
-            <DialogTitle className="text-zinc-900 font-bold">Order Details</DialogTitle>
+            <DialogTitle className="text-zinc-900 font-bold">
+              Order Details - {selectedOrder ? getDisplayOrderId(selectedOrder.id, selectedOrder.created_at) : ""}
+            </DialogTitle>
             <DialogDescription className="text-zinc-500">
-              Invoice #{selectedOrder ? getDisplayOrderId(selectedOrder.id, selectedOrder.created_at) : ""}
+              Manage order status and view customer details
             </DialogDescription>
           </DialogHeader>
 

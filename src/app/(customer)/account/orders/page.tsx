@@ -433,7 +433,7 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {order.payment_method?.toUpperCase() === "COD" && order.payment_status?.toLowerCase() !== "paid" && order.status?.toLowerCase() !== "cancelled" && (
+                {order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed"].includes(order.status?.toLowerCase()) && (
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();

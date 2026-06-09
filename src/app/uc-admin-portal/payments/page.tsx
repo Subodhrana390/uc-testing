@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-
+import { getDisplayOrderId } from "@/lib/order";
 // Recharts imports
 import {
   ResponsiveContainer,
@@ -116,13 +116,6 @@ export default function PaymentsPage() {
     fetchPayments();
   }, [fetchPayments]);
 
-  const getDisplayOrderId = (id: string, dateStr: string) => {
-    if (!id || !dateStr) return `ORD-${id?.slice(0,8).toUpperCase()}`;
-    const date = new Date(dateStr);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `UC-${year}${month}-${id.substring(0, 6).toUpperCase()}`;
-  };
 
   const updateStatus = async (paymentId: string, orderId: string, status: string) => {
     try {
@@ -147,7 +140,7 @@ export default function PaymentsPage() {
         body: JSON.stringify({ orderId, paymentStatus: "Refunded" })
       });
       if (!response.ok) throw new Error("Refund failed");
-      
+
       setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
       toast.success(`Refund issued successfully`);
     } catch (error: any) {
@@ -668,7 +661,7 @@ export default function PaymentsPage() {
             <TableHeader className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200">
               <TableRow className="border-b border-zinc-200 hover:bg-transparent">
                 <TableHead className="w-[180px] font-bold text-zinc-500 pl-6 h-12">Transaction Ref</TableHead>
-                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Custom Order ID</TableHead>
+                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Order ID</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Customer</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Amount</TableHead>
                 <TableHead className="font-bold text-zinc-500 h-12">Status</TableHead>
@@ -721,9 +714,6 @@ export default function PaymentsPage() {
                       <div className="flex flex-col gap-1">
                         <span className="font-bold text-sm text-[#18181b] font-mono bg-zinc-100 px-2 py-1 rounded-md w-max">
                           {payment.orders?.id ? getDisplayOrderId(payment.orders.id, payment.orders.created_at) : `ORD-${payment.order_id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]" title={payment.order_id}>
-                          {payment.order_id}
                         </span>
                       </div>
                     </TableCell>

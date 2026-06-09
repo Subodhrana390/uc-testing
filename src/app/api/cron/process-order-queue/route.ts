@@ -91,6 +91,8 @@ export async function GET(req: Request) {
 
         if (targetPaymentStatus === "Paid" && order.status === "Pending") {
           updatePayload.status = "Placed";
+        } else if (targetPaymentStatus === "Failed") {
+          updatePayload.status = "Failed";
         }
 
         const { data: updatedOrder, error: updateError } = await supabase

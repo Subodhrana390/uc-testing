@@ -171,7 +171,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     async function fetchData() {
       const [{ data: cats }, { data: { user: u } }] = await Promise.all([
-        supabase.from("categories").select("id, name, slug, parent_id").eq("status", "Active").order("name"),
+        supabase.from("categories").select("id, name, slug, parent_id").eq("status", true).order("name"),
         (supabase.auth as any).getUser()
       ]);
       setCategories(cats || []);
