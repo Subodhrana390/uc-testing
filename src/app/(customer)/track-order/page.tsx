@@ -248,11 +248,11 @@ function TrackOrderContent() {
 
   const getStatusStep = (status: string) => {
     const s = status.toLowerCase();
-    if (s === "pending" || s === "placed" || s === "confirmed") return 0;
+    if (s === "pending" || s === "pending_payment" || s === "confirmed" || s === "order_confirmed") return 0;
     if (s === "processing") return 1;
     if (s === "shipped") return 2;
     if (s === "delivered") return 3;
-    return -1; // Terminal / Special status (Cancelled, Returned, Return_Requested, Return_Approved, Failed)
+    return -1; // Terminal: Cancelled, Returned, Return_Requested, Return_Approved, Refund_Pending, Refunded, Failed
   };
 
   const formatMilestoneDate = (baseDateStr: string, hoursToAdd: number) => {
@@ -485,13 +485,15 @@ function TrackOrderContent() {
                               ? "bg-indigo-500/8 text-indigo-700 border-indigo-500/15"
                               : order.status.toLowerCase() === "processing"
                                 ? "bg-blue-500/8 text-blue-700 border-blue-500/15"
-                                : order.status.toLowerCase() === "pending" || order.status.toLowerCase() === "confirmed" || order.status.toLowerCase() === "placed"
+                                : ["pending", "pending_payment", "confirmed", "order_confirmed"].includes(order.status.toLowerCase())
                                   ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
-                                  : order.status.toLowerCase() === "cancelled" || order.status.toLowerCase() === "failed"
+                                  : ["cancelled", "failed"].includes(order.status.toLowerCase())
                                     ? "bg-rose-500/8 text-rose-700 border-rose-500/15"
-                                    : order.status.toLowerCase() === "returned" || order.status.toLowerCase() === "return_requested" || order.status.toLowerCase() === "return_approved"
-                                    ? "bg-amber-500/8 text-amber-700 border-amber-500/15"
-                                    : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
+                                    : ["returned", "return_requested", "return_approved"].includes(order.status.toLowerCase())
+                                      ? "bg-pink-500/8 text-pink-700 border-pink-500/15"
+                                      : ["refund_pending", "refunded"].includes(order.status.toLowerCase())
+                                        ? "bg-violet-500/8 text-violet-700 border-violet-500/15"
+                                        : "bg-zinc-500/8 text-zinc-700 border-zinc-500/15"
                         )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                           {order.status.replace(/_/g, " ")}

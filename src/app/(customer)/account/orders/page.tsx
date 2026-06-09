@@ -342,7 +342,6 @@ export default function OrderHistoryPage() {
     failed:           "Failed",
     // Legacy (kept for old orders still in DB)
     placed:           "Placed",
-    ready_to_ship:    "Ready to Ship",
   };
 
   const getStatusLabel = (status: string): string => {

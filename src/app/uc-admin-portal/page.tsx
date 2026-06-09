@@ -35,8 +35,10 @@ const getStatusBadge = (status: string) => {
   const s = (status || "").toUpperCase();
   switch (s) {
     case "PENDING":
+    case "PENDING_PAYMENT":
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">Pending</span>;
     case "CONFIRMED":
+    case "ORDER_CONFIRMED":
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">Confirmed</span>;
     case "PROCESSING":
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">Processing</span>;
@@ -46,12 +48,20 @@ const getStatusBadge = (status: string) => {
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">Delivered</span>;
     case "CANCELLED":
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">Cancelled</span>;
+    case "RETURN_REQUESTED":
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-pink-50 text-pink-700 border border-pink-200">Return Requested</span>;
+    case "RETURN_APPROVED":
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">Return Approved</span>;
     case "RETURNED":
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">Returned</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300">Returned</span>;
+    case "REFUND_PENDING":
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 animate-pulse">Refund Pending</span>;
+    case "REFUNDED":
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-200">Refunded</span>;
     case "FAILED":
       return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">Failed</span>;
     default:
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-zinc-50 text-zinc-700 border border-zinc-200">{status || "Placed"}</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-zinc-50 text-zinc-700 border border-zinc-200">{status}</span>;
   }
 };
 

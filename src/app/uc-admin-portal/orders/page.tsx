@@ -85,31 +85,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type StatusType = "All" | "Placed" | "Confirmed" | "Processing" | "Pending" | "Shipped" | "Delivered" | "Cancelled" | "Return";
+type StatusType = "All" | "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Return";
 
 const getPossibleNextStatuses = (currentStatus: string): string[] => {
   const status = (currentStatus || "").trim().toUpperCase();
   const transitions: Record<string, string[]> = {
-    PENDING: ["Placed", "Confirmed", "Cancelled"],
-    PLACED: ["Confirmed", "Cancelled"],
-    CONFIRMED: ["Processing", "Cancelled"],
-    PROCESSING: ["Shipped", "Cancelled"],
-    SHIPPED: ["Delivered", "Cancelled"],
-    DELIVERED: [],
+    PENDING:          ["Confirmed", "Cancelled"],
+    CONFIRMED:        ["Processing", "Cancelled"],
+    PROCESSING:       ["Shipped", "Cancelled"],
+    SHIPPED:          ["Delivered"],
+    DELIVERED:        [],
     RETURN_REQUESTED: ["Return_Approved"],
-    RETURN_APPROVED: ["Returned"],
-    FAILED: ["Pending", "Cancelled"],
-    CANCELLED: [],
-    RETURNED: [],
+    RETURN_APPROVED:  ["Returned"],
+    RETURNED:         ["Refund_Pending"],
+    REFUND_PENDING:   ["Refunded"],
+    FAILED:           ["Cancelled"],
+    CANCELLED:        [],
+    REFUNDED:         [],
   };
 
   const defaultStatuses = [
-    "Pending", "Placed", "Confirmed", "Processing", 
-    "Shipped", "Delivered", "Cancelled", 
-    "Return_Requested", "Return_Approved", "Returned"
+    "Confirmed", "Processing",
+    "Shipped", "Delivered", "Cancelled",
+    "Return_Requested", "Return_Approved", "Returned",
+    "Refund_Pending", "Refunded",
   ];
 
-  return transitions[status] || defaultStatuses;
+  return transitions[status] ?? defaultStatuses;
 };
 
 export default function OrdersPage() {
@@ -463,24 +465,24 @@ export default function OrdersPage() {
   }, [orders]);
 
   const statusData = useMemo(() => {
-    const placed = orders.filter(o => o.status.toLowerCase() === "placed").length;
-    const confirmed = orders.filter(o => o.status.toLowerCase() === "confirmed").length;
+    const confirmed  = orders.filter(o => ["confirmed", "order_confirmed"].includes(o.status.toLowerCase())).length;
     const processing = orders.filter(o => o.status.toLowerCase() === "processing").length;
-    const pending = orders.filter(o => o.status.toLowerCase() === "pending").length;
-    const shipped = orders.filter(o => o.status.toLowerCase() === "shipped").length;
-    const delivered = orders.filter(o => o.status.toLowerCase() === "delivered").length;
-    const cancelled = orders.filter(o => o.status.toLowerCase() === "cancelled").length;
-    const returned = orders.filter(o => o.status.toLowerCase() === "return" || o.status.toLowerCase() === "returned").length;
+    const pending    = orders.filter(o => ["pending", "pending_payment"].includes(o.status.toLowerCase())).length;
+    const shipped    = orders.filter(o => o.status.toLowerCase() === "shipped").length;
+    const delivered  = orders.filter(o => o.status.toLowerCase() === "delivered").length;
+    const cancelled  = orders.filter(o => o.status.toLowerCase() === "cancelled").length;
+    const returned   = orders.filter(o => ["returned", "return_requested", "return_approved"].includes(o.status.toLowerCase())).length;
+    const refunded   = orders.filter(o => ["refunded", "refund_pending"].includes(o.status.toLowerCase())).length;
 
     return [
-      { name: "Placed", value: placed, color: "#38bdf8" },
-      { name: "Confirmed", value: confirmed, color: "#6366f1" },
+      { name: "Pending",    value: pending,    color: "#f59e0b" },
+      { name: "Confirmed",  value: confirmed,  color: "#6366f1" },
       { name: "Processing", value: processing, color: "#a855f7" },
-      { name: "Pending", value: pending, color: "#f59e0b" },
-      { name: "Shipped", value: shipped, color: "#3b82f6" },
-      { name: "Delivered", value: delivered, color: "#10b981" },
-      { name: "Cancelled", value: cancelled, color: "#ef4444" },
-      { name: "Returned", value: returned, color: "#f43f5e" }
+      { name: "Shipped",    value: shipped,    color: "#3b82f6" },
+      { name: "Delivered",  value: delivered,  color: "#10b981" },
+      { name: "Cancelled",  value: cancelled,  color: "#ef4444" },
+      { name: "Returned",   value: returned,   color: "#f43f5e" },
+      { name: "Refunded",   value: refunded,   color: "#8b5cf6" },
     ].filter(item => item.value > 0);
   }, [orders]);
 
@@ -721,14 +723,14 @@ export default function OrdersPage() {
           {/* Custom Legends */}
           <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
             {[
-              { label: "Placed", color: "#38bdf8" },
-              { label: "Confirmed", color: "#6366f1" },
+              { label: "Pending",    color: "#f59e0b" },
+              { label: "Confirmed",  color: "#6366f1" },
               { label: "Processing", color: "#a855f7" },
-              { label: "Pending", color: "#f59e0b" },
-              { label: "Shipped", color: "#3b82f6" },
-              { label: "Delivered", color: "#10b981" },
-              { label: "Cancelled", color: "#ef4444" },
-              { label: "Returned", color: "#f43f5e" }
+              { label: "Shipped",    color: "#3b82f6" },
+              { label: "Delivered",  color: "#10b981" },
+              { label: "Cancelled",  color: "#ef4444" },
+              { label: "Returned",   color: "#f43f5e" },
+              { label: "Refunded",   color: "#8b5cf6" },
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -838,14 +840,17 @@ export default function OrdersPage() {
               </SelectTrigger>
               <SelectContent className="bg-white border-zinc-200">
                 <SelectItem value="All">All Orders</SelectItem>
-                <SelectItem value="Placed">Placed</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Confirmed">Confirmed</SelectItem>
                 <SelectItem value="Processing">Processing</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Shipped">Shipped</SelectItem>
                 <SelectItem value="Delivered">Delivered</SelectItem>
                 <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Return">Returned</SelectItem>
+                <SelectItem value="Return_Requested">Return Requested</SelectItem>
+                <SelectItem value="Return_Approved">Return Approved</SelectItem>
+                <SelectItem value="Returned">Returned</SelectItem>
+                <SelectItem value="Refund_Pending">Refund Pending</SelectItem>
+                <SelectItem value="Refunded">Refunded</SelectItem>
               </SelectContent>
             </Select>
           </div>
