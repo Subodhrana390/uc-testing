@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -191,6 +191,15 @@ export default function AdminLayout({
     );
   };
 
+  const renderSidebarIcon = (icon: React.ReactNode, isCollapsed: boolean) => {
+    if (React.isValidElement(icon)) {
+      return React.cloneElement(icon as React.ReactElement, {
+        className: isCollapsed ? "w-5 h-5" : "w-4 h-4"
+      });
+    }
+    return icon;
+  };
+
   const getMenuItemStyles = (label: string, isActive: boolean) => {
     let activeBg = "bg-indigo-50 border-indigo-200 text-indigo-700";
     let inactiveText = "text-slate-600 hover:text-slate-900 hover:bg-slate-50/80";
@@ -341,8 +350,8 @@ export default function AdminLayout({
                               styles.className
                             )}
                           >
-                            <span className={cn("transition-colors w-4 h-4 flex items-center justify-center shrink-0", styles.iconColor)}>
-                              {item.icon}
+                            <span className={cn("transition-colors w-5 h-5 flex items-center justify-center shrink-0", styles.iconColor)}>
+                              {renderSidebarIcon(item.icon, true)}
                             </span>
                             {item.label === "Orders" && (
                               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-50 border-2 border-white rounded-full animate-pulse shadow-sm" />
@@ -394,7 +403,7 @@ export default function AdminLayout({
                                 )}
                               >
                                 <span className={cn("transition-colors w-4 h-4 flex items-center justify-center shrink-0", styles.iconColor)}>
-                                  {item.icon}
+                                  {renderSidebarIcon(item.icon, false)}
                                 </span>
                                 <span className="flex-1 truncate">{item.label}</span>
                                 {item.label === "Orders" && newOrdersCount > 0 && (
@@ -460,7 +469,7 @@ export default function AdminLayout({
 
       {/* Main Container */}
       <div className={cn(
-        "flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-y-auto bg-[#f5f6fa]",
+        "flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-y-auto overflow-x-hidden bg-[#f5f6fa]",
         isSidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
       )}>
         {/* Mobile Header */}
@@ -480,12 +489,15 @@ export default function AdminLayout({
         </header>
 
         {/* Dynamic Page Content */}
-        <main className={cn("admin-dashboard-main flex-1 p-2 pt-6 pb-24 sm:p-4 sm:pt-8 sm:pb-28 lg:p-10 lg:pb-32 max-w-[1500px] mx-auto w-full", getThemeClass(pathname))}>
-          <Suspense fallback={
-            <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest animate-pulse">Loading Dashboard Data...</p>
-            </div>
+        <main
+          className={cn(
+            "admin-dashboard-main flex-1 w-full max-w-[1500px] mx-auto py-8",
+            getThemeClass(pathname)
+          )}
+        >
+          <Suspense fallback={<div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
           }>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -601,6 +613,6 @@ export default function AdminLayout({
           </>
         )}
       </AnimatePresence>
-    </div>
+    </div >
   );
 }

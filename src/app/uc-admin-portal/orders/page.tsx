@@ -90,18 +90,18 @@ type StatusType = "All" | "Pending" | "Confirmed" | "Processing" | "Shipped" | "
 const getPossibleNextStatuses = (currentStatus: string): string[] => {
   const status = (currentStatus || "").trim().toUpperCase();
   const transitions: Record<string, string[]> = {
-    PENDING:          ["Confirmed", "Cancelled"],
-    CONFIRMED:        ["Processing", "Cancelled"],
-    PROCESSING:       ["Shipped", "Cancelled"],
-    SHIPPED:          ["Delivered"],
-    DELIVERED:        [],
+    PENDING: ["Confirmed", "Cancelled"],
+    CONFIRMED: ["Processing", "Cancelled"],
+    PROCESSING: ["Shipped", "Cancelled"],
+    SHIPPED: ["Delivered"],
+    DELIVERED: [],
     RETURN_REQUESTED: ["Return_Approved"],
-    RETURN_APPROVED:  ["Returned"],
-    RETURNED:         ["Refund_Pending"],
-    REFUND_PENDING:   ["Refunded"],
-    FAILED:           ["Cancelled"],
-    CANCELLED:        [],
-    REFUNDED:         [],
+    RETURN_APPROVED: ["Returned"],
+    RETURNED: ["Refund_Pending"],
+    REFUND_PENDING: ["Refunded"],
+    FAILED: ["Cancelled"],
+    CANCELLED: [],
+    REFUNDED: [],
   };
 
   const defaultStatuses = [
@@ -343,7 +343,7 @@ export default function OrdersPage() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Refund failed");
-        
+
         toast.success("Refund processed successfully via Razorpay");
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Refunded" } : o));
         setTableOrders(prev => prev.map(o => o.id === order.id ? { ...o, payment_status: "Refunded" } : o));
@@ -465,24 +465,24 @@ export default function OrdersPage() {
   }, [orders]);
 
   const statusData = useMemo(() => {
-    const confirmed  = orders.filter(o => ["confirmed", "order_confirmed"].includes(o.status.toLowerCase())).length;
+    const confirmed = orders.filter(o => ["confirmed", "order_confirmed"].includes(o.status.toLowerCase())).length;
     const processing = orders.filter(o => o.status.toLowerCase() === "processing").length;
-    const pending    = orders.filter(o => ["pending", "pending_payment"].includes(o.status.toLowerCase())).length;
-    const shipped    = orders.filter(o => o.status.toLowerCase() === "shipped").length;
-    const delivered  = orders.filter(o => o.status.toLowerCase() === "delivered").length;
-    const cancelled  = orders.filter(o => o.status.toLowerCase() === "cancelled").length;
-    const returned   = orders.filter(o => ["returned", "return_requested", "return_approved"].includes(o.status.toLowerCase())).length;
-    const refunded   = orders.filter(o => ["refunded", "refund_pending"].includes(o.status.toLowerCase())).length;
+    const pending = orders.filter(o => ["pending", "pending_payment"].includes(o.status.toLowerCase())).length;
+    const shipped = orders.filter(o => o.status.toLowerCase() === "shipped").length;
+    const delivered = orders.filter(o => o.status.toLowerCase() === "delivered").length;
+    const cancelled = orders.filter(o => o.status.toLowerCase() === "cancelled").length;
+    const returned = orders.filter(o => ["returned", "return_requested", "return_approved"].includes(o.status.toLowerCase())).length;
+    const refunded = orders.filter(o => ["refunded", "refund_pending"].includes(o.status.toLowerCase())).length;
 
     return [
-      { name: "Pending",    value: pending,    color: "#f59e0b" },
-      { name: "Confirmed",  value: confirmed,  color: "#6366f1" },
+      { name: "Pending", value: pending, color: "#f59e0b" },
+      { name: "Confirmed", value: confirmed, color: "#6366f1" },
       { name: "Processing", value: processing, color: "#a855f7" },
-      { name: "Shipped",    value: shipped,    color: "#3b82f6" },
-      { name: "Delivered",  value: delivered,  color: "#10b981" },
-      { name: "Cancelled",  value: cancelled,  color: "#ef4444" },
-      { name: "Returned",   value: returned,   color: "#f43f5e" },
-      { name: "Refunded",   value: refunded,   color: "#8b5cf6" },
+      { name: "Shipped", value: shipped, color: "#3b82f6" },
+      { name: "Delivered", value: delivered, color: "#10b981" },
+      { name: "Cancelled", value: cancelled, color: "#ef4444" },
+      { name: "Returned", value: returned, color: "#f43f5e" },
+      { name: "Refunded", value: refunded, color: "#8b5cf6" },
     ].filter(item => item.value > 0);
   }, [orders]);
 
@@ -516,149 +516,52 @@ export default function OrdersPage() {
     return colors[(name.charCodeAt(0) || 0) % colors.length];
   };
 
+  const handleRefresh = async () => {
+    toast.promise(
+      Promise.all([
+        fetchOrders(),
+        fetchTableOrders(),
+        fetchCarriers()
+      ]),
+      {
+        loading: "Refreshing order dashboard...",
+        success: "Orders dashboard refreshed!",
+        error: "Failed to refresh orders."
+      }
+    );
+  };
+
   if (loading) return <LogoLoader text="Loading orders..." />;
 
   return (
     <div className="space-y-6 sm:space-y-8 w-full px-4 md:px-8 2xl:px-12 mx-auto w-full px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
-      {/* Blue Gradient Banner */}
-      <div className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-500 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
-        {/* Subtle decorative glows */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
-
-        {/* Header System */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Order Management</h1>
-            <p className="text-xs md:text-sm font-medium text-sky-100 mt-1">
-              Manage logistics, track delivery status, and view customer purchase reports.
+            <h1 className="text-3xl font-bold tracking-tight">Order Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track orders, monitor deliveries, and manage logistics.
             </p>
           </div>
-          <Button onClick={exportToPDF} className="gap-2 shadow-sm bg-white/20 hover:bg-white/30 text-white font-bold border border-white/10">
-            <Download className="w-4 h-4" />
-            Export Report
-          </Button>
-        </div>
 
-        {/* Stats Cards Grid */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10">
-          {/* Total Orders Card */}
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden relative group">
-            <div className="p-4 pb-0">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-                <CardTitle className="text-sm font-medium text-white/85">Total Orders</CardTitle>
-                <Package className="h-4 w-4 text-white/70" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl font-black text-white">{stats.total}</div>
-                <div className="text-[10px] text-sky-100/60 font-semibold mt-1">Last 7 days trend</div>
-              </CardContent>
-            </div>
-            <div className="w-full h-8 mt-2 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailyTrends} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="grad-total" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="total" stroke="#ffffff" strokeWidth={1.5} fill="url(#grad-total)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
 
-          {/* Pending Card */}
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden relative group">
-            <div className="p-4 pb-0">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-                <CardTitle className="text-sm font-medium text-white/85">Pending</CardTitle>
-                <Clock className="h-4 w-4 text-white/70" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl font-black text-white">{stats.pending}</div>
-                <div className="text-[10px] text-sky-100/60 font-semibold mt-1">Last 7 days trend</div>
-              </CardContent>
-            </div>
-            <div className="w-full h-8 mt-2 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailyTrends} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="grad-pending" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="pending" stroke="#ffffff" strokeWidth={1.5} fill="url(#grad-pending)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </Card>
-
-          {/* Shipped Card */}
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden relative group">
-            <div className="p-4 pb-0">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-                <CardTitle className="text-sm font-medium text-white/85">Shipped</CardTitle>
-                <Truck className="h-4 w-4 text-white/70" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl font-black text-white">{stats.shipped}</div>
-                <div className="text-[10px] text-sky-100/60 font-semibold mt-1">Last 7 days trend</div>
-              </CardContent>
-            </div>
-            <div className="w-full h-8 mt-2 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailyTrends} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="grad-shipped" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="shipped" stroke="#ffffff" strokeWidth={1.5} fill="url(#grad-shipped)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </Card>
-
-          {/* Delivered Card */}
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden relative group">
-            <div className="p-4 pb-0">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-                <CardTitle className="text-sm font-medium text-white/85">Delivered</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-white/70" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-2xl font-black text-white">{stats.delivered}</div>
-                <div className="text-[10px] text-sky-100/60 font-semibold mt-1">Last 7 days trend</div>
-              </CardContent>
-            </div>
-            <div className="w-full h-8 mt-2 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-              {isMounted && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailyTrends} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="grad-delivered" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="delivered" stroke="#ffffff" strokeWidth={1.5} fill="url(#grad-delivered)" dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </Card>
+            <Button onClick={exportToPDF} className="gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </Button>
+          </div>
         </div>
       </div>
-
 
       {/* Charts Grid */}
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
@@ -722,19 +625,10 @@ export default function OrdersPage() {
           </div>
           {/* Custom Legends */}
           <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-            {[
-              { label: "Pending",    color: "#f59e0b" },
-              { label: "Confirmed",  color: "#6366f1" },
-              { label: "Processing", color: "#a855f7" },
-              { label: "Shipped",    color: "#3b82f6" },
-              { label: "Delivered",  color: "#10b981" },
-              { label: "Cancelled",  color: "#ef4444" },
-              { label: "Returned",   color: "#f43f5e" },
-              { label: "Refunded",   color: "#8b5cf6" },
-            ].map((item, idx) => (
+            {statusData.map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span>{item.label}</span>
+                <span>{item.name} ({item.value})</span>
               </div>
             ))}
           </div>
@@ -875,9 +769,9 @@ export default function OrdersPage() {
                   <SelectItem value="Cancelled">Mark Cancelled</SelectItem>
                 </SelectContent>
               </Select>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="h-8 text-xs text-zinc-600 border-zinc-300 bg-white"
                 onClick={() => setSelectedOrders([])}
               >
@@ -894,8 +788,8 @@ export default function OrdersPage() {
               <TableHeader className="bg-zinc-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-zinc-200">
                 <TableRow>
                   <TableHead className="w-12 text-center">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer mt-1"
                       checked={tableOrders.length > 0 && selectedOrders.length === tableOrders.length}
                       onChange={(e) => {
@@ -951,8 +845,8 @@ export default function OrdersPage() {
                   tableOrders.map((order) => (
                     <TableRow key={order.id} className={cn("hover:bg-zinc-50 transition-all duration-200", selectedOrders.includes(order.id) ? "bg-blue-50/40" : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm")}>
                       <TableCell className="text-center">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                           checked={selectedOrders.includes(order.id)}
                           onChange={(e) => {
