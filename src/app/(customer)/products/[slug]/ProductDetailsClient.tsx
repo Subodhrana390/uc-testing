@@ -243,6 +243,8 @@ export default function ProductDetailsClient({
             </div>
           </div>
         );
+      case "reviews":
+        return <ProductReviews productId={product.id} />;
       default:
         return null;
     }
@@ -252,11 +254,11 @@ export default function ProductDetailsClient({
 
   return (
     <>
-      <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-8">
+      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-8">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-        <ChevronRight className="h-3 w-3" />
+        <span className="text-zinc-300">/</span>
         <Link href="/products" className="hover:text-primary transition-colors">Products</Link>
-        <ChevronRight className="h-3 w-3" />
+        <span className="text-zinc-300">/</span>
         {product.categories?.parent?.name && (
           <>
             <Link 
@@ -265,19 +267,23 @@ export default function ProductDetailsClient({
             >
               {product.categories.parent.name}
             </Link>
-            <ChevronRight className="h-3 w-3" />
+            <span className="text-zinc-300">/</span>
           </>
         )}
-        {product.categories?.slug ? (
-          <Link 
-            href={`/categories/${product.categories.slug}`} 
-            className="hover:text-primary transition-colors text-zinc-900 font-semibold"
-          >
-            {product.categories.name}
-          </Link>
-        ) : (
-          <span className="text-zinc-900 font-semibold">{product.categories?.name || "Uncategorized"}</span>
+        {product.categories?.slug && (
+          <>
+            <Link 
+              href={`/categories/${product.categories.slug}`} 
+              className="hover:text-primary transition-colors"
+            >
+              {product.categories.name}
+            </Link>
+            <span className="text-zinc-300">/</span>
+          </>
         )}
+        <span className="text-zinc-900 font-semibold truncate max-w-[200px] sm:max-w-xs" title={product.name}>
+          {product.name}
+        </span>
       </div>
 
       <div className="grid gap-12 lg:grid-cols-2">
@@ -459,7 +465,8 @@ export default function ProductDetailsClient({
             { id: "specification", label: "Technical Specs" },
             { id: "manufacturing", label: "Applications & Mfg" },
             { id: "warranty", label: "Warranty & Support" },
-            { id: "shipping", label: "Shipping & Delivery" }
+            { id: "shipping", label: "Shipping & Delivery" },
+            { id: "reviews", label: "Reviews" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -480,7 +487,8 @@ export default function ProductDetailsClient({
             { id: "specification", label: "Technical Specs" },
             { id: "manufacturing", label: "Applications & Mfg" },
             { id: "warranty", label: "Warranty & Support" },
-            { id: "shipping", label: "Shipping & Delivery" }
+            { id: "shipping", label: "Shipping & Delivery" },
+            { id: "reviews", label: "Reviews" }
           ].map((tab) => (
             <div key={tab.id} className="w-full border-b border-zinc-100 pb-8 last:border-0 last:pb-0">
               <h3 className="text-lg font-bold text-zinc-900 mb-4">
@@ -493,7 +501,7 @@ export default function ProductDetailsClient({
           ))}
         </div>
 
-        <div className="hidden sm:block mt-12 max-w-5xl">
+        <div className="hidden sm:block mt-12 w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -507,10 +515,6 @@ export default function ProductDetailsClient({
           </AnimatePresence>
         </div>
       </section>
-
-      <div className="mt-4">
-        <ProductReviews productId={product.id} />
-      </div>
 
       <FrequentlyBoughtTogether currentProduct={product} />
 

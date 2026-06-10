@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Check, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ShoppingCart, ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
 import { addCartItem } from "@/lib/cart";
@@ -243,35 +243,43 @@ export default function FrequentlyBoughtTogether({
         {/* Summary Bundle Card */}
         <div className="w-full lg:w-[400px] xl:w-[420px] shrink-0 bg-white p-4 flex flex-col gap-6 relative overflow-hidden self-start">
           <div className="relative z-10 space-y-4">
-            <div className="space-y-3">
-              {allProducts.map((p, idx) => {
-                const isSelected = selectedIds.has(p.id);
-                const isCurrentProduct = p.id === currentProduct.id;
-                
-                return (
-                  <div key={p.id} className="flex justify-between items-start gap-3 text-sm group">
-                    <label className="flex items-start gap-3 cursor-pointer flex-1">
-                      <div className={`mt-0.5 shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'bg-primary border-primary text-white' : 'bg-white border-zinc-300 text-transparent group-hover:border-zinc-400'}`}>
-                        <Check className="w-3.5 h-3.5" />
-                      </div>
-                      <span className={`font-medium line-clamp-2 text-left transition-colors ${isSelected ? 'text-zinc-800' : 'text-zinc-400 line-through'}`}>
-                        {isCurrentProduct && <strong className="text-zinc-950 font-bold mr-1">This item:</strong>}
-                        {p.name}
+            <div>
+              <div className="flex items-center gap-2.5 mb-5 pb-3.5 border-b border-zinc-100/80">
+                <div className="w-7 h-7 rounded-lg bg-zinc-100/80 border border-zinc-200/50 flex items-center justify-center shadow-sm">
+                  <Package className="w-4 h-4 text-zinc-700" />
+                </div>
+                <h3 className="text-xs font-black tracking-widest uppercase text-zinc-950">This Bundle Contains</h3>
+              </div>
+              <div className="space-y-3">
+                {allProducts.map((p, idx) => {
+                  const isSelected = selectedIds.has(p.id);
+                  const isCurrentProduct = p.id === currentProduct.id;
+                  
+                  return (
+                    <div key={p.id} className="flex justify-between items-start gap-3 text-sm group">
+                      <label className="flex items-start gap-3 cursor-pointer flex-1">
+                        <div className={`mt-0.5 shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'bg-primary border-primary text-white' : 'bg-white border-zinc-300 text-transparent group-hover:border-zinc-400'}`}>
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                        <span className={`font-medium line-clamp-2 text-left transition-colors ${isSelected ? 'text-zinc-800' : 'text-zinc-400 line-through'}`}>
+                          {isCurrentProduct && <strong className="text-zinc-950 font-bold mr-1">This item:</strong>}
+                          {p.name}
+                        </span>
+                      </label>
+                      <span className={`font-bold shrink-0 transition-colors ${isSelected ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                        {formatCurrency(p.sale_price || p.price)}
                       </span>
-                    </label>
-                    <span className={`font-bold shrink-0 transition-colors ${isSelected ? 'text-zinc-900' : 'text-zinc-400'}`}>
-                      {formatCurrency(p.sale_price || p.price)}
-                    </span>
-                    {/* Invisible input to make the label click area work cleanly for accessibility/forms if needed, but onClick on label handles it via bubbling if we use standard inputs. We will just use an onChange input */}
-                    <input 
-                      type="checkbox" 
-                      className="hidden" 
-                      checked={isSelected}
-                      onChange={() => toggleSelect(p.id)}
-                    />
-                  </div>
-                );
-              })}
+                      {/* Invisible input to make the label click area work cleanly for accessibility/forms if needed, but onClick on label handles it via bubbling if we use standard inputs. We will just use an onChange input */}
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.id)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="border-t border-zinc-100 pt-4">
