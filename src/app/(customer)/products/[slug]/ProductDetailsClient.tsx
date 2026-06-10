@@ -141,13 +141,13 @@ export default function ProductDetailsClient({
     switch (tabId) {
       case "description":
         return (
-          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
         );
       case "specification":
         return (
           <div className="space-y-12">
             {product.specification && (
-              <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
+              <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
               />
             )}
@@ -204,13 +204,13 @@ export default function ProductDetailsClient({
         );
       case "manufacturing":
         return (
-          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
           />
         );
       case "warranty":
         return (
-          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed"
+          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
           />
         );

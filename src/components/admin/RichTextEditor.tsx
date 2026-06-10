@@ -15,7 +15,7 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { Youtube } from "@tiptap/extension-youtube";
-import { Node } from "@tiptap/core";
+import { Node, Extension } from "@tiptap/core";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Bold,
@@ -49,6 +49,49 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    fontSize: {
+      setFontSize: (size: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
+    };
+  }
+}
+
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() {
+    return { types: ['textStyle'] };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
+            renderHTML: attributes => {
+              if (!attributes.fontSize) return {};
+              return { style: `font-size: ${attributes.fontSize}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: fontSize => ({ chain }) => {
+        return chain().setMark('textStyle', { fontSize }).run();
+      },
+      unsetFontSize: () => ({ chain }) => {
+        return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+      },
+    };
+  },
+});
 
 // Custom Video Extension Node
 const Video = Node.create({
@@ -120,6 +163,7 @@ export default function RichTextEditor({ value, onChange, label }: RichTextEdito
       }),
       Underline,
       TextStyle,
+      FontSize,
       Color,
       Highlight.configure({
         multicolor: true,
@@ -432,6 +476,34 @@ export default function RichTextEditor({ value, onChange, label }: RichTextEdito
             <ToolbarButton onClick={toggleH1} active={editor.isActive("heading", { level: 1 })} title="Heading 1" icon={Heading1} />
             <ToolbarButton onClick={toggleH2} active={editor.isActive("heading", { level: 2 })} title="Heading 2" icon={Heading2} />
             <ToolbarButton onClick={toggleH3} active={editor.isActive("heading", { level: 3 })} title="Heading 3" icon={Heading3} />
+          </div>
+
+          <div className="w-px h-6 bg-zinc-200 self-center mx-1" />
+
+          {/* Font Size Dropdown */}
+          <div className="flex items-center gap-1">
+            <select
+              className="text-[11px] font-bold border border-zinc-200 rounded-lg bg-white px-2 py-1.5 focus:outline-none hover:bg-zinc-50 focus:ring-2 focus:ring-zinc-950 text-zinc-700 w-[60px]"
+              onChange={(e) => {
+                const size = e.target.value;
+                if (size) {
+                  editor.chain().focus().setFontSize(size).run();
+                } else {
+                  editor.chain().focus().unsetFontSize().run();
+                }
+              }}
+              value={editor.getAttributes("textStyle").fontSize || ""}
+            >
+              <option value="">A</option>
+              <option value="12px">12px</option>
+              <option value="14px">14px</option>
+              <option value="16px">16px</option>
+              <option value="18px">18px</option>
+              <option value="20px">20px</option>
+              <option value="24px">24px</option>
+              <option value="30px">30px</option>
+              <option value="36px">36px</option>
+            </select>
           </div>
 
           <div className="w-px h-6 bg-zinc-200 self-center mx-1" />
