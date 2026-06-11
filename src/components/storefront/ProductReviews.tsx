@@ -146,19 +146,13 @@ export default function ProductReviews({ productId }: { productId: string }) {
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-zinc-950 flex items-center gap-2">
-          <span>Product Reviews</span>
-          <span className="text-sm font-bold text-zinc-400 bg-zinc-100 px-2.5 py-0.5 rounded-full">
-            {totalCount}
-          </span>
-        </h2>
         <p className="mt-2 text-sm text-zinc-600">Customer feedback, buying experience and product usage notes.</p>
       </div>
 
       <div className="grid gap-12 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           {/* Rating Summary Snapshot */}
-          <div className="flex flex-col sm:flex-row gap-8 mb-8 bg-zinc-50/50 border border-zinc-100 p-6 sm:p-8 rounded-[2rem]">
+          <div className="flex flex-col sm:flex-row gap-8 mb-8 p-6 sm:p-8">
             <div className="flex flex-col items-center justify-center sm:w-1/3 border-b sm:border-b-0 sm:border-r border-zinc-200 pb-6 sm:pb-0">
               <h3 className="text-6xl font-black text-zinc-950">{ratingStats.average.toFixed(1)}</h3>
               <div className="flex items-center gap-1 text-amber-500 mt-2">
@@ -168,22 +162,39 @@ export default function ProductReviews({ productId }: { productId: string }) {
               </div>
               <p className="text-sm font-bold text-zinc-500 mt-2">{ratingStats.total} Reviews</p>
             </div>
+
             <div className="flex-1 space-y-3">
-              {[5, 4, 3, 2, 1].map(star => {
+              {[5, 4, 3, 2, 1].map((star) => {
                 const count = ratingStats.counts[star as keyof typeof ratingStats.counts];
-                const percentage = ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
+                const percentage =
+                  ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
+
                 return (
                   <div key={star} className="flex items-center gap-4 text-sm">
-                    <div className="w-32 shrink-0 flex items-center justify-between gap-2">
-                      <span className="font-bold text-zinc-900">{star} Star</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{RATING_LABELS[star as keyof typeof RATING_LABELS]}</span>
+                    <div className="w-32 shrink-0 flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${i < star
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-zinc-300"
+                            }`}
+                        />
+                      ))}
                     </div>
+
                     <div className="flex-1 h-3 bg-zinc-200/60 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full transition-all duration-1000" style={{ width: `${percentage}%` }} />
+                      <div
+                        className="h-full bg-amber-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${percentage}%` }}
+                      />
                     </div>
-                    <div className="w-10 text-right font-bold text-zinc-400 shrink-0">{count}</div>
+
+                    <div className="w-10 text-right font-bold text-zinc-400 shrink-0">
+                      {count}
+                    </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -233,9 +244,6 @@ export default function ProductReviews({ productId }: { productId: string }) {
                                 <Star key={index} className={`h-3.5 w-3.5 ${index < item.rating ? "fill-current" : "text-zinc-200"}`} />
                               ))}
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-                              {RATING_LABELS[item.rating as keyof typeof RATING_LABELS]}
-                            </span>
                             <span className="w-1 h-1 rounded-full bg-zinc-300" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{formatDate(item.created_at)}</p>
                           </div>
@@ -320,9 +328,6 @@ export default function ProductReviews({ productId }: { productId: string }) {
                     </button>
                   ))}
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
-                  {RATING_LABELS[rating as keyof typeof RATING_LABELS]}
-                </span>
               </div>
             </div>
 

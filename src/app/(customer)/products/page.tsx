@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
-import ProductCard from "@/components/storefront/ProductCard";
 import InfiniteProductList from "@/components/storefront/InfiniteProductList";
 import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
@@ -162,7 +161,7 @@ export default async function ProductsPage({
         <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-200/80">
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-900">
-              Precision Supplies
+              Explore Our Product Catalog
             </h1>
             <p className="max-w-2xl text-xs md:text-sm leading-relaxed text-zinc-500 font-medium">
               Explore our laboratory chemicals, specialty glassware, and industrial equipment engineered for enterprise scale operations.

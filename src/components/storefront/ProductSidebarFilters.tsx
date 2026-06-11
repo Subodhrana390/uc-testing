@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function ProductSidebarFilters({ 
-  categories, 
+export default function ProductSidebarFilters({
+  categories,
   brands = [],
   currentCategorySlug,
   activeParentCategory,
   activeSiblingCategories
-}: { 
+}: {
   categories: any[];
   brands?: any[];
   currentCategorySlug?: string;
@@ -20,12 +20,13 @@ export default function ProductSidebarFilters({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const currentCategory = currentCategorySlug || searchParams.get("category") || "all";
   const inStockOnly = searchParams.get("in_stock") === "true";
   const promoOnly = searchParams.get("promo") === "true";
   const outOfStockOnly = searchParams.get("out_of_stock") === "true";
   const selectedBrand = searchParams.get("brand") || null;
+  const selectedRating = searchParams.get("rating") ? parseInt(searchParams.get("rating") as string) : null;
   const urlMinPrice = searchParams.get("min_price");
   const urlMaxPrice = searchParams.get("max_price");
 
@@ -92,6 +93,21 @@ export default function ProductSidebarFilters({
     });
   };
 
+  const renderStars = (count: number) => (
+    <div className="flex gap-0.5">
+      {[...Array(5)].map((_, i) => (
+        <Star
+          key={i}
+          className={cn(
+            "w-3.5 h-3.5",
+            i < count ? "fill-amber-500 text-amber-500" : "text-zinc-200"
+          )}
+        />
+      ))}
+    </div>
+  );
+
+
   return (
     <>
       <div className="flex justify-between items-center px-1 pb-1">
@@ -120,8 +136,8 @@ export default function ProductSidebarFilters({
                 >
                   &larr; All Categories
                 </button>
-                
-                <button 
+
+                <button
                   onClick={() => handleCategoryClick(activeParentCategory.slug)}
                   className={`flex items-center justify-between w-full text-xs font-bold rounded-md px-2.5 py-2 transition-colors text-left ${currentCategory === activeParentCategory.slug ? "text-zinc-900 bg-zinc-50" : "text-zinc-800 hover:text-zinc-900 hover:bg-zinc-50"}`}
                 >
@@ -258,6 +274,31 @@ export default function ProductSidebarFilters({
           </div>
         </div>
       )}
+
+      {/* ── Rating ─────────────────────── */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Avg Rating</h4>
+        <div className="space-y-1">
+          {[5, 4, 3, 2, 1].map((stars) => {
+            const isSelected = selectedRating === stars;
+            return (
+              <button
+                key={stars}
+                onClick={() => updateFilters("rating", isSelected ? null : stars.toString())}
+                className={cn(
+                  "flex items-center gap-2.5 w-full text-xs rounded-lg px-2.5 py-1.5 transition-all text-left",
+                  isSelected ? "bg-zinc-100 font-bold text-zinc-900" : "hover:bg-zinc-50 text-zinc-600"
+                )}
+              >
+                {renderStars(stars)}
+                <span className="text-[10px] font-semibold text-zinc-400">
+                  {stars === 5 ? "Only" : "& Up"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Availability</h3>

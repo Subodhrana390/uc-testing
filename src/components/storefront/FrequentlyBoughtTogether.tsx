@@ -174,7 +174,7 @@ export default function FrequentlyBoughtTogether({
   };
 
   return (
-    <div className="mt-8 border-t border-zinc-100 pt-8">
+    <div className="mt-8 border-zinc-100 pt-8">
       <div className="mb-6 space-y-2">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Bundle & Save</p>
         <h2 className="text-3xl font-black tracking-tight text-zinc-950">Frequently Bought Together</h2>

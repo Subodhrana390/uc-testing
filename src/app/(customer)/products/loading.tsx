@@ -1,5 +1,3 @@
-import { Loader2 } from "lucide-react";
-
 export default function ProductsLoading() {
   return (
     <div className="bg-zinc-50/60 min-h-screen text-zinc-900 antialiased py-12 px-4 md:px-8 2xl:px-12 mx-auto sm:px-6 lg:px-8">

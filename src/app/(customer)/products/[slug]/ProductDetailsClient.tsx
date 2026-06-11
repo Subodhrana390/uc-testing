@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, FileText, Download, Share2, Star } from "lucide-react";
+import { FileText, Download, Share2, Star } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
 import DeliveryEstimator from "@/components/storefront/DeliveryEstimator";
@@ -18,12 +17,12 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import ShareModal from "@/components/storefront/ShareModal";
 
-export default function ProductDetailsClient({ 
-  product, 
-  attributes 
-}: { 
-  product: any, 
-  attributes: any[] 
+export default function ProductDetailsClient({
+  product,
+  attributes
+}: {
+  product: any,
+  attributes: any[]
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
@@ -141,11 +140,14 @@ export default function ProductDetailsClient({
     switch (tabId) {
       case "description":
         return (
-          <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description || product.description || "<p>Detailed description coming soon.</p>") }} />
-        );
+          <div>
+            {product.long_description &&
+              < div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.long_description) }} />
+            }
+          </div>);
       case "specification":
         return (
-          <div className="space-y-12">
+          <div className="space-y-4">
             {product.specification && (
               <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.specification) }}
@@ -254,15 +256,15 @@ export default function ProductDetailsClient({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-8">
+      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-4">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
         <span className="text-zinc-300">/</span>
         <Link href="/products" className="hover:text-primary transition-colors">Products</Link>
         <span className="text-zinc-300">/</span>
         {product.categories?.parent?.name && (
           <>
-            <Link 
-              href={`/categories/${product.categories.parent.slug}`} 
+            <Link
+              href={`/categories/${product.categories.parent.slug}`}
               className="hover:text-primary transition-colors"
             >
               {product.categories.parent.name}
@@ -272,8 +274,8 @@ export default function ProductDetailsClient({
         )}
         {product.categories?.slug && (
           <>
-            <Link 
-              href={`/categories/${product.categories.slug}`} 
+            <Link
+              href={`/categories/${product.categories.slug}`}
               className="hover:text-primary transition-colors"
             >
               {product.categories.name}
@@ -313,7 +315,7 @@ export default function ProductDetailsClient({
           )}
           <div className="flex-1 max-w-[450px] mx-auto lg:mx-0 w-full relative">
             <div
-              className="relative aspect-square overflow-hidden rounded-[2.5rem] group cursor-zoom-in"
+              className="relative aspect-square overflow-hidden rounded-md group cursor-zoom-in"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseMove={(e) => {
@@ -361,7 +363,7 @@ export default function ProductDetailsClient({
               </div>
               <span className="hidden sm:inline text-zinc-200">|</span>
               <span className="text-sm font-medium text-zinc-500">Brand: <span className="text-zinc-900 font-semibold">{product.brands?.name || "UC Generic"}</span></span>
-              
+
               <span className="hidden sm:inline text-zinc-200">|</span>
               <button
                 onClick={(e) => {
@@ -375,7 +377,7 @@ export default function ProductDetailsClient({
               </button>
             </div>
             <p className="text-base leading-relaxed text-zinc-600 max-w-2xl">
-              {product.short_description || "High-performance industrial solution designed for precision and durability in professional environments."}
+              {product.short_description}
             </p>
           </div>
 
@@ -439,18 +441,6 @@ export default function ProductDetailsClient({
                   label={null as any}
                   className="h-11 w-11 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
                 />
-                {product.datasheet_url && (
-                  <a
-                    href={product.datasheet_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-10 px-4 rounded-xl border border-zinc-200 flex items-center gap-2 hover:bg-zinc-50 hover:border-zinc-350 transition-colors text-xs font-bold text-zinc-700"
-                    title="Download Product Datasheet (PDF)"
-                  >
-                    <FileText className="w-4 h-4 text-zinc-500" />
-                    <span className="hidden xs:inline">Datasheet</span>
-                  </a>
-                )}
               </div>
             </div>
           </div>
@@ -458,22 +448,23 @@ export default function ProductDetailsClient({
         </div>
       </div>
 
-      <section className="mt-8">
-        <div className="hidden sm:flex w-full justify-start border-b border-zinc-100 gap-12 pb-0">
+      <section className="mt-8 md:mt-12">
+        {/* Desktop Tabs */}
+        <div className="hidden sm:flex w-full justify-start gap-8 lg:gap-12  border-zinc-200">
           {[
             { id: "description", label: "Overview" },
             { id: "specification", label: "Technical Specs" },
             { id: "manufacturing", label: "Applications & Mfg" },
             { id: "warranty", label: "Warranty & Support" },
             { id: "shipping", label: "Shipping & Delivery" },
-            { id: "reviews", label: "Reviews" }
+            { id: "reviews", label: "Reviews" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-4 text-base font-semibold transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id
-                ? "border-primary text-zinc-900"
-                : "border-transparent text-zinc-500 hover:text-zinc-700"
+              className={`py-4 text-sm lg:text-base font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
+                  ? "border-primary text-zinc-900"
+                  : "border-transparent text-zinc-500 hover:text-zinc-700"
                 }`}
             >
               {tab.label}
@@ -481,27 +472,33 @@ export default function ProductDetailsClient({
           ))}
         </div>
 
-        <div className="flex sm:hidden flex-col w-full gap-8">
+        {/* Mobile Sections */}
+        <div className="sm:hidden flex flex-col gap-8">
           {[
             { id: "description", label: "Overview" },
             { id: "specification", label: "Technical Specs" },
             { id: "manufacturing", label: "Applications & Mfg" },
             { id: "warranty", label: "Warranty & Support" },
             { id: "shipping", label: "Shipping & Delivery" },
-            { id: "reviews", label: "Reviews" }
+            { id: "reviews", label: "Reviews" },
           ].map((tab) => (
-            <div key={tab.id} className="w-full border-b border-zinc-100 pb-8 last:border-0 last:pb-0">
-              <h3 className="text-lg font-bold text-zinc-900 mb-4">
+            <div
+              key={tab.id}
+              className="pb-2 last:border-0 last:pb-0"
+            >
+              <h3 className="mb-1 text-lg font-bold text-zinc-900">
                 {tab.label}
               </h3>
-              <div className="pt-2">
+
+              <div className="space-y-2">
                 {renderTabContent(tab.id)}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="hidden sm:block mt-12 w-full">
+        {/* Desktop Content */}
+        <div className="hidden sm:block pt-2 lg:pt-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -515,7 +512,6 @@ export default function ProductDetailsClient({
           </AnimatePresence>
         </div>
       </section>
-
       <FrequentlyBoughtTogether currentProduct={product} />
 
       <ShareModal

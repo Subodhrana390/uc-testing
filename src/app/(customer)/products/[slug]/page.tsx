@@ -41,11 +41,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const supabase = await createClient();
 
-  const { data: productData } = await supabase
-    .from("products")
-    .select("*, categories(id, name, slug, parent:categories!parent_id(name, slug)), brands(name)")
-    .eq("slug", params.slug)
-    .single();
+  const { data: productData, error } = await supabase.rpc(
+    "get_product_by_slug",
+    { p_slug: params.slug }
+  );
 
   if (!productData) {
     notFound();
