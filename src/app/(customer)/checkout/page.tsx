@@ -58,6 +58,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [verificationData, setVerificationData] = useState<{ orderId: string; total: number } | null>(null);
 
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] =
@@ -442,8 +444,11 @@ export default function CheckoutPage() {
           image: "/logo.png",
           order_id: razorpayOrder.id,
           handler: async function (response: any) {
-            // Payment success callback
+            // Payment success callback - show verifying screen
             try {
+              setVerifyingPayment(true);
+              setVerificationData({ orderId: supabaseOrderId, total: grandTotal });
+              
               const confirmRes = await fetch("/api/orders/status", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -458,16 +463,23 @@ export default function CheckoutPage() {
               });
 
               if (confirmRes.ok) {
-                toast.success("Payment successful! Order placed.");
+                toast.success("Payment verified successfully! Order placed.");
                 clearCart();
-                router.push(`/checkout/success?orderId=${supabaseOrderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
+                // Add small delay to let user see the success state
+                setTimeout(() => {
+                  router.push(`/checkout/success?orderId=${supabaseOrderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
+                }, 800);
               } else {
                 // Payment went through but DB sync failed — don't delete the order, just alert support
+                setVerifyingPayment(false);
+                setVerificationData(null);
                 toast.error("Payment received but order registration failed. Please contact support.");
                 router.push(`/checkout/failed?error=${encodeURIComponent("Payment registered, but order database state sync failed. Please contact support.")}`);
               }
             } catch (err: any) {
               // Verification threw — clean up the unpaid order
+              setVerifyingPayment(false);
+              setVerificationData(null);
               try { await deleteFailedOrder(supabaseOrderId); } catch (_) { }
               toast.error("An unexpected error occurred during order verification.");
               router.push(`/checkout/failed?error=${encodeURIComponent(err.message || "An unexpected error occurred during payment verification.")}`);
@@ -494,6 +506,11 @@ export default function CheckoutPage() {
               setSubmitting(false);
               setIsPlacingOrder(false);
               toast.error("Payment cancelled. You can try again.");
+              router.push(
+                `/checkout/failed?error=${encodeURIComponent(
+                  "Payment window closed without completing payment. Please try again."
+                )}`
+              );
             }
           }
         };
@@ -553,6 +570,55 @@ export default function CheckoutPage() {
     return (
       <div className="py-20 text-center font-bold text-zinc-400 animate-pulse">
         PREPARING CHECKOUT...
+      </div>
+    );
+  }
+
+  // Verifying Payment Screen
+  if (verifyingPayment && verificationData) {
+    return (
+      <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white border border-zinc-200 rounded-3xl p-8 text-center space-y-6 shadow-lg">
+            {/* Animated Verification Icon */}
+            <div className="flex justify-center">
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 rounded-full border-4 border-zinc-200"></div>
+                <div 
+                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary border-r-primary animate-spin"
+                  style={{ animationDuration: '2s' }}
+                ></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-primary animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Text Content */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-zinc-950">Verifying Payment</h2>
+              <p className="text-sm text-zinc-600">Please wait while we confirm your payment...</p>
+            </div>
+
+            {/* Order Details */}
+            <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 text-left space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Order ID</span>
+                <span className="text-sm font-bold text-zinc-950 font-mono">{getDisplayOrderId(verificationData.orderId, new Date().toISOString())}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Amount</span>
+                <span className="text-sm font-bold text-primary">{formatCurrency(verificationData.total)}</span>
+              </div>
+            </div>
+
+            {/* Status Message */}
+            <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700 font-medium">Do not close this page. Your payment is being verified and your order will be confirmed shortly.</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
