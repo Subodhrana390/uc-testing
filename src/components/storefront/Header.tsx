@@ -163,6 +163,23 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
 
               {/* Actions */}
               <div className="flex items-center justify-end gap-3 sm:gap-4 shrink-0">
+                {/* Mobile Profile Icon */}
+                {!user ? (
+                  <button
+                    onClick={goToLogin}
+                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                  >
+                    <User className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <Link
+                    href="/account/profile"
+                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                  >
+                    <User className="h-4 w-4" />
+                  </Link>
+                )}
+
                 {!user ? (
                   <button
                     onClick={goToLogin}
@@ -181,55 +198,72 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   </Link>
                 )}
 
-                <div className="hidden sm:block">
-                  <WishlistButton />
-                </div>
+                <WishlistButton />
 
                 <CartButton />
               </div>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8 h-12 text-xs font-bold uppercase tracking-wider text-zinc-600 relative z-10 select-none">
+            <nav className="hidden lg:flex items-center gap-8 py-3 border-t border-zinc-50 text-sm font-semibold text-zinc-700">
               {/* Categories Trigger */}
-              <div className="relative h-full flex items-center group/cat border-r border-zinc-100 pr-6 mr-2">
-                <button className="flex items-center gap-1.5 hover:text-primary transition-colors h-full">
+              <div className="group relative">
+                <button className="inline-flex items-center gap-2 text-primary hover:text-red-700 transition-colors">
                   Categories
-                  <ChevronDown className="h-3 w-3 text-zinc-400 group-hover/cat:rotate-180 transition duration-300" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </button>
                 {/* Categories Dropdown */}
-                <div className="absolute top-full left-0 w-[580px] bg-white border border-zinc-150 rounded-b-3xl shadow-xl p-6 opacity-0 translate-y-2 pointer-events-none group-hover/cat:opacity-100 group-hover/cat:translate-y-0 group-hover/cat:pointer-events-auto transition-all duration-200 flex gap-6 z-50">
-                  <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-4">
-                    {categories
-                      .filter((c) => !c.parent_id)
-                      .slice(0, 6)
-                      .map((mainCat) => (
-                        <div key={mainCat.id} className="space-y-1 text-left">
-                          <Link
-                            href={`/categories/${mainCat.slug}`}
-                            className="text-[11px] font-black uppercase text-zinc-900 hover:text-primary tracking-wider transition-colors block"
-                          >
-                            {mainCat.name}
-                          </Link>
-                          <div className="flex flex-col gap-1.5 pl-2">
-                            {categories
-                              .filter((sub) => sub.parent_id === mainCat.id)
-                              .slice(0, 3)
-                              .map((subCat) => (
+                <div className="invisible absolute left-0 top-full z-50 mt-2 w-[550px] border border-zinc-100 bg-white opacity-0 shadow-2xl rounded-none overflow-hidden transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-y-1 flex">
+                  {/* Main Categories (Left Sidebar) */}
+                  <div className="w-1/3 bg-zinc-50 border-r border-zinc-100 p-2 max-h-[450px] overflow-y-auto custom-scrollbar">
+                    <div className="space-y-1 mt-1">
+                      {categories
+                        .filter((c) => !c.parent_id)
+                        .map((mainCat) => (
+                          <div key={mainCat.id} className="group/main">
+                            <Link
+                              href={`/categories/${mainCat.slug}`}
+                              className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
+                            >
+                              {mainCat.name}
+                              <ChevronDown className="h-4 w-4 -rotate-90 opacity-40 group-hover/main:opacity-100" />
+                            </Link>
+
+                            {/* Subcategories (Right Panel) */}
+                            <div className="invisible absolute left-[33.33%] top-0 w-[66.66%] h-full p-5 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar text-left">
+                              <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
+                                  {mainCat.name}
+                                </h3>
                                 <Link
-                                  key={subCat.id}
-                                  href={`/categories/${subCat.slug}`}
-                                  className="text-[10px] font-bold text-zinc-500 hover:text-primary transition-colors block"
+                                  href={`/categories/${mainCat.slug}`}
+                                  className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
                                 >
-                                  {subCat.name}
+                                  View All
                                 </Link>
-                              ))}
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                                {categories
+                                  .filter((sub) => sub.parent_id === mainCat.id)
+                                  .map((subCat) => (
+                                    <Link
+                                      key={subCat.id}
+                                      href={`/categories/${subCat.slug}`}
+                                      className="text-sm font-bold text-zinc-600 hover:text-primary transition-colors py-1"
+                                    >
+                                      {subCat.name}
+                                    </Link>
+                                  ))}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                    </div>
                   </div>
-                  <div className="w-[180px] border-l border-zinc-100 pl-6 flex flex-col justify-center items-center text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center p-2 mb-3">
+
+                  {/* Default Panel (Right) */}
+                  <div className="flex-1 p-6 flex flex-col justify-center text-center bg-white">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center p-2 mb-3 mx-auto">
                       <Image
                         src={logoSrc}
                         alt="Logo"
