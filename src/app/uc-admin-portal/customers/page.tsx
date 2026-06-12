@@ -21,6 +21,7 @@ import {
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { Pagination } from "@/components/ui/pagination";
+import { getDisplayOrderId } from "@/lib/order";
 
 import {
   DropdownMenu,
@@ -134,7 +135,7 @@ export default function CustomersPage() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, created_at, total_amount, status')
+        .select('id, created_at, total_amount, status, order_items(id, quantity, unit_price, products(name))')
         .eq('user_id', customer.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -645,54 +646,82 @@ export default function CustomersPage() {
 
       {/* Dialog for Order History */}
       <Dialog open={!!orderHistoryCustomer} onOpenChange={(open) => !open && setOrderHistoryCustomer(null)}>
-        <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl border-zinc-200">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+        <DialogContent className="sm:max-w-[550px] bg-white rounded-3xl border border-zinc-150 p-6 shadow-xl text-[#18181b]">
+          <DialogHeader className="pb-3 border-b border-zinc-100">
+            <DialogTitle className="text-xl font-black text-zinc-900 flex items-center gap-2">
               <Package className="w-5 h-5 text-teal-600" />
               Order History
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">
-              Recent orders for <span className="font-semibold text-zinc-700">{orderHistoryCustomer?.full_name || orderHistoryCustomer?.email}</span>
+            <DialogDescription className="text-xs text-zinc-500 mt-1">
+              Showing recent orders for <span className="font-bold text-zinc-800">{orderHistoryCustomer?.full_name || orderHistoryCustomer?.email}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {loadingOrders ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+                <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Loading history...</p>
               </div>
             ) : customerOrders.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500 text-sm border border-dashed border-zinc-200 rounded-xl">
-                No orders found for this customer.
+              <div className="text-center py-12 text-zinc-400 text-xs border border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center space-y-3 bg-zinc-50/30">
+                <Package className="w-8 h-8 text-zinc-300" />
+                <div>
+                  <p className="font-bold text-zinc-700">No Orders Found</p>
+                  <p className="mt-0.5 text-zinc-450">This customer hasn't placed any orders yet.</p>
+                </div>
               </div>
             ) : (
-              <ScrollArea className="h-[300px] pr-4">
-                <div className="space-y-3">
+              <ScrollArea className="h-[420px] pr-2">
+                <div className="space-y-4">
                   {customerOrders.map(order => (
-                    <div key={order.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-100 bg-zinc-50/50 hover:bg-zinc-50 transition-colors">
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold text-zinc-800">
-                          Order #{order.id.slice(0, 8).toUpperCase()}
+                    <div key={order.id} className="p-4 rounded-2xl border border-zinc-150 bg-zinc-50/30 hover:bg-zinc-50/50 transition-all duration-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-bold text-zinc-800">
+                            Order ID: {getDisplayOrderId(order.id, order.created_at)}
+                          </div>
+                          <div className="text-[11px] font-medium text-zinc-400">
+                            {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
                         </div>
-                        <div className="text-xs text-zinc-500">
-                          {new Date(order.created_at).toLocaleDateString()}
+                        <div className="text-right space-y-1">
+                          <div className="text-sm font-black text-zinc-900">
+                            ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                          </div>
+                          <div className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-100 px-2.5 py-0.5 rounded-lg inline-block capitalize">
+                            {order.status || 'Placed'}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-sm font-bold text-zinc-900">
-                          ₹{Number(order.total_amount).toLocaleString('en-IN')}
+
+                      {/* Items List */}
+                      {order.order_items && order.order_items.length > 0 && (
+                        <div className="border-t border-zinc-100 pt-2.5 mt-2 space-y-2">
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Items ({order.order_items.length})</p>
+                          <div className="space-y-1.5">
+                            {order.order_items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex justify-between items-center text-xs text-zinc-600 bg-white border border-zinc-100 p-2.5 rounded-xl shadow-xs">
+                                <span className="font-bold text-zinc-700 truncate max-w-[240px]">
+                                  {item.products?.name || "Deleted Product"}
+                                </span>
+                                <span className="font-mono text-zinc-500 text-[11px] whitespace-nowrap">
+                                  {item.quantity} × ₹{Number(item.unit_price).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md inline-block">
-                          {order.status || 'Placed'}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </ScrollArea>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOrderHistoryCustomer(null)}>Close</Button>
+          <DialogFooter className="pt-3 border-t border-zinc-100">
+            <Button variant="outline" onClick={() => setOrderHistoryCustomer(null)} className="rounded-xl border-zinc-200 font-semibold">
+              Close History
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

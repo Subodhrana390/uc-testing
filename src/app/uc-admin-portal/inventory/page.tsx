@@ -33,6 +33,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Recharts components
 import {
@@ -53,6 +61,7 @@ import {
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,6 +73,13 @@ export default function InventoryPage() {
   const [editingValue, setEditingValue] = useState<number>(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  // Advanced Adjustment States
+  const [adjustingProduct, setAdjustingProduct] = useState<any>(null);
+  const [adjustmentQty, setAdjustmentQty] = useState<number>(1);
+  const [adjustmentType, setAdjustmentType] = useState<"PURCHASE" | "ADJUSTMENT" | "RETURN" | "GENERAL_ADD" | "GENERAL_SUB">("PURCHASE");
+  const [adjustmentNotes, setAdjustmentNotes] = useState<string>("");
+  const [isAdjustingSubmit, setIsAdjustingSubmit] = useState<boolean>(false);
+
   // Stock Movement History States
   const [transactions, setTransactions] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -74,6 +90,66 @@ export default function InventoryPage() {
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
 
   const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleSubmitAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustingProduct) return;
+    if (adjustmentQty <= 0) return toast.error("Quantity must be greater than zero");
+
+    setIsAdjustingSubmit(true);
+    try {
+      let delta = adjustmentQty;
+      let reason = "";
+      
+      switch (adjustmentType) {
+        case "PURCHASE":
+          delta = adjustmentQty;
+          reason = "Restock / Purchase Addition";
+          break;
+        case "ADJUSTMENT":
+          delta = -adjustmentQty; // Damage decreases stock
+          reason = "Wastage / Damage write-off";
+          break;
+        case "RETURN":
+          delta = adjustmentQty;
+          reason = "Customer Return";
+          break;
+        case "GENERAL_ADD":
+          delta = adjustmentQty;
+          reason = "General Stock Increase";
+          break;
+        case "GENERAL_SUB":
+          delta = -adjustmentQty;
+          reason = "General Stock Decrease";
+          break;
+      }
+
+      const reasonWithNotes = adjustmentNotes ? `${reason}: ${adjustmentNotes}` : reason;
+
+      const res = await adjustStock({
+        productId: adjustingProduct.id,
+        variantId: adjustingProduct.variant_id,
+        quantity: delta,
+        reason: reasonWithNotes,
+        notes: `Advanced adjustment logged by Admin`,
+        type: (adjustmentType === "GENERAL_ADD" || adjustmentType === "GENERAL_SUB") ? "ADJUSTMENT" : adjustmentType
+      });
+
+      if (!res.success) throw new Error(res.error);
+
+      toast.success("Stock adjusted successfully");
+      setAdjustingProduct(null);
+      fetchInventory();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to adjust stock");
+    } finally {
+      setIsAdjustingSubmit(false);
+    }
+  };
 
   // Debounced search for history tab
   useEffect(() => {
@@ -288,6 +364,39 @@ export default function InventoryPage() {
     return Object.values(monthlyData);
   }, [products]);
 
+  const metricCards = useMemo(() => {
+    return [
+      {
+        title: "Total Products",
+        value: stats?.totalProducts || 0,
+        sub: "Managed items",
+        icon: <Package className="w-4 h-4 text-emerald-100" />,
+        dataKey: "totalProducts",
+      },
+      {
+        title: "Inventory Value",
+        value: `₹${stats?.totalValue?.toLocaleString('en-IN') || 0}`,
+        sub: "Estimated physical worth",
+        icon: <Activity className="w-4 h-4 text-emerald-100" />,
+        dataKey: "totalValue",
+      },
+      {
+        title: "Low Stock",
+        value: stats?.lowStockCount || 0,
+        sub: "Approaching thresholds",
+        icon: <AlertTriangle className="w-4 h-4 text-emerald-100" />,
+        dataKey: "lowStockCount",
+      },
+      {
+        title: "Out of Stock",
+        value: stats?.outOfStockCount || 0,
+        sub: "Depleted items",
+        icon: <TrendingDown className="w-4 h-4 text-emerald-100" />,
+        dataKey: "outOfStockCount",
+      }
+    ];
+  }, [stats]);
+
   const exportToCSV = () => {
     if (!filteredProducts.length) return toast.error("No dataset available to export");
 
@@ -319,59 +428,51 @@ export default function InventoryPage() {
             <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Stock Inventory</h1>
             <p className="text-sm font-medium text-emerald-50 mt-1">Monitor ledgers, variants, and update product availability in real-time</p>
           </div>
-        </div>
-
-        {/* Analytics Summary Core Matrix */}
+        </div>        {/* Analytics Summary Core Matrix */}
         <div className="grid gap-5 grid-cols-2 md:grid-cols-4 relative z-10">
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-emerald-105 uppercase tracking-wider">Total Products</span>
-              <Package className="w-4 h-4 text-emerald-100" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">{stats?.totalProducts || 0}</div>
-              <p className="text-[11px] text-emerald-100/60 mt-1">Managed items</p>
-            </CardContent>
-          </Card>
+          {metricCards.map((card, idx) => (
+            <Card
+              key={idx}
+              className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl backdrop-blur-md hover:bg-white/15 transition-all duration-300 flex flex-col justify-between overflow-hidden group pb-0"
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
+                <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">{card.title}</span>
+                {card.icon}
+              </CardHeader>
+              <CardContent className="p-5 pt-0 pb-0">
+                <div className="text-2xl font-black tracking-tight text-white">{card.value}</div>
+                <p className="text-[11px] text-emerald-100/60 mt-1">{card.sub}</p>
+              </CardContent>
 
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-emerald-105 uppercase tracking-wider">Inventory Value</span>
-              <Activity className="w-4 h-4 text-emerald-100" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                ₹{stats?.totalValue?.toLocaleString() || 0}
+              {/* Sparkline wave line chart at bottom (clean white color) */}
+              <div className="w-full h-12 mt-4 -mx-5 px-5 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
+                {isMounted && stats?.trendData && stats.trendData.length > 0 && (
+                  <ResponsiveContainer width="112%" height="100%">
+                    <AreaChart
+                      data={stats.trendData}
+                      margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id={`grad-white-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <Area
+                        type="monotone"
+                        dataKey={card.dataKey}
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        fill={`url(#grad-white-${idx})`}
+                        dot={false}
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-              <p className="text-[11px] text-emerald-100/60 mt-1">Estimated physical worth</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-emerald-105 uppercase tracking-wider">Low Stock</span>
-              <AlertTriangle className="w-4 h-4 text-emerald-100" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {stats?.lowStockCount || 0}
-              </div>
-              <p className="text-[11px] text-emerald-100/60 mt-1">Approaching thresholds</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-emerald-105 uppercase tracking-wider">Out of Stock</span>
-              <TrendingDown className="w-4 h-4 text-emerald-100" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {stats?.outOfStockCount || 0}
-              </div>
-              <p className="text-[11px] text-emerald-100/60 mt-1">Depleted items</p>
-            </CardContent>
-          </Card>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -531,19 +632,20 @@ export default function InventoryPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right pr-8">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleUpdateStock(product.id, product.variant_id, product.stock_quantity - 1, product.stock_quantity)}
-                              className="w-8 h-8 rounded-lg border border-zinc-200 bg-white flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-zinc-50 transition-all"
+                          <div className="flex items-center justify-end">
+                            <Button
+                              onClick={() => {
+                                setAdjustingProduct(product);
+                                setAdjustmentQty(1);
+                                setAdjustmentType("PURCHASE");
+                                setAdjustmentNotes("");
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-3 rounded-lg text-xs font-bold border-zinc-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-250 transition-all cursor-pointer"
                             >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStock(product.id, product.variant_id, product.stock_quantity + 1, product.stock_quantity)}
-                              className="w-8 h-8 rounded-lg border border-zinc-200 bg-white flex items-center justify-center text-zinc-500 hover:text-teal-600 hover:bg-zinc-50 transition-all"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
+                              Adjust Stock
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -796,6 +898,86 @@ export default function InventoryPage() {
         </TabsContent>
 
       </Tabs>
+
+      {/* Advanced Stock Adjustment Dialog */}
+      <Dialog open={!!adjustingProduct} onOpenChange={(open) => !open && setAdjustingProduct(null)}>
+        <DialogContent className="sm:max-w-[440px] bg-white rounded-2xl border border-zinc-200 p-6 shadow-xl text-[#18181b] z-50">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-lg font-bold text-zinc-800">Adjust Stock Level</DialogTitle>
+            <DialogDescription className="text-sm text-zinc-500">
+              Modify inventory for <span className="font-semibold text-zinc-700">{adjustingProduct?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmitAdjustment} className="space-y-4 mt-3">
+            <div className="space-y-1.5 text-left">
+              <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block ml-0.5">Operation Type</label>
+              <Select value={adjustmentType} onValueChange={(val: any) => setAdjustmentType(val)}>
+                <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-emerald-500 text-[#18181b]">
+                  <SelectValue placeholder="Select Operation" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-zinc-200 rounded-xl">
+                  <SelectItem value="PURCHASE" className="text-xs">Stock Addition (Purchase/Restock)</SelectItem>
+                  <SelectItem value="ADJUSTMENT" className="text-xs text-rose-600 font-medium">Damage / Wastage Write-off</SelectItem>
+                  <SelectItem value="RETURN" className="text-xs text-purple-600 font-medium">Customer Return</SelectItem>
+                  <SelectItem value="GENERAL_ADD" className="text-xs">General Adjustment (Add Stock)</SelectItem>
+                  <SelectItem value="GENERAL_SUB" className="text-xs">General Adjustment (Remove Stock)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block ml-0.5">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={adjustmentQty}
+                onChange={(e) => setAdjustmentQty(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full h-10 px-3 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all text-[#18181b]"
+              />
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block ml-0.5">Notes / Reason Detail</label>
+              <textarea
+                placeholder="e.g. Received batch #42, Damaged during shipping box handling..."
+                value={adjustmentNotes}
+                onChange={(e) => setAdjustmentNotes(e.target.value)}
+                className="w-full min-h-[80px] p-3 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all text-[#18181b] placeholder:text-zinc-400"
+              />
+            </div>
+
+            <DialogFooter className="mt-6 gap-2 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAdjustingProduct(null)}
+                className="h-10 border-zinc-200 text-zinc-700 hover:bg-zinc-50 rounded-xl text-sm"
+                disabled={isAdjustingSubmit}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isAdjustingSubmit}
+                className="h-10 rounded-xl gap-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isAdjustingSubmit ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    Commit Adjustment
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

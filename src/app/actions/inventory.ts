@@ -9,12 +9,14 @@ export async function adjustStock({
   quantity,
   reason,
   notes,
+  type = "ADJUSTMENT",
 }: {
   productId: string;
   variantId?: string | null;
   quantity: number; // The absolute amount to add or subtract (can be negative)
   reason: string;
   notes?: string;
+  type?: "SALE" | "PURCHASE" | "RETURN" | "REFUND" | "RESERVATION" | "RELEASE" | "ADJUSTMENT";
 }) {
   const supabase = await createAdminClient();
 
@@ -73,12 +75,12 @@ export async function adjustStock({
     const { error: txError } = await supabase.from("inventory_transactions").insert({
       product_id: productId,
       variant_id: variantId || null,
-      type: "ADJUSTMENT",
+      type: type,
       quantity: quantity,
       before_stock: beforeStock,
       after_stock: afterStock,
       reference_id: user.id,
-      reference_type: "ADJUSTMENT",
+      reference_type: type,
       notes: `${reason} - ${notes || ''}`,
       created_by: user.id
     });
@@ -98,7 +100,7 @@ export async function getInventoryDashboardStats() {
 
   const { data: products, error: productError } = await supabase
     .from("products")
-    .select("id, name, stock_quantity, low_stock_threshold, price, manage_stock")
+    .select("id, name, stock_quantity, low_stock_threshold, price, manage_stock, created_at")
     .eq("status", "Active");
 
   if (productError) {
@@ -121,13 +123,106 @@ export async function getInventoryDashboardStats() {
     }
   });
 
+  // Calculate 7-day trend data
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { data: transactions, error: txError } = await supabase
+    .from("inventory_transactions")
+    .select("product_id, quantity, before_stock, after_stock, created_at")
+    .gte("created_at", sevenDaysAgo.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (txError) {
+    console.error("Failed to fetch transaction trends:", txError);
+  }
+
+  const stocksMap = new Map<string, {
+    stock: number;
+    threshold: number;
+    manageStock: boolean;
+    price: number;
+    createdAt: Date;
+  }>();
+
+  products?.forEach(p => {
+    stocksMap.set(p.id, {
+      stock: p.stock_quantity || 0,
+      threshold: p.low_stock_threshold || 5,
+      manageStock: !!p.manage_stock,
+      price: Number(p.price || 0),
+      createdAt: new Date(p.created_at)
+    });
+  });
+
+  const last7DaysBackwards = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    return d;
+  });
+
+  const txList = (transactions as any[]) || [];
+
+  const trendDataBackwards = last7DaysBackwards.map(day => {
+    const dayName = day.toLocaleDateString("en-IN", { weekday: "short" });
+    const endOfDay = new Date(day);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Revert transactions that happened after this day
+    while (txList.length > 0) {
+      const tx = txList[0];
+      const txTime = new Date(tx.created_at).getTime();
+      if (txTime > endOfDay.getTime()) {
+        const item = stocksMap.get(tx.product_id);
+        if (item) {
+          const delta = (tx.after_stock ?? 0) - (tx.before_stock ?? 0);
+          item.stock -= delta;
+        }
+        txList.shift();
+      } else {
+        break;
+      }
+    }
+
+    let dayTotalProducts = 0;
+    let dayTotalValue = 0;
+    let dayLowStockCount = 0;
+    let dayOutOfStockCount = 0;
+
+    stocksMap.forEach(item => {
+      if (item.createdAt.getTime() <= endOfDay.getTime()) {
+        dayTotalProducts++;
+        dayTotalValue += (item.stock * item.price);
+        
+        if (item.manageStock) {
+          if (item.stock === 0) {
+            dayOutOfStockCount++;
+          } else if (item.stock <= item.threshold) {
+            dayLowStockCount++;
+          }
+        }
+      }
+    });
+
+    return {
+      name: dayName,
+      totalProducts: dayTotalProducts,
+      totalValue: dayTotalValue,
+      lowStockCount: dayLowStockCount,
+      outOfStockCount: dayOutOfStockCount
+    };
+  });
+
+  const trendData = trendDataBackwards.reverse();
+
   return {
     success: true,
     data: {
       totalProducts,
       totalValue,
       lowStockCount,
-      outOfStockCount
+      outOfStockCount,
+      trendData
     }
   };
 }

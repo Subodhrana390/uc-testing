@@ -4,6 +4,20 @@ import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  SortingState,
+  GroupingState,
+  ExpandedState,
+  getGroupedRowModel,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
+import {
   Plus,
   Search,
   Edit,
@@ -23,7 +37,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import SingleImageUpload from "@/components/admin/SingleImageUpload";
 import LogoLoader from "@/components/ui/LogoLoader";
-import { toggleBrandStatus } from "@/app/actions/admin";
+import { toggleBrandStatus, toggleBrandFeatured } from "@/app/actions/admin";
 import { Pagination } from "@/components/ui/pagination";
 
 // Recharts imports
@@ -61,9 +75,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("analytics");
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -73,8 +89,13 @@ export default function BrandsPage() {
   const [brandToDelete, setBrandToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [grouping, setGrouping] = useState<GroupingState>([]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const [formData, setFormData] = useState({
     name: "",
@@ -141,20 +162,142 @@ export default function BrandsPage() {
     ];
   }, [brands]);
 
-  const filteredBrands = useMemo(() => {
-    return brands.filter(b =>
-      b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (b.category || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [brands, searchQuery]);
+  const columnHelper = createColumnHelper<any>();
 
-  const paginatedBrands = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredBrands.slice(start, start + pageSize);
-  }, [filteredBrands, currentPage, pageSize]);
+  const columns = useMemo(() => [
+    columnHelper.accessor("name", {
+      header: "Brand Name",
+      cell: (info) => {
+        const brand = info.row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200/60 flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
+              {brand.logo_url ? (
+                <Image src={brand.logo_url} alt="" width={40} height={40} className="w-full h-full object-contain" />
+              ) : (
+                <Award className="w-4 h-4 text-blue-600" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-zinc-700">{brand.name}</span>
+              {!!brand.is_featured && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-50 border border-amber-100 text-amber-500">
+                  <Star className="w-3 h-3 fill-current" />
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor("category", {
+      header: "Category",
+      cell: (info) => (
+        <span className="text-xs font-medium text-zinc-500 block">{info.getValue() || "—"}</span>
+      )
+    }),
+    columnHelper.accessor("status", {
+      header: "Status",
+      enableSorting: false,
+      cell: (info) => {
+        const brand = info.row.original;
+        return (
+          <button
+            onClick={() => handleToggleStatus(brand)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-bold text-white inline-flex items-center gap-2 shadow-sm transition-all hover:opacity-90",
+              brand.status === true ? "bg-blue-600" : "bg-zinc-500"
+            )}
+          >
+            {brand.status === true ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                Active
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                Inactive
+              </>
+            )}
+          </button>
+        );
+      }
+    }),
+    columnHelper.accessor("is_featured", {
+      header: "Featured",
+      enableSorting: false,
+      cell: (info) => {
+        const brand = info.row.original;
+        return (
+          <button
+            onClick={() => handleToggleFeatured(brand)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-2 shadow-sm transition-all hover:opacity-90",
+              brand.is_featured ? "bg-amber-500 text-white" : "bg-zinc-100 text-zinc-500 border border-zinc-200"
+            )}
+          >
+            <Star className={cn("w-3.5 h-3.5", brand.is_featured ? "fill-current" : "")} />
+            {brand.is_featured ? "Featured" : "Standard"}
+          </button>
+        );
+      }
+    }),
+    columnHelper.display({
+      id: "actions",
+      enableSorting: false,
+      cell: (info) => {
+        const brand = info.row.original;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => handleOpenDrawer(brand)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setBrandToDelete(brand)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      }
+    })
+  ], []);
+
+  const table = useReactTable({
+    data: brands,
+    columns,
+    state: {
+      sorting,
+      globalFilter: searchQuery,
+      pagination,
+      grouping,
+      expanded,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGroupingChange: setGrouping,
+    onExpandedChange: setExpanded,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    globalFilterFn: (row, columnId, filterValue) => {
+      const name = String(row.getValue("name") || "").toLowerCase();
+      const category = String(row.getValue("category") || "").toLowerCase();
+      const search = String(filterValue).toLowerCase();
+      return name.includes(search) || category.includes(search);
+    },
+  });
 
   useEffect(() => {
-    setCurrentPage(1);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [searchQuery]);
 
   const handleOpenDrawer = (brand?: any) => {
@@ -232,12 +375,12 @@ export default function BrandsPage() {
     const toastId = toast.loading("Updating brand status...");
     try {
       const result = await toggleBrandStatus(brand.id, brand.status);
-      
+
       if (!result.success) {
         throw new Error(result.error);
       }
-      
-      setBrands(prev => prev.map(b => 
+
+      setBrands(prev => prev.map(b =>
         b.id === brand.id ? { ...b, status: result.newStatus } : b
       ));
       toast.success(`Brand is now ${result.newStatus ? "Active" : "Inactive"}`, { id: toastId });
@@ -246,340 +389,413 @@ export default function BrandsPage() {
     }
   };
 
+  const handleToggleFeatured = async (brand: any) => {
+    const toastId = toast.loading("Updating featured status...");
+    try {
+      const result = await toggleBrandFeatured(brand.id, !!brand.is_featured);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setBrands(prev => prev.map(b =>
+        b.id === brand.id ? { ...b, is_featured: result.newFeatured } : b
+      ));
+      toast.success(`Brand is ${result.newFeatured ? "now" : "no longer"} featured`, { id: toastId });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update featured status", { id: toastId });
+    }
+  };
+
   if (loading) return <LogoLoader text="Loading brand directory..." />;
 
   return (
     <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8">
-      {/* Blue Gradient Banner */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-sky-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8">
-        {/* Subtle decorative glows */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
+      {/* Redesigned Header UI Banner */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden mb-6 transition-all duration-300">
+        {/* Subtle colorful neon glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-10 w-72 h-72 bg-sky-500/10 rounded-full -ml-20 -mb-20 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header Viewport Container */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
-          <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Brand Directory</h1>
-            <p className="text-sm font-medium text-blue-100 mt-1">Manage authorized industrial partners</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+              <Award className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-3xl font-bold text-slate-300 tracking-tight border-none p-0 !pl-0 before:hidden">
+                  Brand Directory
+                </h1>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-blue-200 border border-white/5 backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                  {brands.length} Partners
+                </span>
+              </div>
+              <p className="text-sm font-medium text-slate-300 mt-1">
+                Configure authorized industrial creators and localize partner visibility
+              </p>
+            </div>
           </div>
           <Button
             onClick={() => handleOpenDrawer()}
-            className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2"
+            className="h-11 px-5 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-bold text-sm rounded-xl transition-all shadow-lg hover:shadow-blue-500/10 hover:scale-[1.02] active:scale-[0.98] border-0 gap-2 shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Initialize Brand
           </Button>
         </div>
-
-        {/* Analytics Summary Core Matrix */}
-        <div className="grid gap-5 grid-cols-2 md:grid-cols-4 relative z-10">
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Total Partners</span>
-              <Layers className="w-4 h-4 text-white/70" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">{brands.length}</div>
-              <p className="text-[11px] text-white/60 mt-1">Industrial creators</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Active Brands</span>
-              <Activity className="w-4 h-4 text-white/80" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {brands.filter(b => b.status === true).length}
-              </div>
-              <p className="text-[11px] text-white/60 mt-1">Live storefront listings</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Total Categories</span>
-              <Globe className="w-4 h-4 text-white/70" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {new Set(brands.map(b => b.category).filter(Boolean)).size}
-              </div>
-              <p className="text-[11px] text-white/60 mt-1">Unique segments</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-              <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Featured Brands</span>
-              <Star className="w-4 h-4 text-white/80" />
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {brands.filter(b => !!b.is_featured).length}
-              </div>
-              <p className="text-[11px] text-white/60 mt-1">Promoted spotlight listings</p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Category Distribution Chart */}
-        <Card className="lg:col-span-2 bg-white border border-zinc-100 shadow-sm rounded-2xl p-6 flex flex-col justify-between text-[#18181b]">
-          <div>
-            <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Top Categories</h3>
-            <p className="text-xs font-semibold text-zinc-400 mt-1">Brand count by categories (Top 5)</p>
-          </div>
-          <div className="h-[240px] w-full mt-4 -ml-4">
-            {isMounted && brands.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryChartData} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="brandCategoryBarGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="100%" stopColor="#2563eb" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }} />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }} width={90} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }}
-                    content={({ active, payload }: any) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-blue-500 text-xs font-bold animate-in fade-in duration-200">
-                            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
-                              {payload[0].payload.name}
-                            </p>
-                            <p className="text-sm font-black">
-                              {payload[0].value} brands
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="value" fill="url(#brandCategoryBarGrad)" radius={[0, 4, 4, 0]} barSize={14} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-300">
-                <p className="text-[10px] font-black uppercase tracking-widest">No brand data available</p>
-              </div>
-            )}
-          </div>
-        </Card>
+      {/* Unified Tab Workspace System */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-150 pb-2">
+          <TabsList className="bg-zinc-100/80 p-1 rounded-xl h-11 flex w-fit">
+            <TabsTrigger value="analytics" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm gap-1.5 flex items-center">
+              <Activity className="w-3.5 h-3.5 text-zinc-500" /> Analytics
+            </TabsTrigger>
+            <TabsTrigger value="table" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm">
+              Brands Table
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Status Distribution Donut Chart */}
-        <Card className="lg:col-span-1 bg-white border border-zinc-100 shadow-sm rounded-2xl p-6 flex flex-col justify-between text-[#18181b]">
-          <div>
-            <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Active Status</h3>
-            <p className="text-xs font-semibold text-zinc-400 mt-1">Listing distribution</p>
-          </div>
-          <div className="h-[240px] w-full mt-4 flex items-center justify-center relative">
-            {isMounted && brands.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
+        {/* Tab 1: Brands Table */}
+        <TabsContent value="table" className="space-y-4 outline-none">
+          {/* Main Table Interface */}
+          <Card className="bg-white rounded-2xl border border-zinc-150 shadow-sm overflow-hidden py-0 gap-0">
+            {/* Filtration Header */}
+            <div className="p-5 border-b border-zinc-100 bg-zinc-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="relative w-full max-w-xl">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Search brands by name or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-10 h-11 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all placeholder:text-zinc-400 text-[#18181b]"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
                   >
-                    {statusChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={({ active, payload }: any) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        const percentage = ((data.value / (brands.length || 1)) * 100).toFixed(1);
-                        return (
-                          <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-zinc-800 text-xs font-bold animate-in fade-in duration-200">
-                            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
-                              {data.name}
-                            </p>
-                            <p className="text-sm font-black">
-                              {data.value} brands ({percentage}%)
-                            </p>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 px-4 h-11 rounded-xl shadow-sm select-none shrink-0">
+                <Label htmlFor="group-by-category" className="text-xs font-semibold text-zinc-650 cursor-pointer">
+                  Group by Category
+                </Label>
+                <Switch
+                  id="group-by-category"
+                  checked={grouping.includes("category")}
+                  onCheckedChange={(checked) => {
+                    setGrouping(checked ? ["category"] : []);
+                  }}
+                  className="data-[state=checked]:bg-blue-600 bg-black"
+                />
+              </div>
+            </div>        {/* Tabular Ingestion Stream */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id} className="bg-zinc-50/70 border-b border-zinc-100">
+                      {headerGroup.headers.map(header => (
+                        <th
+                          key={header.id}
+                          onClick={header.column.getToggleSortingHandler()}
+                          className={cn(
+                            "px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider select-none",
+                            header.column.getCanSort() && "cursor-pointer hover:bg-zinc-100 hover:text-zinc-600 transition-colors",
+                            header.id === "name" && "pl-8",
+                            header.id === "actions" && "w-24 pr-8 text-right"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5 justify-start">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            {header.column.getIsSorted() === "asc" && (
+                              <span className="text-[10px]">▲</span>
+                            )}
+                            {header.column.getIsSorted() === "desc" && (
+                              <span className="text-[10px]">▼</span>
+                            )}
                           </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-300">
-                <p className="text-[10px] font-black uppercase tracking-widest">No brand data available</p>
-              </div>
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {table.getRowModel().rows.map(row => (
+                    <tr key={row.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                      {row.getVisibleCells().map(cell => (
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "px-6 py-4",
+                            cell.column.id === "name" && "pl-8",
+                            cell.column.id === "actions" && "text-right pr-8"
+                          )}
+                        >
+                          {cell.getIsGrouped() ? (
+                            <button
+                              type="button"
+                              onClick={row.getToggleExpandedHandler()}
+                              className="flex items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-800 focus:outline-none"
+                            >
+                              <span>{row.getIsExpanded() ? "▼" : "▶"}</span>
+                              <span>{String(cell.getValue() || "Unassigned")}</span>
+                              <span className="text-xs font-semibold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
+                                {row.subRows.length} {row.subRows.length === 1 ? "brand" : "brands"}
+                              </span>
+                            </button>
+                          ) : cell.getIsAggregated() ? (
+                            null
+                          ) : cell.getIsPlaceholder() ? (
+                            null
+                          ) : (
+                            flexRender(cell.column.columnDef.cell, cell.getContext())
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {table.getFilteredRowModel().rows.length > 0 && (
+              <Pagination
+                currentPage={table.getState().pagination.pageIndex + 1}
+                totalItems={table.getFilteredRowModel().rows.length}
+                pageSize={table.getState().pagination.pageSize}
+                onPageChange={(page) => table.setPageIndex(page - 1)}
+                onPageSizeChange={(size) => table.setPageSize(size)}
+                variantColor="blue"
+              />
             )}
 
-            {/* Center Text inside Donut Hole */}
-            {isMounted && brands.length > 0 && (
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-[#18181b]">
+            {/* Empty Fallback State */}
+            {table.getFilteredRowModel().rows.length === 0 && (
+              <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
+                <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100">
+                  <Layers className="w-8 h-8 text-zinc-300" />
+                </div>
+                <div className="max-w-xs">
+                  <h3 className="text-sm font-bold text-[#18181b]">No Brands Found</h3>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">We couldn't find any industrial partners matching your search query.</p>
+                  {searchQuery && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSearchQuery("")}
+                      className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
+                    >
+                      Clear Search
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: Analytics */}
+        <TabsContent value="analytics" className="space-y-6 outline-none animate-in fade-in-50 duration-200">
+          {/* Analytics Summary Core Matrix */}
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="bg-white border border-zinc-150 shadow-sm rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 mb-3">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Total Partners</span>
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Layers className="w-4 h-4" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="text-2xl font-black tracking-tight text-zinc-800">{brands.length}</div>
+                <p className="text-[11px] text-zinc-400 mt-1">Industrial creators</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-zinc-150 shadow-sm rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 mb-3">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Active Brands</span>
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <Activity className="w-4 h-4" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="text-2xl font-black tracking-tight text-zinc-800">
                   {brands.filter(b => b.status === true).length}
-                </span>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">Live storefront listings</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-zinc-150 shadow-sm rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 mb-3">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Total Categories</span>
+                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                  <Globe className="w-4 h-4" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="text-2xl font-black tracking-tight text-zinc-800">
+                  {new Set(brands.map(b => b.category).filter(Boolean)).size}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">Unique segments</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-zinc-150 shadow-sm rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 mb-3">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Featured Brands</span>
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
+                  <Star className="w-4 h-4" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="text-2xl font-black tracking-tight text-zinc-800">
+                  {brands.filter(b => !!b.is_featured).length}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">Promoted spotlight listings</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Category Distribution Chart */}
+            <Card className="lg:col-span-2 bg-white border border-zinc-100 shadow-sm rounded-2xl p-6 flex flex-col justify-between text-[#18181b]">
+              <div>
+                <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Top Categories</h3>
+                <p className="text-xs font-semibold text-zinc-400 mt-1">Brand count by categories (Top 5)</p>
               </div>
-            )}
-          </div>
-
-          {/* Custom Legends */}
-          <div className="flex items-center justify-center gap-4 mt-2">
-            {statusChartData.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span>{item.name}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Table Interface */}
-      <Card className="bg-white rounded-2xl border border-zinc-150 shadow-sm overflow-hidden py-0 gap-0">
-        {/* Filtration Header */}
-        <div className="p-5 border-b border-zinc-100 bg-zinc-50/30">
-          <div className="relative w-full max-w-xl">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search brands by name or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 h-11 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all placeholder:text-zinc-400 text-[#18181b]"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Tabular Ingestion Stream */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr className="bg-zinc-50/70 border-b border-zinc-100">
-                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-8">Brand Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
-                <th className="w-24 pr-8 text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {paginatedBrands.map((brand) => (
-                <tr key={brand.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
-                  <td className="px-6 py-4 pl-8">
-                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200/60 flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
-                         {brand.logo_url ? (
-                           <Image src={brand.logo_url} alt="" width={40} height={40} className="w-full h-full object-contain" />
-                         ) : (
-                           <Award className="w-4 h-4 text-blue-600" />
-                         )}
-                       </div>
-                       <div className="flex items-center gap-2">
-                         <span className="text-sm font-semibold text-zinc-700">{brand.name}</span>
-                         {!!brand.is_featured && (
-                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-50 border border-amber-100 text-amber-500">
-                             <Star className="w-3 h-3 fill-current" />
-                           </span>
-                         )}
-                       </div>
-                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                     <span className="text-xs font-medium text-zinc-500 block">{brand.category || "—"}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={brand.status === true}
-                        onCheckedChange={() => handleToggleStatus(brand)}
-                        className="data-[state=checked]:bg-blue-600"
+              <div className="h-[240px] w-full mt-4 -ml-4">
+                {isMounted && brands.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={categoryChartData} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="brandCategoryBarGrad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#38bdf8" />
+                          <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }} />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }} width={90} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }}
+                        content={({ active, payload }: any) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-blue-500 text-xs font-bold animate-in fade-in duration-200">
+                                <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
+                                  {payload[0].payload.name}
+                                </p>
+                                <p className="text-sm font-black">
+                                  {payload[0].value} brands
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
                       />
-                      <span
-                        className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-medium border inline-flex items-center gap-1.5",
-                          brand.status === true ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                        )}
-                      >
-                        {brand.status === true && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-                        {brand.status ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right pr-8">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleOpenDrawer(brand)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 transition-all"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setBrandToDelete(brand)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <Bar dataKey="value" fill="url(#brandCategoryBarGrad)" radius={[0, 4, 4, 0]} barSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-300">
+                    <p className="text-[10px] font-black uppercase tracking-widest">No brand data available</p>
+                  </div>
+                )}
+              </div>
+            </Card>
 
-        {filteredBrands.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalItems={filteredBrands.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            variantColor="blue"
-          />
-        )}
+            {/* Status Distribution Donut Chart */}
+            <Card className="lg:col-span-1 bg-white border border-zinc-100 shadow-sm rounded-2xl p-6 flex flex-col justify-between text-[#18181b]">
+              <div>
+                <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Active Status</h3>
+                <p className="text-xs font-semibold text-zinc-400 mt-1">Listing distribution</p>
+              </div>
+              <div className="h-[240px] w-full mt-4 flex items-center justify-center relative">
+                {isMounted && brands.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={75}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }: any) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const percentage = ((data.value / (brands.length || 1)) * 100).toFixed(1);
+                            return (
+                              <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-zinc-800 text-xs font-bold animate-in fade-in duration-200">
+                                <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
+                                  {data.name}
+                                </p>
+                                <p className="text-sm font-black">
+                                  {data.value} brands ({percentage}%)
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-300">
+                    <p className="text-[10px] font-black uppercase tracking-widest">No brand data available</p>
+                  </div>
+                )}
 
-        {/* Empty Fallback State */}
-        {filteredBrands.length === 0 && (
-          <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
-            <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100">
-              <Layers className="w-8 h-8 text-zinc-300" />
-            </div>
-            <div className="max-w-xs">
-              <h3 className="text-sm font-bold text-[#18181b]">No Brands Found</h3>
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">We couldn't find any industrial partners matching your search query.</p>
-              {searchQuery && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                  className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
-                >
-                  Clear Search
-                </Button>
-              )}
-            </div>
+                {/* Center Text inside Donut Hole */}
+                {isMounted && brands.length > 0 && (
+                  <div className="absolute flex flex-col items-center justify-center">
+                    <span className="text-2xl font-black text-[#18181b]">
+                      {brands.filter(b => b.status === true).length}
+                    </span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Legends */}
+              <div className="flex items-center justify-center gap-4 mt-2">
+                {statusChartData.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span>{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
-        )}
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Floating Configuration Sheet Panel */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -613,50 +829,64 @@ export default function BrandsPage() {
               />
             </div>
 
-             {/* Brand Category */}
-             <div className="space-y-2">
-               <Label htmlFor="brand-category" className="text-xs font-medium text-zinc-500">Brand Category</Label>
-               <select
-                 id="brand-category"
-                 value={formData.category}
-                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                 className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 bg-white"
-               >
-                 <option value="">Select Category</option>
-                 {categories.map((cat) => (
-                   <option key={cat.id} value={cat.name}>
-                     {cat.name}
-                   </option>
-                 ))}
-               </select>
-             </div>
-
-            {/* Switch Toggle State wrapper */}
-            <div className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl">
-              <div className="space-y-0.5">
-                <Label htmlFor="brand-status" className="text-sm font-medium text-zinc-800">Active Listing Status</Label>
-                <p className="text-xs text-zinc-400">Determine visibility across localized client platforms</p>
-              </div>
-              <Switch
-                id="brand-status"
-                checked={formData.status === true}
-                onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
-                className="data-[state=checked]:bg-teal-600"
-              />
+            {/* Brand Category */}
+            <div className="space-y-2">
+              <Label htmlFor="brand-category" className="text-xs font-medium text-zinc-500">Brand Category</Label>
+              <select
+                id="brand-category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 bg-white"
+              >
+                <option value="">Select Category</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Featured Brand Toggle State wrapper */}
-            <div className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl">
-              <div className="space-y-0.5">
-                <Label htmlFor="brand-featured" className="text-sm font-medium text-zinc-800">Featured Partner</Label>
+            {/* Toggle Button State wrapper */}
+            <div
+              className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl"
+            >
+              <div className="space-y-0.5 pr-4">
+                <Label className="text-sm font-medium text-zinc-800">Active Listing Status</Label>
+                <p className="text-xs text-zinc-400">Determine visibility across localized client platforms</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
+                className={cn(
+                  "shrink-0 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2",
+                  formData.status ? "bg-teal-600 text-white" : "bg-zinc-200 text-zinc-600"
+                )}
+              >
+                <div className={cn("w-1.5 h-1.5 rounded-full", formData.status ? "bg-white animate-pulse" : "bg-zinc-400")} />
+                {formData.status ? "Active" : "Inactive"}
+              </button>
+            </div>
+
+            {/* Featured Brand Toggle Button wrapper */}
+            <div
+              className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl"
+            >
+              <div className="space-y-0.5 pr-4">
+                <Label className="text-sm font-medium text-zinc-800">Featured Partner</Label>
                 <p className="text-xs text-zinc-400">Promote this brand on storefront spotlights</p>
               </div>
-              <Switch
-                id="brand-featured"
-                checked={formData.is_featured}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
-                className="data-[state=checked]:bg-amber-500"
-              />
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, is_featured: !prev.is_featured }))}
+                className={cn(
+                  "shrink-0 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2",
+                  formData.is_featured ? "bg-amber-500 text-white" : "bg-zinc-200 text-zinc-600"
+                )}
+              >
+                <Star className={cn("w-3.5 h-3.5", formData.is_featured ? "fill-current" : "")} />
+                {formData.is_featured ? "Featured" : "Standard"}
+              </button>
             </div>
           </form>
 

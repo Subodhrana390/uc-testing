@@ -3,21 +3,26 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
+  TrendingUp,
+  Receipt,
+  X,
+  Loader2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  SlidersHorizontal,
+  XCircle,
   Search,
   Filter,
   CheckCircle2,
   Clock,
-  XCircle,
   FileSpreadsheet,
   CreditCard,
   MoreHorizontal,
   Eye,
   Truck,
-  ArrowDownRight,
-  TrendingUp,
-  Receipt,
-  X,
-  Loader2
+  ArrowDownRight
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -80,6 +85,301 @@ import {
 
 type StatusType = "All" | "Completed" | "Pending" | "Failed" | "Refunded";
 
+interface DateRangePickerProps {
+  startDate: string;
+  endDate: string;
+  onChange: (start: string, end: string) => void;
+}
+
+function DateRangePicker({ startDate, endDate, onChange }: DateRangePickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = startDate ? new Date(startDate) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [hoverDate, setHoverDate] = useState<string | null>(null);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".date-range-picker-container")) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  // Get total days in month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Get start day of week (0-6)
+  const startDayOfWeek = new Date(year, month, 1).getDay();
+
+  const handlePrevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentMonth(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentMonth(new Date(year, month + 1, 1));
+  };
+
+  const formatDateString = (y: number, m: number, d: number) => {
+    const mm = String(m + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  };
+
+  const handleDateClick = (dateStr: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!startDate || (startDate && endDate)) {
+      onChange(dateStr, "");
+    } else {
+      if (new Date(dateStr) < new Date(startDate)) {
+        onChange(dateStr, "");
+      } else {
+        onChange(startDate, dateStr);
+        setIsOpen(false); // Auto close after selecting range
+      }
+    }
+  };
+
+  const isSelected = (dateStr: string) => {
+    return dateStr === startDate || dateStr === endDate;
+  };
+
+  const isInRange = (dateStr: string) => {
+    if (!startDate) return false;
+    const time = new Date(dateStr).getTime();
+    const startTime = new Date(startDate).getTime();
+    if (endDate) {
+      const endTime = new Date(endDate).getTime();
+      return time > startTime && time < endTime;
+    }
+    if (hoverDate) {
+      const hoverTime = new Date(hoverDate).getTime();
+      return time > startTime && time < hoverTime;
+    }
+    return false;
+  };
+
+  const days = [];
+  // Empty slots for previous month padding
+  for (let i = 0; i < startDayOfWeek; i++) {
+    days.push(null);
+  }
+  // Days of month
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const displayValue = () => {
+    if (!startDate) return "Select date range";
+    const startFmt = new Date(startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    if (!endDate) return `${startFmt} - ...`;
+    const endFmt = new Date(endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return `${startFmt} to ${endFmt}`;
+  };
+
+  return (
+    <div className="relative date-range-picker-container w-full sm:w-[220px] shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-10 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100/70 text-left px-3 rounded-md text-xs text-[#18181b] flex items-center justify-between transition-all duration-200 cursor-pointer"
+      >
+        <span className={!startDate ? "text-zinc-400 font-medium" : "font-semibold text-zinc-800"}>
+          {displayValue()}
+        </span>
+        <Calendar className="w-4 h-4 text-zinc-400 shrink-0 ml-2" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-11 right-0 sm:left-0 z-50 w-[280px] bg-white border border-zinc-200 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-zinc-150 rounded-lg text-zinc-500 transition-all cursor-pointer border-0 bg-transparent"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-extrabold text-zinc-800">
+              {monthNames[month]} {year}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-zinc-150 rounded-lg text-zinc-500 transition-all cursor-pointer border-0 bg-transparent"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day, idx) => {
+              if (day === null) {
+                return <div key={`empty-${idx}`} className="h-7" />;
+              }
+
+              const dateStr = formatDateString(year, month, day);
+              const selected = isSelected(dateStr);
+              const inRange = isInRange(dateStr);
+
+              return (
+                <button
+                  key={`day-${day}`}
+                  type="button"
+                  onMouseEnter={() => !endDate && startDate && setHoverDate(dateStr)}
+                  onMouseLeave={() => setHoverDate(null)}
+                  onClick={(e) => handleDateClick(dateStr, e)}
+                  className={cn(
+                    "h-7 w-full text-xs font-semibold rounded-md flex items-center justify-center transition-all cursor-pointer border-0 bg-transparent",
+                    selected && "bg-amber-500 text-white font-extrabold shadow-sm hover:bg-amber-600",
+                    inRange && !selected && "bg-amber-50 text-amber-700 hover:bg-amber-100",
+                    !selected && !inRange && "text-zinc-700 hover:bg-zinc-100"
+                  )}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between">
+            <span className="text-[10px] text-zinc-400 font-medium">Click start then end date</span>
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange("", "");
+                  setHoverDate(null);
+                }}
+                className="text-[10px] text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 px-1.5 py-0.5 rounded-md cursor-pointer transition-all border-0 bg-transparent"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface PriceRangePickerProps {
+  minPrice: string;
+  maxPrice: string;
+  setMinPrice: (val: string) => void;
+  setMaxPrice: (val: string) => void;
+}
+
+function PriceRangePicker({ minPrice, maxPrice, setMinPrice, setMaxPrice }: PriceRangePickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".price-range-picker-container")) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  const displayValue = () => {
+    if (!minPrice && !maxPrice) return "Select price range";
+    if (minPrice && !maxPrice) return `₹${parseInt(minPrice).toLocaleString()} - ...`;
+    if (!minPrice && maxPrice) return `... - ₹${parseInt(maxPrice).toLocaleString()}`;
+    return `₹${parseInt(minPrice).toLocaleString()} to ₹${parseInt(maxPrice).toLocaleString()}`;
+  };
+
+  return (
+    <div className="relative price-range-picker-container w-full sm:w-[200px] shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-10 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100/70 text-left px-3 rounded-md text-xs text-[#18181b] flex items-center justify-between transition-all duration-200 cursor-pointer"
+      >
+        <span className={(!minPrice && !maxPrice) ? "text-zinc-400 font-medium" : "font-semibold text-zinc-800"}>
+          {displayValue()}
+        </span>
+        <SlidersHorizontal className="w-4 h-4 text-zinc-400 shrink-0 ml-2" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-11 right-0 sm:left-0 z-50 w-[240px] bg-white border border-zinc-200 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 space-y-3">
+          <div className="text-xs font-bold text-zinc-800 uppercase tracking-wider">Set Price Range</div>
+          <div className="flex items-center gap-2">
+            <div className="space-y-1 flex-1">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Min (₹)</span>
+              <Input
+                placeholder="0"
+                type="number"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="bg-white border-zinc-200 text-xs h-9 focus-visible:ring-[#f59e0b]"
+              />
+            </div>
+            <span className="text-zinc-400 text-xs font-bold pt-4">to</span>
+            <div className="space-y-1 flex-1">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Max (₹)</span>
+              <Input
+                placeholder="Max"
+                type="number"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="bg-white border-zinc-200 text-xs h-9 focus-visible:ring-[#f59e0b]"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="text-[10px] text-amber-600 hover:text-amber-700 font-bold hover:bg-amber-50 px-1.5 py-0.5 rounded-md cursor-pointer transition-all border-0 bg-transparent"
+            >
+              Apply
+            </button>
+            {(minPrice || maxPrice) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMinPrice("");
+                  setMaxPrice("");
+                }}
+                className="text-[10px] text-rose-600 hover:text-rose-700 font-bold hover:bg-rose-50 px-1.5 py-0.5 rounded-md cursor-pointer transition-all border-0 bg-transparent"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +389,13 @@ export default function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState("");
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState("");
+  const [activeView, setActiveView] = useState<"analytics" | "table">("table");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -129,37 +436,78 @@ export default function PaymentsPage() {
 
       if (debouncedSearchQuery) {
         const query = debouncedSearchQuery.trim();
-        
-        // 1. Search orders table for matching customer detail
-        const { data: matchedOrders } = await supabase
-          .from("orders")
-          .select("id")
-          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`);
-        
-        const matchedIds = (matchedOrders || []).map(o => o.id);
-        
-        // Clean up display ID prefix if searched
-        let cleanQuery = query;
-        if (cleanQuery.toUpperCase().startsWith("ORD-")) {
-          cleanQuery = cleanQuery.slice(4);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+        let matchedIds: string[] = [];
+
+        // Check if query is a custom display order ID (e.g. OD178100194544591134)
+        const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
+        if (odMatch) {
+          const ts = parseInt(odMatch[1]);
+          const startWindow = new Date(ts - 2000).toISOString();
+          const endWindow = new Date(ts + 2000).toISOString();
+
+          const { data: windowOrders } = await supabase
+            .from("orders")
+            .select("id, created_at")
+            .gte("created_at", startWindow)
+            .lte("created_at", endWindow);
+
+          const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
+          if (matchingOrder) {
+            matchedIds.push(matchingOrder.id);
+          }
+        } else {
+          let ordersOrConditions = `customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`;
+          if (isUuid) {
+            ordersOrConditions += `,id.eq.${query}`;
+          }
+
+          // 1. Search orders table for matching customer detail or order ID (UUID)
+          const { data: matchedOrders } = await supabase
+            .from("orders")
+            .select("id")
+            .or(ordersOrConditions);
+
+          matchedIds = (matchedOrders || []).map(o => o.id);
         }
-        
+
         let orConditions = `transaction_id.ilike.%${query}%`;
-        
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQuery);
         if (isUuid) {
-          orConditions += `,order_id.eq.${cleanQuery}`;
+          orConditions += `,id.eq.${query},order_id.eq.${query}`;
         }
-        
+
         if (matchedIds.length > 0) {
           orConditions += `,order_id.in.(${matchedIds.map(id => `"${id}"`).join(",")})`;
         }
-        
+
         q = q.or(orConditions);
       }
 
       if (statusFilter !== "All") {
         q = q.eq("status", statusFilter);
+      }
+
+      if (startDate) {
+        q = q.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+
+      if (endDate) {
+        q = q.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
+      if (debouncedMinPrice) {
+        const minVal = parseFloat(debouncedMinPrice);
+        if (!isNaN(minVal)) {
+          q = q.gte("amount", minVal);
+        }
+      }
+
+      if (debouncedMaxPrice) {
+        const maxVal = parseFloat(debouncedMaxPrice);
+        if (!isNaN(maxVal)) {
+          q = q.lte("amount", maxVal);
+        }
       }
 
       const start = (currentPage - 1) * pageSize;
@@ -178,11 +526,20 @@ export default function PaymentsPage() {
     } finally {
       setTableLoading(false);
     }
-  }, [supabase, currentPage, pageSize, debouncedSearchQuery, statusFilter]);
+  }, [supabase, currentPage, pageSize, debouncedSearchQuery, statusFilter, startDate, endDate, debouncedMinPrice, debouncedMaxPrice]);
 
   useEffect(() => {
     setIsMounted(true);
     fetchPayments();
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const searchVal = params.get("search");
+      if (searchVal) {
+        setSearchQuery(searchVal);
+        setActiveView("table");
+      }
+    }
   }, [fetchPayments]);
 
   useEffect(() => {
@@ -196,6 +553,21 @@ export default function PaymentsPage() {
     }, 300);
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  // Debounce price range
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMinPrice(minPrice);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [minPrice]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMaxPrice(maxPrice);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [maxPrice]);
 
 
   const updateStatus = async (paymentId: string, orderId: string, status: string) => {
@@ -257,37 +629,78 @@ export default function PaymentsPage() {
 
       if (debouncedSearchQuery) {
         const query = debouncedSearchQuery.trim();
-        
-        // 1. Search orders table for matching customer detail
-        const { data: matchedOrders } = await supabase
-          .from("orders")
-          .select("id")
-          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`);
-        
-        const matchedIds = (matchedOrders || []).map(o => o.id);
-        
-        // Clean up display ID prefix if searched
-        let cleanQuery = query;
-        if (cleanQuery.toUpperCase().startsWith("ORD-")) {
-          cleanQuery = cleanQuery.slice(4);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+        let matchedIds: string[] = [];
+
+        // Check if query is a custom display order ID (e.g. OD178100194544591134)
+        const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
+        if (odMatch) {
+          const ts = parseInt(odMatch[1]);
+          const startWindow = new Date(ts - 2000).toISOString();
+          const endWindow = new Date(ts + 2000).toISOString();
+
+          const { data: windowOrders } = await supabase
+            .from("orders")
+            .select("id, created_at")
+            .gte("created_at", startWindow)
+            .lte("created_at", endWindow);
+
+          const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
+          if (matchingOrder) {
+            matchedIds.push(matchingOrder.id);
+          }
+        } else {
+          let ordersOrConditions = `customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`;
+          if (isUuid) {
+            ordersOrConditions += `,id.eq.${query}`;
+          }
+
+          // 1. Search orders table for matching customer detail or order ID (UUID)
+          const { data: matchedOrders } = await supabase
+            .from("orders")
+            .select("id")
+            .or(ordersOrConditions);
+
+          matchedIds = (matchedOrders || []).map(o => o.id);
         }
-        
+
         let orConditions = `transaction_id.ilike.%${query}%`;
-        
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQuery);
         if (isUuid) {
-          orConditions += `,order_id.eq.${cleanQuery}`;
+          orConditions += `,id.eq.${query},order_id.eq.${query}`;
         }
-        
+
         if (matchedIds.length > 0) {
           orConditions += `,order_id.in.(${matchedIds.map(id => `"${id}"`).join(",")})`;
         }
-        
+
         q = q.or(orConditions);
       }
 
       if (statusFilter !== "All") {
         q = q.eq("status", statusFilter);
+      }
+
+      if (startDate) {
+        q = q.gte("created_at", `${startDate}T00:00:00Z`);
+      }
+
+      if (endDate) {
+        q = q.lte("created_at", `${endDate}T23:59:59Z`);
+      }
+
+      if (debouncedMinPrice) {
+        const minVal = parseFloat(debouncedMinPrice);
+        if (!isNaN(minVal)) {
+          q = q.gte("amount", minVal);
+        }
+      }
+
+      if (debouncedMaxPrice) {
+        const maxVal = parseFloat(debouncedMaxPrice);
+        if (!isNaN(maxVal)) {
+          q = q.lte("amount", maxVal);
+        }
       }
 
       const { data, error } = await q.order("created_at", { ascending: false });
@@ -319,7 +732,7 @@ export default function PaymentsPage() {
   // Reset page to 1 when filters or query change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery, statusFilter]);
+  }, [debouncedSearchQuery, statusFilter, startDate, endDate, debouncedMinPrice, debouncedMaxPrice]);
 
   const stats = useMemo(() => {
     const completed = payments.filter(p => p.status.toLowerCase() === "completed");
@@ -438,6 +851,18 @@ export default function PaymentsPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              onClick={() => {
+                setLoading(true);
+                setTableLoading(true);
+                fetchPayments();
+                fetchTablePayments();
+              }}
+              className="bg-white/20 hover:bg-white/30 text-white font-bold border border-white/10 shadow-sm"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
             <Button
               onClick={downloadCSV}
               className="bg-white/20 hover:bg-white/30 text-white font-bold border border-white/10 shadow-sm"
@@ -594,346 +1019,377 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Revenue Trend Area Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
-          <div>
-            <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Revenue Trend</h3>
-            <p className="text-xs font-semibold text-zinc-400 mt-1">Daily completed payments revenue (7 days)</p>
-          </div>
-          <div className="h-[260px] w-full mt-4 -ml-4">
-            {isMounted && payments.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyRevenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }}
-                    tickFormatter={(val) => `₹${val}`}
-                  />
-                  <Tooltip
-                    cursor={{ stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '4 4' }}
-                    content={({ active, payload }: any) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-[#f59e0b] text-xs font-bold animate-in fade-in duration-200">
-                            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
-                              {payload[0].payload.date}
-                            </p>
-                            <p className="text-sm font-black">
-                              ₹{payload[0].value.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    fill="url(#revenueAreaGrad)"
-                    strokeLinecap="round"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-300">
-                <p className="text-[10px] font-black uppercase tracking-widest">No revenue trend data available</p>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Payment Status Breakdown Donut Chart */}
-        <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
-          <div>
-            <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Payment Status</h3>
-            <p className="text-xs font-semibold text-zinc-400 mt-1">Transaction status distribution</p>
-          </div>
-          <div className="h-[260px] w-full mt-4 flex items-center justify-center relative">
-            {isMounted && payments.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={paymentStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {paymentStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={({ active, payload }: any) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        const percentage = ((data.value / (payments.length || 1)) * 100).toFixed(1);
-                        return (
-                          <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-zinc-800 text-xs font-bold animate-in fade-in duration-200">
-                            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
-                              {data.name}
-                            </p>
-                            <p className="text-sm font-black">
-                              {data.value} tx ({percentage}%)
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-300">
-                <p className="text-[10px] font-black uppercase tracking-widest">No payment data available</p>
-              </div>
-            )}
-
-            {/* Center Text inside Donut Hole */}
-            {isMounted && payments.length > 0 && (
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-[#18181b]">{payments.length}</span>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Tx</span>
-              </div>
-            )}
-          </div>
-          {/* Custom Legends */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-            {[
-              { label: "Completed", color: "#10b981" },
-              { label: "Pending", color: "#f59e0b" },
-              { label: "Failed", color: "#ef4444" },
-              { label: "Refunded", color: "#8b5cf6" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+      {/* View Switcher Tabs */}
+      <div className="flex border-b border-zinc-200 gap-6">
+        <button
+          onClick={() => setActiveView("analytics")}
+          className={cn(
+            "pb-3 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer bg-transparent border-0",
+            activeView === "analytics"
+              ? "border-amber-500 text-zinc-950 font-extrabold"
+              : "border-transparent text-zinc-400 hover:text-zinc-650"
+          )}
+        >
+          Analytics & Trends
+        </button>
+        <button
+          onClick={() => setActiveView("table")}
+          className={cn(
+            "pb-3 text-sm font-bold tracking-wide transition-all border-b-2 cursor-pointer bg-transparent border-0",
+            activeView === "table"
+              ? "border-amber-500 text-zinc-950 font-extrabold"
+              : "border-transparent text-zinc-400 hover:text-zinc-650"
+          )}
+        >
+          Payments Table
+        </button>
       </div>
 
-      {/* DATA TABLE */}
-      <Card className="overflow-hidden border border-zinc-200 bg-white shadow-sm rounded-2xl text-[#18181b]">
-
-        {/* Action Bar */}
-        <div className="p-4 border-b border-zinc-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-white">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <Input
-              placeholder="Search tx_id, email, or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 h-10 bg-zinc-50 border-zinc-200 focus-visible:ring-[#f59e0b] text-[#18181b] placeholder:text-zinc-400"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex items-center w-full sm:w-auto gap-3">
-            <Select value={statusFilter} onValueChange={(val) => setStatusFilter((val as StatusType) || "All")}>
-              <SelectTrigger className="w-full sm:w-[160px] bg-zinc-50 border-zinc-200 focus:ring-[#f59e0b] text-[#18181b] relative">
-                <div className="flex items-center gap-2 text-zinc-600">
-                  <Filter className="w-4 h-4" />
-                  <SelectValue placeholder="All" />
-                </div>
-                {statusFilter !== "All" && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white border-zinc-200">
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Failed">Failed</SelectItem>
-                <SelectItem value="Refunded">Refunded</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Table */}
-        <ScrollArea className="h-[600px]">
-          <Table>
-            <TableHeader className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200">
-              <TableRow className="border-b border-zinc-200 hover:bg-transparent">
-                <TableHead className="w-[180px] font-bold text-zinc-500 pl-6 h-12">Transaction Ref</TableHead>
-                <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Order ID</TableHead>
-                <TableHead className="font-bold text-zinc-500 h-12">Customer</TableHead>
-                <TableHead className="font-bold text-zinc-500 h-12">Amount</TableHead>
-                <TableHead className="font-bold text-zinc-500 h-12">Status</TableHead>
-                <TableHead className="font-bold text-zinc-500 h-12">Date</TableHead>
-                <TableHead className="text-right pr-6 font-bold text-zinc-500 h-12">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-zinc-100">
-              {tableLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-60 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
-                      <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                      <p className="text-xs font-semibold">Loading transactions...</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : tablePayments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-60 text-center text-zinc-500">
-                    <div className="flex flex-col items-center justify-center gap-2 py-8">
-                      <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
-                        <Search className="w-5 h-5" />
-                      </div>
-                      <p className="text-sm font-bold text-zinc-800 mt-2">No records found</p>
-                      <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any payments matching "{searchQuery}" or status "{statusFilter}".</p>
-                      {(searchQuery || statusFilter !== "All") && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchQuery("");
-                            setStatusFilter("All");
-                          }}
-                          className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
-                        >
-                          Clear Filters
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+      {activeView === "analytics" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Revenue Trend Area Chart */}
+          <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
+            <div>
+              <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Revenue Trend</h3>
+              <p className="text-xs font-semibold text-zinc-400 mt-1">Daily completed payments revenue (7 days)</p>
+            </div>
+            <div className="h-[260px] w-full mt-4 -ml-4">
+              {isMounted && payments.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyRevenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="revenueAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 600, fill: '#94a3b8' }}
+                      tickFormatter={(val) => `₹${val}`}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-[#f59e0b] text-xs font-bold animate-in fade-in duration-200">
+                              <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
+                                {payload[0].payload.date}
+                              </p>
+                              <p className="text-sm font-black">
+                                ₹{payload[0].value.toLocaleString("en-IN")}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="#f59e0b"
+                      strokeWidth={3}
+                      fill="url(#revenueAreaGrad)"
+                      strokeLinecap="round"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               ) : (
-                tablePayments.map((payment) => (
-                  <TableRow key={payment.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm border-zinc-200">
-
-                    <TableCell className="pl-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-bold text-sm text-[#18181b]">
-                          {payment.transaction_id || payment.id.slice(0, 12).toUpperCase()}
-                        </span>
-                        <span className="text-xs text-zinc-400 font-mono">
-                          {payment.payment_method || "ONLINE"}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-bold text-sm text-[#18181b] font-mono bg-zinc-100 px-2 py-1 rounded-md w-max">
-                          {payment.orders?.id ? getDisplayOrderId(payment.orders.id, payment.orders.created_at) : `ORD-${payment.order_id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className={cn("h-8 w-8", getAvatarBg(payment.orders?.customer_name))}>
-                          <AvatarFallback className="bg-transparent text-xs font-bold">
-                            {getInitials(payment.orders?.customer_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-[#18181b]">
-                            {payment.orders?.customer_name || "Guest Customer"}
-                          </span>
-                          <span className="text-xs text-zinc-500">
-                            {payment.orders?.customer_email || "No email provided"}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-[#18181b]">
-                          ₹{parseFloat(payment.amount).toLocaleString('en-IN')}
-                        </span>
-                        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                          {payment.payment_method || "Card"}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      {getStatusBadge(payment.status)}
-                    </TableCell>
-
-                    <TableCell className="text-sm text-zinc-500">
-                      {new Date(payment.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </TableCell>
-
-                    <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={
-                          <Button variant="ghost" className="h-8 w-8 p-0 text-zinc-400 hover:text-[#f59e0b] hover:bg-zinc-100 rounded-lg">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        } />
-                        <DropdownMenuContent align="end" className="w-48 bg-white border border-zinc-200 shadow-xl rounded-xl">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(payment);
-                            setIsDetailsOpen(true);
-                          }} className="cursor-pointer font-semibold text-zinc-700 hover:bg-zinc-50">
-                            <Receipt className="w-4 h-4 mr-2 text-zinc-400" /> View Receipt
-                          </DropdownMenuItem>
-                          {payment.status && 
-                           ["refund_pending", "refund_processing"].includes(payment.status.toLowerCase()) && (
-                            <>
-                              <DropdownMenuSeparator className="bg-zinc-100" />
-                              <DropdownMenuItem onClick={() => issueRefund(payment.id, payment.order_id)} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
-                                <ArrowDownRight className="w-4 h-4 mr-2" /> Issue Refund
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-
-                  </TableRow>
-                ))
+                <div className="h-full flex flex-col items-center justify-center text-zinc-300">
+                  <p className="text-[10px] font-black uppercase tracking-widest">No revenue trend data available</p>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-        {!tableLoading && totalItems > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalItems={totalItems}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            variantColor="amber"
-          />
-        )}
-      </Card>
+            </div>
+          </Card>
+
+          {/* Payment Status Breakdown Donut Chart */}
+          <Card className="bg-white border-zinc-200 shadow-sm rounded-2xl overflow-hidden p-6 flex flex-col justify-between text-[#18181b]">
+            <div>
+              <h3 className="text-lg font-bold text-[#18181b] tracking-tight">Payment Status</h3>
+              <p className="text-xs font-semibold text-zinc-400 mt-1">Transaction status distribution</p>
+            </div>
+            <div className="h-[260px] w-full mt-4 flex items-center justify-center relative">
+              {isMounted && payments.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={paymentStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {paymentStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const percentage = ((data.value / (payments.length || 1)) * 100).toFixed(1);
+                          return (
+                            <div className="bg-zinc-950 text-white p-3 rounded-xl shadow-xl border border-zinc-800 text-xs font-bold animate-in fade-in duration-200">
+                              <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
+                                {data.name}
+                              </p>
+                              <p className="text-sm font-black">
+                                {data.value} tx ({percentage}%)
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-zinc-300">
+                  <p className="text-[10px] font-black uppercase tracking-widest">No payment data available</p>
+                </div>
+              )}
+
+              {/* Center Text inside Donut Hole */}
+              {isMounted && payments.length > 0 && (
+                <div className="absolute flex flex-col items-center justify-center">
+                  <span className="text-3xl font-black text-[#18181b]">{payments.length}</span>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Tx</span>
+                </div>
+              )}
+            </div>
+            {/* Custom Legends */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
+              {[
+                { label: "Completed", color: "#10b981" },
+                { label: "Pending", color: "#f59e0b" },
+                { label: "Failed", color: "#ef4444" },
+                { label: "Refunded", color: "#8b5cf6" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* DATA TABLE */}
+      {activeView === "table" && (
+        <Card className="overflow-hidden border border-zinc-200 bg-white shadow-sm rounded-2xl text-[#18181b]">
+
+          {/* Action Bar */}
+          <div className="p-4 border-b border-zinc-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-white">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Input
+                placeholder="Search tx_id, email, or name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 h-10 bg-zinc-50 border-zinc-200 focus-visible:ring-[#f59e0b] text-[#18181b] placeholder:text-zinc-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center w-full sm:w-auto gap-3">
+              <PriceRangePicker minPrice={minPrice} maxPrice={maxPrice} setMinPrice={setMinPrice} setMaxPrice={setMaxPrice} />
+              <DateRangePicker startDate={startDate} endDate={endDate} onChange={(start, end) => { setStartDate(start); setEndDate(end); }} />
+              <Select value={statusFilter} onValueChange={(val) => setStatusFilter((val as StatusType) || "All")}>
+                <SelectTrigger className="w-full sm:w-[160px] bg-zinc-50 border-zinc-200 focus:ring-[#f59e0b] text-[#18181b] relative">
+                  <div className="flex items-center gap-2 text-zinc-600">
+                    <Filter className="w-4 h-4" />
+                    <SelectValue placeholder="All" />
+                  </div>
+                  {statusFilter !== "All" && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                  )}
+                </SelectTrigger>
+                <SelectContent className="bg-white border-zinc-200">
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Failed">Failed</SelectItem>
+                  <SelectItem value="Refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Table */}
+          <ScrollArea className="h-[600px]">
+            <Table>
+              <TableHeader className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200">
+                <TableRow className="border-b border-zinc-200 hover:bg-transparent">
+                  <TableHead className="w-[180px] font-bold text-zinc-500 pl-6 h-12">Transaction Ref</TableHead>
+                  <TableHead className="w-[180px] font-bold text-zinc-500 h-12">Order ID</TableHead>
+                  <TableHead className="font-bold text-zinc-500 h-12">Customer</TableHead>
+                  <TableHead className="font-bold text-zinc-500 h-12">Amount</TableHead>
+                  <TableHead className="font-bold text-zinc-500 h-12">Status</TableHead>
+                  <TableHead className="font-bold text-zinc-500 h-12">Date</TableHead>
+                  <TableHead className="text-right pr-6 font-bold text-zinc-500 h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-zinc-100">
+                {tableLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-60 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                        <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                        <p className="text-xs font-semibold">Loading transactions...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : tablePayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-60 text-center text-zinc-500">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8">
+                        <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
+                          <Search className="w-5 h-5" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800 mt-2">No records found</p>
+                        <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any payments matching "{searchQuery}" or status "{statusFilter}".</p>
+                        {(searchQuery || statusFilter !== "All") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setStatusFilter("All");
+                            }}
+                            className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
+                          >
+                            Clear Filters
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  tablePayments.map((payment) => (
+                    <TableRow key={payment.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm border-zinc-200">
+
+                      <TableCell className="pl-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-sm text-[#18181b]">
+                            {payment.transaction_id || payment.id.slice(0, 12).toUpperCase()}
+                          </span>
+                          <span className="text-xs text-zinc-400 font-mono">
+                            {payment.payment_method || "ONLINE"}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-sm text-[#18181b] font-mono bg-zinc-100 px-2 py-1 rounded-md w-max">
+                            {payment.orders?.id ? getDisplayOrderId(payment.orders.id, payment.orders.created_at) : `ORD-${payment.order_id.slice(0, 8).toUpperCase()}`}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className={cn("h-8 w-8", getAvatarBg(payment.orders?.customer_name))}>
+                            <AvatarFallback className="bg-transparent text-xs font-bold">
+                              {getInitials(payment.orders?.customer_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-[#18181b]">
+                              {payment.orders?.customer_name || "Guest Customer"}
+                            </span>
+                            <span className="text-xs text-zinc-500">
+                              {payment.orders?.customer_email || "No email provided"}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-bold text-[#18181b]">
+                            ₹{parseFloat(payment.amount).toLocaleString('en-IN')}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                            {payment.payment_method || "Card"}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        {getStatusBadge(payment.status)}
+                      </TableCell>
+
+                      <TableCell className="text-sm text-zinc-500">
+                        {new Date(payment.created_at).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </TableCell>
+
+                      <TableCell className="text-right pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={
+                            <Button variant="ghost" className="h-8 w-8 p-0 text-zinc-400 hover:text-[#f59e0b] hover:bg-zinc-100 rounded-lg">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <DropdownMenuContent align="end" className="w-48 bg-white border border-zinc-200 shadow-xl rounded-xl">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(payment);
+                              setIsDetailsOpen(true);
+                            }} className="cursor-pointer font-semibold text-zinc-700 hover:bg-zinc-50">
+                              <Receipt className="w-4 h-4 mr-2 text-zinc-400" /> View Receipt
+                            </DropdownMenuItem>
+                            {payment.status &&
+                              ["refund_pending", "refund_processing"].includes(payment.status.toLowerCase()) && (
+                                <>
+                                  <DropdownMenuSeparator className="bg-zinc-100" />
+                                  <DropdownMenuItem onClick={() => issueRefund(payment.id, payment.order_id)} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
+                                    <ArrowDownRight className="w-4 h-4 mr-2" /> Issue Refund
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+          {!tableLoading && totalItems > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              variantColor="amber"
+            />
+          )}
+        </Card>
+      )}
 
       {/* --- DIALOGS --- */}
 

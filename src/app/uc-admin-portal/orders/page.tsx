@@ -523,7 +523,36 @@ export default function OrdersPage() {
         `, { count: "exact" });
 
       if (debouncedSearchQuery) {
-        q = q.or(`customer_name.ilike.%${debouncedSearchQuery}%,id.ilike.%${debouncedSearchQuery}%`);
+        const query = debouncedSearchQuery.trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+        // Check if query is a custom display order ID (e.g. OD178100194544591134)
+        const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
+        if (odMatch) {
+          const ts = parseInt(odMatch[1]);
+          const startWindow = new Date(ts - 2000).toISOString();
+          const endWindow = new Date(ts + 2000).toISOString();
+
+          const { data: windowOrders } = await supabase
+            .from("orders")
+            .select("id, created_at")
+            .gte("created_at", startWindow)
+            .lte("created_at", endWindow);
+
+          const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
+          if (matchingOrder) {
+            q = q.eq("id", matchingOrder.id);
+          } else {
+            // No matching order, force 0 results
+            q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+          }
+        } else {
+          let orConditions = `customer_name.ilike.%${query}%`;
+          if (isUuid) {
+            orConditions += `,id.eq.${query}`;
+          }
+          q = q.or(orConditions);
+        }
       }
 
       if (statusFilter !== "All") {
@@ -562,6 +591,19 @@ export default function OrdersPage() {
       if (error) throw error;
       setTableOrders(data || []);
       setTotalItems(count || 0);
+
+      // Auto-open if searching specifically for a single order from URL
+      if (data && data.length === 1 && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const searchVal = params.get("search");
+        if (searchVal && (
+          searchVal.toLowerCase() === data[0].id.toLowerCase() ||
+          getDisplayOrderId(data[0].id, data[0].created_at).toLowerCase() === searchVal.toLowerCase()
+        )) {
+          setSelectedOrder(data[0]);
+          setIsDetailsOpen(true);
+        }
+      }
     } catch (error) {
       console.error("Error fetching table orders:", error);
       toast.error("Failed to load orders table");
@@ -588,6 +630,15 @@ export default function OrdersPage() {
     setIsMounted(true);
     fetchOrders();
     fetchCarriers();
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const searchVal = params.get("search");
+      if (searchVal) {
+        setSearchQuery(searchVal);
+        setActiveView("table");
+      }
+    }
   }, [fetchOrders, fetchCarriers]);
 
   useEffect(() => {
@@ -825,7 +876,36 @@ export default function OrdersPage() {
       `);
 
     if (debouncedSearchQuery) {
-      q = q.or(`customer_name.ilike.%${debouncedSearchQuery}%,id.ilike.%${debouncedSearchQuery}%`);
+      const query = debouncedSearchQuery.trim();
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+      // Check if query is a custom display order ID (e.g. OD178100194544591134)
+      const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
+      if (odMatch) {
+        const ts = parseInt(odMatch[1]);
+        const startWindow = new Date(ts - 2000).toISOString();
+        const endWindow = new Date(ts + 2000).toISOString();
+
+        const { data: windowOrders } = await supabase
+          .from("orders")
+          .select("id, created_at")
+          .gte("created_at", startWindow)
+          .lte("created_at", endWindow);
+
+        const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
+        if (matchingOrder) {
+          q = q.eq("id", matchingOrder.id);
+        } else {
+          // No matching order, force 0 results
+          q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+        }
+      } else {
+        let orConditions = `customer_name.ilike.%${query}%`;
+        if (isUuid) {
+          orConditions += `,id.eq.${query}`;
+        }
+        q = q.or(orConditions);
+      }
     }
 
     if (statusFilter !== "All") {
@@ -1869,6 +1949,34 @@ export default function OrdersPage() {
                     )}>
                       {selectedOrder.payment_status || 'Unpaid'}
                     </p>
+
+                    {selectedOrder.transaction_id && (
+                      <p className="text-zinc-500 text-[10px] font-mono mt-1 break-all">
+                        Txn ID: {selectedOrder.transaction_id}
+                      </p>
+                    )}
+                    {selectedOrder.razorpay_order_id && (
+                      <p className="text-zinc-500 text-[10px] font-mono mt-0.5 break-all">
+                        Rzp Ord: {selectedOrder.razorpay_order_id}
+                      </p>
+                    )}
+                    {selectedOrder.razorpay_payment_id && (
+                      <p className="text-zinc-500 text-[10px] font-mono mt-0.5 break-all">
+                        Rzp Pay: {selectedOrder.razorpay_payment_id}
+                      </p>
+                    )}
+
+                    {(selectedOrder.transaction_id || selectedOrder.razorpay_payment_id) && (
+                      <div className="pt-1.5">
+                        <Link
+                          href={`/uc-admin-portal/payments?search=${selectedOrder.transaction_id || selectedOrder.razorpay_payment_id}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
+                        >
+                          View Payment Record &rarr;
+                        </Link>
+                      </div>
+                    )}
+
                     {selectedOrder.payment_status === 'Refund Pending' && (
                       <Button
                         size="sm"

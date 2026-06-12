@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { createClient } from "@/utils/supabase/client";
 import { Pagination } from "@/components/ui/pagination";
+import Link from "next/link";
+import { getDisplayOrderId } from "@/lib/order";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -58,13 +60,49 @@ export default function InvoiceAdminPage() {
     try {
       let q = supabase
         .from("invoices")
-        .select("*, orders(customer_name, customer_email)", { count: "exact" });
+        .select("*, orders(id, customer_name, customer_email, created_at)", { count: "exact" });
 
       if (debouncedSearchQuery) {
-        q = supabase
-          .from("invoices")
-          .select("*, orders!inner(customer_name, customer_email)", { count: "exact" });
-        q = q.or(`invoice_number.ilike.%${debouncedSearchQuery}%,orders.customer_name.ilike.%${debouncedSearchQuery}%`);
+        const query = debouncedSearchQuery.trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+        // Check if query is a custom display order ID (e.g. OD178100194544591134)
+        const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
+        if (odMatch) {
+          const ts = parseInt(odMatch[1]);
+          const startWindow = new Date(ts - 2000).toISOString();
+          const endWindow = new Date(ts + 2000).toISOString();
+
+          const { data: windowOrders } = await supabase
+            .from("orders")
+            .select("id, created_at")
+            .gte("created_at", startWindow)
+            .lte("created_at", endWindow);
+
+          const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
+          if (matchingOrder) {
+            q = supabase
+              .from("invoices")
+              .select("*, orders!inner(id, customer_name, customer_email, created_at)", { count: "exact" })
+              .eq("order_id", matchingOrder.id);
+          } else {
+            // Force 0 results by using dummy order ID
+            q = supabase
+              .from("invoices")
+              .select("*, orders!inner(id, customer_name, customer_email, created_at)", { count: "exact" })
+              .eq("order_id", "00000000-0000-0000-0000-000000000000");
+          }
+        } else {
+          q = supabase
+            .from("invoices")
+            .select("*, orders!inner(id, customer_name, customer_email, created_at)", { count: "exact" });
+
+          let orConditions = `invoice_number.ilike.%${query}%,orders.customer_name.ilike.%${query}%`;
+          if (isUuid) {
+            orConditions += `,order_id.eq.${query}`;
+          }
+          q = q.or(orConditions);
+        }
       }
 
       if (statusFilter !== "all") {
@@ -254,6 +292,7 @@ export default function InvoiceAdminPage() {
             <thead>
               <tr className="bg-zinc-50/70 border-b border-zinc-100">
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider pl-8">Invoice Info</th>
+                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Associated Order</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
@@ -263,7 +302,7 @@ export default function InvoiceAdminPage() {
             <tbody className="divide-y divide-zinc-100">
               {tableLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center">
+                  <td colSpan={6} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-zinc-500">
                       <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
                       <p className="text-xs font-semibold">Loading invoices...</p>
@@ -272,7 +311,7 @@ export default function InvoiceAdminPage() {
                 </tr>
               ) : tableInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-16 text-center text-zinc-500">
+                  <td colSpan={6} className="p-16 text-center text-zinc-500">
                     No invoices match your search criteria.
                   </td>
                 </tr>
@@ -282,6 +321,18 @@ export default function InvoiceAdminPage() {
                     <td className="px-6 py-4 pl-8">
                       <div className="font-bold text-zinc-800">{inv.invoice_number}</div>
                       <div className="text-[11px] text-zinc-500 mt-0.5">{new Date(inv.issued_at).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {inv.orders ? (
+                        <Link
+                          href={`/uc-admin-portal/orders?search=${getDisplayOrderId(inv.orders.id, inv.orders.created_at)}`}
+                          className="font-mono text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors hover:underline"
+                        >
+                          {getDisplayOrderId(inv.orders.id, inv.orders.created_at)}
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-zinc-400 font-mono">N/A</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-zinc-700">{inv.orders?.customer_name || "N/A"}</div>

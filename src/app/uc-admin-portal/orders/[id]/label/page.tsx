@@ -1,5 +1,5 @@
 import { createAdminClient as createClient } from "@/utils/supabase/admin-server";
-import { Printer, MapPin, Package, Phone } from "lucide-react";
+import { Printer, MapPin, Package, Phone, FileText, CreditCard, AlertTriangle, Truck, Calendar } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDisplayOrderId } from "@/lib/order";
@@ -18,123 +18,294 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
     return notFound();
   }
 
+  // Fetch invoice details
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("order_id", order.id)
+    .maybeSingle();
+
+  const isShipped = order.status?.toUpperCase() === "SHIPPED" || order.status?.toUpperCase() === "DELIVERED";
+
   return (
-    <div className="min-h-screen bg-zinc-100 p-8 flex flex-col items-center">
+    <div className="min-h-screen bg-zinc-100 p-4 md:p-8 flex flex-col items-center text-[#18181b] font-sans">
       {/* Print Controls (hidden when printing) */}
-      <div className="mb-8 flex gap-4 print:hidden w-full max-w-2xl justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-zinc-200">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 print:hidden w-full max-w-5xl justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-zinc-200 no-print">
         <div>
-          <h2 className="font-bold text-zinc-800">Shipping Label Generator</h2>
-          <p className="text-xs text-zinc-500">Order {getDisplayOrderId(order.id, order.created_at)}</p>
+          <h2 className="font-extrabold text-zinc-900 text-lg tracking-tight">Label & Invoice Hub</h2>
+          <p className="text-xs font-medium text-zinc-500 mt-0.5">Order ID: {getDisplayOrderId(order.id, order.created_at)}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/uc-admin-portal/orders" className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+        <div className="flex gap-2.5">
+          <Link href="/uc-admin-portal/orders" className="px-4 py-2.5 text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 rounded-xl transition-all shadow-sm">
             Back to Orders
           </Link>
           <PrintButton />
         </div>
       </div>
 
-      {/* Actual Label (Size roughly 4x6 inches for thermal printers) */}
-      <div className="w-[4in] h-[6in] bg-white text-black border-2 border-dashed border-zinc-300 print:border-none print:shadow-none shadow-xl flex flex-col overflow-hidden mx-auto relative p-6 box-border print:w-full print:h-full print:m-0 print:p-4">
-        
-        {/* Label Header */}
-        <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+      {/* Shipping Warning Alert (hidden when printing) */}
+      {!isShipped && (
+        <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 p-4 rounded-2xl text-amber-850 text-xs w-full max-w-5xl print:hidden no-print">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <h1 className="text-2xl font-black tracking-tighter uppercase">STANDARD</h1>
-            <p className="text-xs font-bold mt-1 uppercase tracking-widest">{order.carrier || "Carrier Pending"}</p>
-          </div>
-          <div className="text-right">
-            <h2 className="font-bold text-lg leading-none">UC</h2>
-            <p className="text-[10px] uppercase font-semibold text-gray-500">Logistics</p>
+            <span className="font-bold text-amber-900">Label Status Warning:</span> This order is currently in <span className="font-bold uppercase text-amber-900">{order.status || "Pending"}</span> status. Standard shipping carrier and tracking barcode parameters are fully generated after checking out the shipment as <span className="font-bold">Shipped</span>.
           </div>
         </div>
+      )}
 
-        {/* Addresses */}
-        <div className="flex flex-col gap-6 flex-1">
-          {/* From */}
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-widest mb-1">From:</p>
-            <div className="text-xs leading-tight">
-              <p className="font-bold">UC Enterprises</p>
-              <p>Zirakpur, Punjab</p>
-              <p>India, 140603</p>
-              <p>+91 98888 63377</p>
+      {/* Main Printable Container */}
+      <div className="print-area flex flex-col lg:flex-row gap-8 justify-center items-start w-full max-w-5xl print:block print:w-full print:max-w-none">
+        
+        {/* SECTION 1: Standard Courier Shipping Label */}
+        <div className="print-label-thermal w-[4in] h-[6in] bg-white text-black border-2 border-dashed border-zinc-300 shadow-xl flex flex-col overflow-hidden relative p-6 box-border shrink-0 page-break">
+          {/* Label Header */}
+          <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-3 shrink-0">
+            <div>
+              <h1 className="text-xl font-black tracking-tighter uppercase">STANDARD DELIV</h1>
+              <p className="text-[10px] font-black mt-0.5 uppercase tracking-wider text-zinc-700">{order.carrier || "STANDARD CARRIER"}</p>
+            </div>
+            <div className="text-right">
+              <h2 className="font-black text-lg leading-none tracking-tight">UC</h2>
+              <p className="text-[9px] uppercase font-bold text-zinc-500">Logistics</p>
             </div>
           </div>
 
-          {/* To */}
-          <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
-            <p className="text-[9px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-              <MapPin className="w-3 h-3" /> Ship To:
-            </p>
-            <div className="text-sm leading-snug">
-              <p className="font-extrabold text-base mb-1">{order.customer_name}</p>
-              <p className="whitespace-pre-wrap">{order.shipping_address || "No Address Provided"}</p>
-              <p className="mt-2 font-mono font-bold flex items-center gap-1">
-                <Phone className="w-3 h-3" /> {order.phone || "No Phone"}
+          {/* Address Details */}
+          <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+            {/* From */}
+            <div className="shrink-0">
+              <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-0.5">FROM:</p>
+              <div className="text-[11px] leading-tight text-zinc-800">
+                <p className="font-bold">UC Enterprises Warehouse</p>
+                <p>Zirakpur, Punjab, India, 140603</p>
+                <p className="font-semibold">Ph: +91 98888 63377</p>
+              </div>
+            </div>
+
+            {/* To */}
+            <div className="bg-zinc-50 border border-zinc-200 p-2.5 rounded-lg flex-1 min-h-0 flex flex-col justify-center">
+              <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-1 flex items-center gap-1">
+                <MapPin className="w-2.5 h-2.5" /> SHIP TO:
+              </p>
+              <div className="text-xs leading-snug">
+                <p className="font-black text-sm text-zinc-950">{order.customer_name}</p>
+                <p className="font-medium text-zinc-850 whitespace-pre-wrap leading-tight mt-0.5">{order.shipping_address || "No Address Provided"}</p>
+                <p className="mt-1.5 font-mono font-bold text-[11px] flex items-center gap-1 text-zinc-900">
+                  <Phone className="w-2.5 h-2.5" /> {order.phone || "No Phone"}
+                </p>
+              </div>
+            </div>
+
+            {/* Micro Item Manifest (within label box) */}
+            <div className="pt-2 border-t border-zinc-200 shrink-0">
+              <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500 mb-1">MANIFEST SUMMARY:</p>
+              <div className="text-[9px] space-y-1 max-h-[60px] overflow-hidden">
+                {order.order_items?.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-center text-zinc-800 font-medium">
+                    <span className="truncate pr-2">{item.products?.name || "Deleted Product"}</span>
+                    <span className="font-mono font-bold shrink-0 bg-zinc-100 px-1 py-0.2 rounded">Qty: {item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Label Footer */}
+          <div className="border-t-2 border-black pt-3 mt-auto shrink-0">
+            <div className="flex justify-between items-end mb-2 text-xs">
+              <div>
+                <p className="text-[8px] font-bold uppercase text-zinc-500">Order ID</p>
+                <p className="font-mono font-black text-zinc-900">{getDisplayOrderId(order.id, order.created_at)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-bold uppercase text-zinc-500">Items</p>
+                <p className="font-black text-zinc-900">{order.order_items?.length || 0}</p>
+              </div>
+            </div>
+
+            {/* Barcode representation */}
+            <div className="flex flex-col items-center border border-black p-1.5 bg-zinc-50 rounded">
+              <div className="font-mono text-2xl tracking-[-0.12em] font-black text-black select-none leading-none">
+                |||| || ||||| ||| || |||| |||||
+              </div>
+              <p className="font-mono text-[9px] font-bold tracking-widest mt-1 uppercase text-zinc-900">
+                {order.tracking_id || order.id.toUpperCase().substring(0, 12)}
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Items */}
-          <div className="mt-2 pt-4 border-t border-gray-200">
-            <p className="text-[9px] font-black uppercase tracking-widest mb-2 text-gray-500">Items included:</p>
-            <div className="text-[10px] space-y-1.5 leading-snug max-h-[100px] overflow-hidden">
-              {order.order_items?.map((item: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-start">
-                  <span className="font-semibold pr-2 line-clamp-2">{item.products?.name || "Unknown Item"}</span>
-                  <span className="font-mono font-bold whitespace-nowrap bg-gray-100 px-1 rounded">Qty: {item.quantity}</span>
+        {/* SECTION 2: Integrated Detailed Invoice / Packing Slip */}
+        <div className="print-invoice-a4 w-full lg:w-[7.5in] bg-white text-zinc-800 border border-zinc-200 shadow-xl rounded-3xl p-6 md:p-8 box-border flex flex-col justify-between print:mt-0">
+          <div>
+            {/* Invoice Header */}
+            <div className="flex justify-between items-start border-b border-zinc-200 pb-5 mb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">OFFICIAL INVOICE</span>
                 </div>
-              ))}
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight mt-1">
+                  {invoice?.invoice_number || `INV-${order.id.slice(0, 8).toUpperCase()}`}
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Date: {new Date(invoice?.created_at || order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <div className="text-right">
+                <h3 className="font-black text-lg text-zinc-900 tracking-tight leading-none">UC ENTERPRISES</h3>
+                <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mt-1">Tax Invoice / Packing Slip</p>
+              </div>
+            </div>
+
+            {/* Party Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-zinc-200 mb-6">
+              {/* Customer Info */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> Customer Details
+                </p>
+                <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl space-y-1">
+                  <p className="font-bold text-zinc-900 text-sm">{order.customer_name}</p>
+                  <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <span>Email:</span> <span className="font-medium text-zinc-700">{order.customer_email || "N/A"}</span>
+                  </p>
+                  <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <span>Phone:</span> <span className="font-medium text-zinc-700">{order.phone || "N/A"}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Shipping & Payment info */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5" /> Payment & Logistics
+                </p>
+                <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl space-y-1 text-xs">
+                  <p className="text-zinc-500 flex justify-between">
+                    <span>Payment Method:</span> <span className="font-bold text-zinc-800">{order.payment_method || "COD"}</span>
+                  </p>
+                  <p className="text-zinc-500 flex justify-between">
+                    <span>Payment Status:</span> 
+                    <span className={`font-bold uppercase ${order.payment_status?.toLowerCase() === "paid" ? "text-emerald-600" : "text-amber-600"}`}>
+                      {order.payment_status || "Unpaid"}
+                    </span>
+                  </p>
+                  {isShipped && (
+                    <div className="border-t border-zinc-200/60 pt-1 mt-1 space-y-0.5">
+                      <p className="text-zinc-500 flex justify-between">
+                        <span>Carrier:</span> <span className="font-semibold text-zinc-700">{order.carrier || "Standard"}</span>
+                      </p>
+                      <p className="text-zinc-500 flex justify-between">
+                        <span>Tracking ID:</span> <span className="font-mono text-zinc-700">{order.tracking_id || "N/A"}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Address Block */}
+              <div className="md:col-span-2 space-y-2">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" /> Shipping Address
+                </p>
+                <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl text-xs text-zinc-700 leading-relaxed font-medium">
+                  {order.shipping_address || "No shipping address details found."}
+                </div>
+              </div>
+            </div>
+
+            {/* Product details table */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Product Itemized Breakdown</p>
+              <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-zinc-50 border-b border-zinc-250 text-zinc-500 font-bold uppercase text-[10px]">
+                      <th className="px-4 py-3">Product details</th>
+                      <th className="px-4 py-3 text-center">SKU</th>
+                      <th className="px-4 py-3 text-right">Unit Price</th>
+                      <th className="px-4 py-3 text-center">Qty</th>
+                      <th className="px-4 py-3 text-right">Total Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 font-medium">
+                    {order.order_items?.map((item: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-zinc-50/50">
+                        <td className="px-4 py-3.5 text-zinc-900 font-bold max-w-[200px] truncate">{item.products?.name || "Deleted Product"}</td>
+                        <td className="px-4 py-3.5 text-center font-mono text-zinc-400 text-[10px]">{item.products?.sku || "N/A"}</td>
+                        <td className="px-4 py-3.5 text-right text-zinc-650">₹{Number(item.unit_price).toLocaleString('en-IN')}</td>
+                        <td className="px-4 py-3.5 text-center text-zinc-700 font-bold">{item.quantity}</td>
+                        <td className="px-4 py-3.5 text-right text-zinc-900 font-black">₹{Number(item.quantity * parseFloat(item.unit_price)).toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Totals & Signatures */}
+          <div className="mt-8 border-t border-zinc-200 pt-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              <div className="text-[11px] text-zinc-400 font-medium max-w-sm">
+                <p>Thank you for choosing UC Enterprises. For any queries regarding this package, please contact logistics support at support@ucenterprises.com.</p>
+              </div>
+
+              {/* Total calculations */}
+              <div className="w-full sm:w-64 space-y-2 text-xs font-semibold text-zinc-500">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="text-zinc-800">
+                    ₹{order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping Fee:</span>
+                  <span className="text-emerald-600 font-bold">FREE</span>
+                </div>
+                <div className="flex justify-between border-t border-zinc-150 pt-2 text-sm font-black text-zinc-900">
+                  <span>Grand Total:</span>
+                  <span>₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Order Meta */}
-        <div className="border-t-2 border-black pt-4 mt-auto">
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase text-gray-500">Order Reference</p>
-              <p className="font-mono font-bold text-sm">{getDisplayOrderId(order.id, order.created_at)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase text-gray-500">Weight</p>
-              <p className="font-bold text-sm">1.5 kg</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase text-gray-500">Items</p>
-              <p className="font-bold text-sm">{order.order_items?.length || 0}</p>
-            </div>
-          </div>
-
-          {/* Fake Barcode */}
-          <div className="flex flex-col items-center border border-black p-2 bg-gray-50">
-            <div className="font-mono text-3xl tracking-[-0.1em] font-black text-black select-none">
-              ||| ||||| ||| ||| |||| |||||
-            </div>
-            <p className="font-mono text-[10px] font-bold tracking-widest mt-1">
-              {order.tracking_id || order.id.toUpperCase().substring(0, 12)}
-            </p>
-          </div>
-        </div>
       </div>
-      
+
       {/* Print styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
           body * {
             visibility: hidden;
           }
-          .print\\:w-full, .print\\:w-full * {
+          .print-area, .print-area * {
             visibility: visible;
           }
-          .print\\:w-full {
+          .print-area {
             position: absolute;
             left: 0;
             top: 0;
             width: 100% !important;
-            height: 100% !important;
+          }
+          .print-label-thermal {
+            width: 4in !important;
+            height: 6in !important;
+            border: 2px solid black !important;
+            margin: 0 auto 30px auto !important;
+            page-break-after: always;
+            break-after: page;
+          }
+          .print-invoice-a4 {
+            width: 100% !important;
             border: none !important;
+            box-shadow: none !important;
+            padding: 20px 0 !important;
+            margin: 0 !important;
+            page-break-before: always;
+            break-before: page;
           }
         }
       `}} />

@@ -47,3 +47,25 @@ export async function toggleCategoryStatus(categoryId: string, currentStatus: bo
     return { success: false, error: err.message || "An unexpected error occurred" };
   }
 }
+
+export async function toggleBrandFeatured(brandId: string, currentFeatured: boolean) {
+  try {
+    const supabase = await createAdminClient();
+    const newFeatured = !currentFeatured;
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { error } = await supabase.from('brands').update({ is_featured: newFeatured }).eq('id', brandId);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/uc-admin-portal/brands');
+    return { success: true, newFeatured };
+  } catch (err: any) {
+    return { success: false, error: err.message || "An unexpected error occurred" };
+  }
+}
