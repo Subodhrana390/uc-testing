@@ -48,6 +48,12 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **URL Decoration**: Outbound relative and same-origin links are automatically appended with active tracking parameters.
 - **Analytics Integration**: Real analytics tracking with Google Analytics (`gtag`) and Meta Pixel (`fbq`).
 
+### 🔍 Search Engine Optimization (SEO)
+- **Dynamic Metadata & JSON-LD**: Comprehensive generation of Server-Side Metadata, Open Graph tags, Twitter Cards, and structured data schemas (`CollectionPage`, `BreadcrumbList`, `ItemList`, `FAQPage`) for enhanced Google Rich Snippets.
+- **Indexability & Crawling**: Fully optimized `robots.txt` configuration, wildcard directives, dynamic Canonical URLs preventing duplicate content, and properly structured `/categories/[slug]` routing.
+- **Automated Sitemaps**: Dynamic `sitemap.xml` generation mapped to the PostgreSQL database, including Image Sitemap integration for Google Image Search discovery.
+- **Page Performance**: Implemented paginated canonicalization, `noindex` rules for deep search boundaries, and Next.js Image caching to improve Core Web Vitals.
+
 ## 🛠 Setup & Installation
 
 1. **Clone the repository**:
