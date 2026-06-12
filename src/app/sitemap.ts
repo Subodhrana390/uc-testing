@@ -75,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Product pages ────────────────────────────────────────────────────────────
   const { data: products } = await supabase
     .from("products")
-    .select("slug, updated_at")
+    .select("slug, updated_at, image_url")
     .eq("status", "Active")
     .order("updated_at", { ascending: false });
 
@@ -84,12 +84,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.85,
+    ...(p.image_url ? { images: [p.image_url] } : {}),
   }));
 
   // ── Category pages ──────────────────────────────────────────────────────────
   const { data: categories } = await supabase
     .from("categories")
-    .select("slug, updated_at")
+    .select("slug, updated_at, image_url")
     .eq("status", true);
 
   const categoryPages: MetadataRoute.Sitemap = (categories || []).map((c) => ({
@@ -97,6 +98,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: c.updated_at ? new Date(c.updated_at) : new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.75,
+    ...(c.image_url ? { images: [c.image_url] } : {}),
   }));
 
   return [...staticPages, ...productPages, ...categoryPages];

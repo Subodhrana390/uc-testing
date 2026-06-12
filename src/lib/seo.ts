@@ -186,6 +186,7 @@ interface CategoryMetaInput {
   image_url?: string | null;
   productCount?: number;
   page?: number;
+  keywords?: string[];
 }
 
 export function categoryMetadata(c: CategoryMetaInput): Metadata {
@@ -202,10 +203,19 @@ export function categoryMetadata(c: CategoryMetaInput): Metadata {
   
   const url = canonicalUrl(`/categories/${c.slug}`);
   const image = normalizeSeoImageUrl(c.image_url) || OG_IMAGE;
+  
+  const keywords = c.keywords || [
+    c.name.toLowerCase(),
+    `buy ${c.name.toLowerCase()}`,
+    `${c.name.toLowerCase()} online`,
+    `wholesale ${c.name.toLowerCase()}`,
+    `${c.name.toLowerCase()} suppliers in India`
+  ];
 
   return baseMetadata({
     title,
     description,
+    keywords,
     alternates: { canonical: url },
     robots: isFirstPage
       ? { index: true, follow: true }

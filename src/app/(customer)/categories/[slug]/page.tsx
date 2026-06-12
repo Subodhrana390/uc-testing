@@ -9,8 +9,12 @@ import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
 import InfiniteProductList from "@/components/storefront/InfiniteProductList";
 import Pagination from "@/components/storefront/Pagination";
 import JsonLd from "@/components/seo/JsonLd";
-import { breadcrumbSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
+import { breadcrumbSchema, itemListSchema, webPageSchema, faqSchema } from "@/lib/jsonld";
 import { categoryMetadata, SITE_URL } from "@/lib/seo";
+import { faqItems } from "@/lib/storefront";
+import dynamic from "next/dynamic";
+
+const FAQAccordion = dynamic(() => import("@/components/storefront/FAQAccordion"));
 
 export const revalidate = 3600; // ISR — revalidate every hour
 
@@ -178,6 +182,7 @@ export default async function CategoryPage({
           type: "CollectionPage",
         }),
         ...(safeProducts.length > 0 ? [itemListSchema(safeProducts, category.name, categoryUrl)] : []),
+        faqSchema(faqItems.slice(0, 3)),
       ]} />
 
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-10">
@@ -294,6 +299,15 @@ export default async function CategoryPage({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Category FAQ Section */}
+        <div className="mt-16 border-t border-zinc-200/60 pt-12">
+          <div className="max-w-3xl mx-auto text-center mb-8">
+            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">Frequently Asked Questions</h2>
+            <p className="text-sm text-zinc-500 mt-2">Everything you need to know about purchasing {category.name}</p>
+          </div>
+          <FAQAccordion items={faqItems.slice(0, 3)} className="max-w-3xl mx-auto" />
         </div>
       </section>
     </div>
