@@ -18,6 +18,15 @@ export async function createOrder(orderData: {
   paymentMethod: string
   deliveryEstimate?: string
   paymentStatus?: string
+  couponCode?: string
+  isEmi?: boolean
+  emiProviderId?: string
+  emiPlanId?: string
+  emiTenure?: number
+  emiMonthlyInstallment?: number
+  emiInterestRate?: number
+  emiTotalPayable?: number
+  emiDetails?: any
 }) {
   try {
     const supabase = await createClient()
@@ -74,7 +83,16 @@ export async function createOrder(orderData: {
           quantity: item.quantity
         })),
         p_attribution: attribution,
-        p_postal_code: orderData.postalCode
+        p_postal_code: orderData.postalCode,
+        p_coupon_code: orderData.couponCode || null,
+        p_is_emi: orderData.isEmi || false,
+        p_emi_provider_id: orderData.emiProviderId || null,
+        p_emi_plan_id: orderData.emiPlanId || null,
+        p_emi_tenure: orderData.emiTenure || null,
+        p_emi_monthly_installment: orderData.emiMonthlyInstallment || null,
+        p_emi_interest_rate: orderData.emiInterestRate || null,
+        p_emi_total_payable: orderData.emiTotalPayable || null,
+        p_emi_details: orderData.emiDetails || null
       }
     )
 

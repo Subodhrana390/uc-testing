@@ -1939,7 +1939,9 @@ export default function OrdersPage() {
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Payment Details</h4>
-                    <p className="text-zinc-600 text-xs font-semibold uppercase">{selectedOrder.payment_method || 'N/A'}</p>
+                    <p className="text-zinc-600 text-xs font-semibold uppercase">
+                      {selectedOrder.is_emi ? "EMI / INSTALLMENTS" : (selectedOrder.payment_method || 'N/A')}
+                    </p>
                     <p className={cn(
                       "text-xs font-bold",
                       selectedOrder.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-600' :
@@ -1949,6 +1951,19 @@ export default function OrdersPage() {
                     )}>
                       {selectedOrder.payment_status || 'Unpaid'}
                     </p>
+
+                    {selectedOrder.is_emi && (
+                      <div className="mt-2 p-2 bg-zinc-50 border border-zinc-200 rounded-lg text-[10px] space-y-1 font-semibold text-zinc-650">
+                        <p className="font-bold text-zinc-800 uppercase tracking-wide">EMI Breakup</p>
+                        <div>Provider: <span className="font-bold text-zinc-950">{selectedOrder.emi_details?.provider_name || 'N/A'}</span></div>
+                        <div>Tenure: <span className="font-bold text-zinc-950">{selectedOrder.emi_tenure} Months</span></div>
+                        <div>Installment: <span className="font-bold text-zinc-950">₹{selectedOrder.emi_monthly_installment}/mo</span></div>
+                        <div>Interest: <span className="font-bold text-zinc-950">{selectedOrder.emi_interest_rate}% p.a.</span></div>
+                        <div className="border-t border-zinc-200 pt-1 mt-1 font-bold text-zinc-850">
+                          Total Payable: <span className="font-black text-zinc-950">₹{selectedOrder.emi_total_payable}</span>
+                        </div>
+                      </div>
+                    )}
 
                     {selectedOrder.transaction_id && (
                       <p className="text-zinc-500 text-[10px] font-mono mt-1 break-all">

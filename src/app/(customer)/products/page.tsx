@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
+import { fetchProductsFiltered } from "@/app/actions/products";
 import InfiniteProductList from "@/components/storefront/InfiniteProductList";
 import Pagination from "@/components/storefront/Pagination";
 import SortDropdown from "@/components/storefront/SortDropdown";
@@ -31,115 +32,28 @@ export default async function ProductsPage({
 }) {
   const supabase = await createClient();
   const currentPage = parseInt(searchParams.page || "1");
-  const sortMode = searchParams.sort || "latest";
   const pageSize = 12;
-  const from = (currentPage - 1) * pageSize;
-  const to = from + pageSize - 1;
 
-  // Mapping sort modes to Supabase order
-  let orderColumn = "created_at";
-  let orderOptions = { ascending: false };
-
-  if (sortMode === "price_asc") {
-    orderColumn = "price";
-    orderOptions = { ascending: true };
-  } else if (sortMode === "price_desc") {
-    orderColumn = "price";
-    orderOptions = { ascending: false };
-  }
-
+  // Parallel fetches for filter sidebar categories, brands, and custom attributes
   const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", true).order("name");
-
-  let productsData: any[] = [];
-  let totalCount = 0;
-
-  const categoryFilter = searchParams.category;
-  const inStockFilter = searchParams.in_stock === "true";
-  const outOfStockFilter = searchParams.out_of_stock === "true";
-  const promoFilter = searchParams.promo === "true";
-  const minPriceFilter = searchParams.min_price ? Number(searchParams.min_price) : null;
-  const maxPriceFilter = searchParams.max_price ? Number(searchParams.max_price) : null;
-  const brandFilter = searchParams.brand;
-
-  // Fetch available brands for the filter sidebar
   const brandsPromise = supabase.from("brands").select("id, name").order("name");
+  const attributesPromise = supabase.from("attributes").select("id, name, options").eq("is_filterable", true).order("display_order");
 
-  // If a specific category is selected, we need to find its ID and its subcategories' IDs
-  let categoryIds: string[] = [];
-  if (categoryFilter && categoryFilter !== "all") {
-    const { data: targetCat } = await supabase.from("categories").select("id").eq("slug", categoryFilter).single();
-    if (targetCat) {
-      const { data: subCats } = await supabase.from("categories").select("id").eq("parent_id", targetCat.id);
-      categoryIds = [targetCat.id, ...(subCats || []).map(c => c.id)];
-    }
-  }
+  // Fetch filtered products using the unified server action query
+  const { products: sortedProducts, totalCount } = await fetchProductsFiltered(currentPage, searchParams);
 
-  // Build the base query for non-rating sort
-  // We need to use inner join for brands if we want to filter by brand name
-  let query = supabase.from("products")
-    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)", { count: "exact" })
-    .eq("status", "Active");
+  const [categoriesResult, brandsResult, attributesResult] = await Promise.all([
+    categoriesPromise,
+    brandsPromise,
+    attributesPromise
+  ]);
 
-  if (categoryIds.length > 0) {
-    query = query.in("category_id", categoryIds);
-  }
-  if (inStockFilter && !outOfStockFilter) {
-    query = query.gt("stock_quantity", 0);
-  }
-  if (outOfStockFilter && !inStockFilter) {
-    query = query.eq("stock_quantity", 0);
-  }
-  if (promoFilter) {
-    query = query.not("sale_price", "is", null);
-  }
-  if (minPriceFilter !== null && !isNaN(minPriceFilter)) {
-    // Note: since sale_price overrides price, ideally we'd coalesce.
-    // For simplicity with Supabase postgrest, we can check price directly since sale_price logic is complex.
-    query = query.gte("price", minPriceFilter);
-  }
-  if (maxPriceFilter !== null && !isNaN(maxPriceFilter)) {
-    query = query.lte("price", maxPriceFilter);
-  }
-  if (brandFilter) {
-    query = query.eq("brands.name", brandFilter);
-  }
-
-  if (sortMode === "rating") {
-    // For rating sort, we fetch all matching without range because we sort in memory
-    const { data: allProducts } = await query;
-
-    const sorted = [...(allProducts || [])];
-    sorted.sort((a, b) => {
-      const aReviews = a.product_reviews || [];
-      const bReviews = b.product_reviews || [];
-      const aAvg = aReviews.length > 0 ? aReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / aReviews.length : 0;
-      const bAvg = bReviews.length > 0 ? bReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bReviews.length : 0;
-
-      if (bAvg !== aAvg) return bAvg - aAvg;
-
-      const aTop = a.is_top_rated ? 1 : 0;
-      const bTop = b.is_top_rated ? 1 : 0;
-      return bTop - aTop;
-    });
-    totalCount = sorted.length;
-    productsData = sorted.slice(from, to + 1);
-  } else {
-    // Standard database sorting and pagination
-    query = query.order(orderColumn, orderOptions).range(from, to);
-    const { data, count: dbCount } = await query;
-    productsData = data || [];
-    totalCount = dbCount || 0;
-  }
-
-  const { data: categoriesResult } = await categoriesPromise;
-  const categoriesList = categoriesResult || [];
-
-  const { data: brandsResult } = await brandsPromise;
-  const brandsList = brandsResult || [];
+  const categoriesList = categoriesResult.data || [];
+  const brandsList = brandsResult.data || [];
+  const attributesList = attributesResult.data || [];
 
   const count = totalCount;
   const totalPages = Math.ceil(totalCount / pageSize);
-  const sortedProducts = productsData;
 
   return (
     <div className="bg-zinc-50/60 min-h-screen text-zinc-900 antialiased">
@@ -186,7 +100,7 @@ export default async function ProductsPage({
           <MobileFilterWrapper>
             <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
 
-              <ProductSidebarFilters categories={categoriesList} brands={brandsList} />
+              <ProductSidebarFilters categories={categoriesList} brands={brandsList} attributes={attributesList} />
 
             </aside>
           </MobileFilterWrapper>

@@ -8,12 +8,14 @@ import { cn } from "@/lib/utils";
 export default function ProductSidebarFilters({
   categories,
   brands = [],
+  attributes = [],
   currentCategorySlug,
   activeParentCategory,
   activeSiblingCategories
 }: {
   categories: any[];
   brands?: any[];
+  attributes?: any[];
   currentCategorySlug?: string;
   activeParentCategory?: any;
   activeSiblingCategories?: any[];
@@ -25,7 +27,7 @@ export default function ProductSidebarFilters({
   const inStockOnly = searchParams.get("in_stock") === "true";
   const promoOnly = searchParams.get("promo") === "true";
   const outOfStockOnly = searchParams.get("out_of_stock") === "true";
-  const selectedBrand = searchParams.get("brand") || null;
+  const selectedBrands = searchParams.get("brand")?.split(",").map(b => b.trim()).filter(Boolean) || [];
   const selectedRating = searchParams.get("rating") ? parseInt(searchParams.get("rating") as string) : null;
   const urlMinPrice = searchParams.get("min_price");
   const urlMaxPrice = searchParams.get("max_price");
@@ -252,28 +254,69 @@ export default function ProductSidebarFilters({
       {brands.length > 0 && (
         <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Brands</h3>
-          <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
             {brands.map((brand) => {
-              const isSelected = selectedBrand === brand.name;
+              const isSelected = selectedBrands.includes(brand.name);
               return (
-                <button
-                  key={brand.id}
-                  onClick={() => updateFilters("brand", isSelected ? null : brand.name)}
-                  className={cn(
-                    "flex items-center justify-between w-full text-xs font-medium rounded-md px-2 py-1.5 transition-colors text-left",
-                    isSelected
-                      ? "bg-zinc-100 text-zinc-950 font-bold"
-                      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                  )}
-                >
-                  <span className="truncate pr-2">{brand.name}</span>
-                  {isSelected && <Check className="w-3 h-3 text-zinc-900 shrink-0" />}
-                </button>
+                <label key={brand.id} className="flex items-center gap-3 cursor-pointer group select-none">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      const newBrands = e.target.checked
+                        ? [...selectedBrands, brand.name]
+                        : selectedBrands.filter(b => b !== brand.name);
+                      updateFilters("brand", newBrands.length > 0 ? newBrands.join(",") : null);
+                    }}
+                    className="w-4 h-4 rounded-sm border-zinc-300 text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 accent-zinc-900 transition-all cursor-pointer"
+                  />
+                  <span className={cn(
+                    "text-xs font-medium transition-colors truncate pr-2",
+                    isSelected ? "text-zinc-950 font-bold" : "text-zinc-650 group-hover:text-zinc-950"
+                  )}>
+                    {brand.name}
+                  </span>
+                </label>
               );
             })}
           </div>
         </div>
       )}
+
+      {attributes && attributes.length > 0 && attributes.map((attr) => {
+        const selectedValues = searchParams.get("attr_" + attr.id)?.split(",").map((v: string) => v.trim()).filter(Boolean) || [];
+        return (
+          <div key={attr.id} className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{attr.name}</h3>
+            <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
+              {attr.options && attr.options.map((option: string) => {
+                const isSelected = selectedValues.includes(option);
+                return (
+                  <label key={option} className="flex items-center gap-3 cursor-pointer group select-none">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const newValues = e.target.checked
+                          ? [...selectedValues, option]
+                          : selectedValues.filter(v => v !== option);
+                        updateFilters("attr_" + attr.id, newValues.length > 0 ? newValues.join(",") : null);
+                      }}
+                      className="w-4 h-4 rounded-sm border-zinc-300 text-zinc-900 focus:ring-zinc-900 focus:ring-offset-0 accent-zinc-900 transition-all cursor-pointer"
+                    />
+                    <span className={cn(
+                      "text-xs font-medium transition-colors",
+                      isSelected ? "text-zinc-950 font-bold" : "text-zinc-650 group-hover:text-zinc-950"
+                    )}>
+                      {option}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {/* ── Rating ─────────────────────── */}
       <div className="space-y-2">

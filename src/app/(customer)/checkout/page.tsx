@@ -17,6 +17,7 @@ import {
   Check,
   AlertCircle,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -67,8 +68,13 @@ export default function CheckoutPage() {
     useState<string | null>(null);
 
   const [paymentMethod, setPaymentMethod] = useState<
-    "COD" | "ONLINE"
+    "COD" | "ONLINE" | "EMI"
   >("ONLINE");
+
+  const [emiProviders, setEmiProviders] = useState<any[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [fetchingEmi, setFetchingEmi] = useState(false);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -79,6 +85,18 @@ export default function CheckoutPage() {
     state: "",
     postalCode: "",
   });
+
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountType: "percentage" | "fixed";
+    discountValue: number;
+    minOrderAmount: number;
+    maxDiscountAmount: number | null;
+  } | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const totals = items.reduce(
     (acc, item) => {
@@ -105,7 +123,90 @@ export default function CheckoutPage() {
 
   const [deliveryCharge, setDeliveryCharge] = useState<number>(50);
 
-  const grandTotal = subtotal + totals.taxExclusiveTotal + deliveryCharge;
+  const grandTotal = Math.max(0, subtotal + totals.taxExclusiveTotal + deliveryCharge - discountAmount);
+
+  useEffect(() => {
+    if (appliedCoupon) {
+      let discount = 0;
+      if (appliedCoupon.discountType === "percentage") {
+        discount = subtotal * (appliedCoupon.discountValue / 100);
+        if (appliedCoupon.maxDiscountAmount !== null) {
+          discount = Math.min(discount, appliedCoupon.maxDiscountAmount);
+        }
+      } else if (appliedCoupon.discountType === "fixed") {
+        discount = appliedCoupon.discountValue;
+      }
+      discount = Math.min(discount, subtotal);
+      setDiscountAmount(discount);
+    } else {
+      setDiscountAmount(0);
+    }
+  }, [subtotal, appliedCoupon]);
+
+  useEffect(() => {
+    if (paymentMethod === "EMI") {
+      setFetchingEmi(true);
+      import("@/app/actions/emi").then(({ getEligibleEMIOptions }) => {
+        getEligibleEMIOptions(grandTotal).then((res) => {
+          if (res.success && res.providers) {
+            setEmiProviders(res.providers);
+            if (res.providers.length > 0) {
+              setSelectedProviderId(res.providers[0].id);
+              if (res.providers[0].plans.length > 0) {
+                setSelectedPlanId(res.providers[0].plans[0].id);
+              }
+            } else {
+              setSelectedProviderId(null);
+              setSelectedPlanId(null);
+            }
+          }
+          setFetchingEmi(false);
+        });
+      });
+    } else {
+      setEmiProviders([]);
+      setSelectedProviderId(null);
+      setSelectedPlanId(null);
+    }
+  }, [paymentMethod, grandTotal]);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCodeInput.trim()) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+    setApplyingCoupon(true);
+    setCouponError(null);
+    try {
+      const { validateCouponAction } = await import("@/app/actions/coupons");
+      const res = await validateCouponAction(couponCodeInput, subtotal);
+      if (res.success && res.coupon) {
+        setAppliedCoupon({
+          code: res.coupon.code,
+          discountType: res.coupon.discount_type as "percentage" | "fixed",
+          discountValue: res.coupon.discount_value,
+          minOrderAmount: res.coupon.min_order_amount,
+          maxDiscountAmount: res.coupon.max_discount_amount,
+        });
+        toast.success(`Coupon "${res.coupon.code}" applied successfully!`);
+      } else {
+        setCouponError(res.error || "Failed to apply coupon");
+        toast.error(res.error || "Failed to apply coupon");
+      }
+    } catch (err: any) {
+      setCouponError(err.message || "An unexpected error occurred");
+      toast.error(err.message || "An unexpected error occurred");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
+    setCouponError(null);
+    toast.success("Coupon removed");
+  };
 
   useEffect(() => {
     const cartItems = getCartItems();
@@ -395,12 +496,19 @@ export default function CheckoutPage() {
     try {
       const { createOrder } = await import("@/app/actions/orders");
 
-      if (paymentMethod === "ONLINE") {
+      if (paymentMethod === "ONLINE" || paymentMethod === "EMI") {
+        if (paymentMethod === "EMI" && (!selectedProviderId || !selectedPlanId)) {
+          throw new Error("Please select an EMI provider and plan");
+        }
+
         // Ensure Razorpay script is loaded
         const isLoaded = await loadRazorpayScript();
         if (!isLoaded) {
           throw new Error("Failed to load Razorpay SDK. Please check your internet connection or disable ad-blockers.");
         }
+
+        const selectedProvider = emiProviders.find(p => p.id === selectedProviderId);
+        const selectedPlan = selectedProvider?.plans.find((pl: any) => pl.id === selectedPlanId);
 
         // 1. Create order in Supabase as Unpaid
         const res = await createOrder({
@@ -409,7 +517,21 @@ export default function CheckoutPage() {
           total: grandTotal,
           paymentMethod: "ONLINE",
           deliveryEstimate: deliveryEstimate?.date,
-          paymentStatus: "Unpaid"
+          paymentStatus: "Unpaid",
+          couponCode: appliedCoupon?.code || undefined,
+          isEmi: paymentMethod === "EMI",
+          emiProviderId: paymentMethod === "EMI" ? selectedProviderId || undefined : undefined,
+          emiPlanId: paymentMethod === "EMI" ? selectedPlanId || undefined : undefined,
+          emiTenure: paymentMethod === "EMI" ? selectedPlan?.tenureMonths : undefined,
+          emiMonthlyInstallment: paymentMethod === "EMI" ? selectedPlan?.emi : undefined,
+          emiInterestRate: paymentMethod === "EMI" ? selectedPlan?.interestRate : undefined,
+          emiTotalPayable: paymentMethod === "EMI" ? selectedPlan?.totalPayable : undefined,
+          emiDetails: paymentMethod === "EMI" ? {
+            provider_name: selectedProvider?.name,
+            provider_code: selectedProvider?.code,
+            tenure_months: selectedPlan?.tenureMonths,
+            interest_rate: selectedPlan?.interestRate
+          } : undefined
         });
 
         if (!res?.success || !res?.orderId) {
@@ -543,7 +665,8 @@ export default function CheckoutPage() {
           items,
           total: grandTotal,
           paymentMethod: "COD",
-          deliveryEstimate: deliveryEstimate?.date
+          deliveryEstimate: deliveryEstimate?.date,
+          couponCode: appliedCoupon?.code || undefined
         });
 
         if (res?.success) {
@@ -851,7 +974,7 @@ export default function CheckoutPage() {
                     </h2>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div
                       onClick={() => setPaymentMethod("ONLINE")}
                       className={cn(
@@ -877,7 +1000,134 @@ export default function CheckoutPage() {
                       <p className="font-bold text-sm text-zinc-950">Cash on Delivery</p>
                       {paymentMethod === "COD" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
                     </div>
+
+                    <div
+                      onClick={() => setPaymentMethod("EMI")}
+                      className={cn(
+                        "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
+                        paymentMethod === "EMI"
+                          ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
+                          : "border-zinc-200 hover:border-zinc-400"
+                      )}
+                    >
+                      <p className="font-bold text-sm text-zinc-950">Pay in EMI</p>
+                      {paymentMethod === "EMI" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
+                    </div>
                   </div>
+
+                  {paymentMethod === "EMI" && (
+                    <div className="mt-6 pt-6 border-t border-zinc-100 space-y-6 animate-in fade-in duration-300">
+                      <div>
+                        <h3 className="text-sm font-bold text-zinc-950 mb-1">Select EMI Provider</h3>
+                        <p className="text-xs text-zinc-500">Available bank credit cards & finance partners for your order amount</p>
+                      </div>
+
+                      {fetchingEmi ? (
+                        <div className="py-6 flex items-center justify-center gap-2 text-xs font-bold text-zinc-400">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span>Checking eligibility & plans...</span>
+                        </div>
+                      ) : emiProviders.length === 0 ? (
+                        <div className="p-5 border border-amber-100 bg-amber-50/50 rounded-2xl flex items-center gap-3 text-amber-700 text-xs font-medium">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span>No EMI plans available for this order amount. EMI requires a minimum order value of ₹3,000.</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {/* Banks Grid */}
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            {emiProviders.map((prov) => (
+                              <div
+                                key={prov.id}
+                                onClick={() => {
+                                  setSelectedProviderId(prov.id);
+                                  if (prov.plans.length > 0) {
+                                    setSelectedPlanId(prov.plans[0].id);
+                                  }
+                                }}
+                                className={cn(
+                                  "p-4 border rounded-xl cursor-pointer transition-all flex flex-col justify-between h-20 hover:border-zinc-400",
+                                  selectedProviderId === prov.id
+                                    ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950"
+                                    : "border-zinc-200"
+                                )}
+                              >
+                                <span className="text-xs font-black text-zinc-900 block truncate">{prov.name}</span>
+                                <span className="text-[10px] text-zinc-400 font-medium block">From ₹{prov.minOrderAmount.toLocaleString('en-IN')} spend</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Selected Bank Plans */}
+                          {selectedProviderId && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Available Tenures</h4>
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                {emiProviders
+                                  .find((p) => p.id === selectedProviderId)
+                                  ?.plans.map((plan: any) => (
+                                    <div
+                                      key={plan.id}
+                                      onClick={() => setSelectedPlanId(plan.id)}
+                                      className={cn(
+                                        "p-4 border rounded-xl cursor-pointer transition-all flex flex-col justify-between h-28 hover:border-zinc-400 relative",
+                                        selectedPlanId === plan.id
+                                          ? "border-zinc-950 bg-zinc-50/30 ring-1 ring-zinc-950"
+                                          : "border-zinc-200"
+                                      )}
+                                    >
+                                      {plan.interestRate === 0 && (
+                                        <span className="absolute top-2 right-2 px-1.5 py-0.5 bg-green-500 text-white text-[8px] font-black uppercase rounded">
+                                          No Cost
+                                        </span>
+                                      )}
+                                      <div>
+                                        <span className="text-sm font-black text-zinc-900">{plan.tenureMonths} Months</span>
+                                        <span className="text-xs text-zinc-500 block mt-1">₹{plan.emi.toLocaleString('en-IN')}/mo</span>
+                                      </div>
+                                      <span className="text-[10px] font-bold text-zinc-400 block pt-1">
+                                        {plan.interestRate > 0 ? `${plan.interestRate}% interest` : "Interest-free"}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* EMI Details Breakdown */}
+                          {selectedProviderId && selectedPlanId && (() => {
+                            const provider = emiProviders.find(p => p.id === selectedProviderId);
+                            const plan = provider?.plans.find((pl: any) => pl.id === selectedPlanId);
+                            if (!plan) return null;
+
+                            return (
+                              <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-4">
+                                <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-wider pb-2 border-b border-zinc-200/60">
+                                  <span>EMI Term Summary</span>
+                                  <span className="text-primary text-[10px] font-bold">{provider?.name}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-zinc-600">
+                                  <div className="flex flex-col gap-1">
+                                    <span>Tenure: <strong className="text-zinc-900">{plan.tenureMonths} Months</strong></span>
+                                    <span>Interest Rate: <strong className="text-zinc-900">{plan.interestRate}% p.a.</strong></span>
+                                  </div>
+                                  <div className="flex flex-col gap-1 text-right">
+                                    <span>Monthly Installment: <strong className="text-zinc-900">₹{plan.emi.toLocaleString('en-IN')}</strong></span>
+                                    <span>Total Payable: <strong className="text-zinc-900">₹{plan.totalPayable.toLocaleString('en-IN')}</strong></span>
+                                  </div>
+                                </div>
+                                {plan.interestRate > 0 && (
+                                  <div className="p-3 bg-white rounded-lg border border-zinc-150 text-[10px] text-zinc-500 leading-normal font-semibold">
+                                    Includes <strong>₹{plan.totalInterest.toLocaleString('en-IN')}</strong> total interest charged by the card-issuing bank.
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
@@ -919,7 +1169,22 @@ export default function CheckoutPage() {
                         <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Payment Method</h3>
                         <button onClick={() => setCurrentStep(2)} className="text-xs font-bold text-primary hover:underline">Edit</button>
                       </div>
-                      <p className="font-bold text-sm text-zinc-950">{paymentMethod === "ONLINE" ? "Online Payment (Razorpay)" : "Cash on Delivery"}</p>
+                      <p className="font-bold text-sm text-zinc-950">
+                        {paymentMethod === "COD" 
+                          ? "Cash on Delivery" 
+                          : paymentMethod === "ONLINE" 
+                          ? "Online Payment (Razorpay)" 
+                          : `Pay in Installments (EMI)`}
+                      </p>
+                      {paymentMethod === "EMI" && selectedProviderId && selectedPlanId && (() => {
+                        const provider = emiProviders.find(p => p.id === selectedProviderId);
+                        const plan = provider?.plans.find((pl: any) => pl.id === selectedPlanId);
+                        return (
+                          <p className="text-xs text-zinc-500 mt-1 font-medium">
+                            Plan: {provider?.name} ({plan?.tenureMonths} Months @ {plan?.interestRate}% p.a.) - ₹{plan?.emi}/mo (Total: ₹{plan?.totalPayable})
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 </section>
@@ -1000,6 +1265,63 @@ export default function CheckoutPage() {
                         Estimated Delivery
                       </span>
                       <span>{deliveryEstimate.date}</span>
+                    </div>
+                  )}
+
+                  {/* Coupon Application Block */}
+                  <div className="pt-4 border-t border-zinc-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Coupon / Promo</span>
+                    </div>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-50/50 border border-emerald-100 p-3 rounded-2xl">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-emerald-800 bg-emerald-100/50 px-2.5 py-1 rounded-lg inline-block w-fit tracking-wide">
+                            {appliedCoupon.code}
+                          </span>
+                          <span className="text-[11px] text-emerald-600 font-bold mt-1">
+                            Saved {formatCurrency(discountAmount)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="text-xs font-bold text-red-500 hover:text-red-700 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            value={couponCodeInput}
+                            onChange={(e) => {
+                              setCouponCodeInput(e.target.value);
+                              setCouponError(null);
+                            }}
+                            placeholder="Enter coupon code"
+                            className="h-10 border-zinc-200 rounded-xl focus-visible:ring-zinc-950 text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={applyingCoupon}
+                            className="px-4 h-10 bg-zinc-950 hover:bg-primary text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
+                          >
+                            {applyingCoupon ? "Applying..." : "Apply"}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-[11px] text-red-500 font-semibold">{couponError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-sm font-bold text-emerald-600 bg-emerald-50/40 p-2.5 rounded-xl border border-emerald-100/40 mt-3">
+                      <span>Coupon Discount</span>
+                      <span>-{formatCurrency(discountAmount)}</span>
                     </div>
                   )}
                 </div>

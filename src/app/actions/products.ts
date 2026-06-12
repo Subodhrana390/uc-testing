@@ -1,10 +1,28 @@
 "use server";
-
+ 
 import { createClient } from "@/utils/supabase/server";
 
-export async function fetchProductsPage(
+export interface FilterParams {
+  q?: string;
+  sort?: string;
+  category?: string;
+  in_stock?: string;
+  out_of_stock?: string;
+  promo?: string;
+  min_price?: string;
+  max_price?: string;
+  brand?: string;
+  rating?: string;
+  [key: string]: string | string[] | undefined;
+}
+
+/**
+ * Highly optimized, server-side database query helper to search and filter products.
+ * Queries against the `filterable_products` view for optimal performance.
+ */
+export async function fetchProductsFiltered(
   page: number,
-  searchParams: { sort?: string, category?: string, in_stock?: string, out_of_stock?: string, promo?: string, min_price?: string, max_price?: string, brand?: string }
+  searchParams: FilterParams
 ) {
   const supabase = await createClient();
   const sortMode = searchParams.sort || "latest";
@@ -12,87 +30,117 @@ export async function fetchProductsPage(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // Mapping sort modes to Supabase order
-  let orderColumn = "created_at";
-  let orderOptions = { ascending: false };
+  // Initialize query on the filterable_products view
+  let query = supabase
+    .from("filterable_products")
+    .select("*", { count: "exact" })
+    .eq("status", "Active");
 
-  if (sortMode === "price_asc") {
-    orderColumn = "price";
-    orderOptions = { ascending: true };
-  } else if (sortMode === "price_desc") {
-    orderColumn = "price";
-    orderOptions = { ascending: false };
+  // 1. Search Query
+  if (searchParams.q && searchParams.q.trim() !== "") {
+    const searchTerm = searchParams.q.trim();
+    query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
   }
 
-  const categoryFilter = searchParams.category;
-  const inStockFilter = searchParams.in_stock === "true";
-  const outOfStockFilter = searchParams.out_of_stock === "true";
-  const promoFilter = searchParams.promo === "true";
-  const minPriceFilter = searchParams.min_price ? Number(searchParams.min_price) : null;
-  const maxPriceFilter = searchParams.max_price ? Number(searchParams.max_price) : null;
-  const brandFilter = searchParams.brand;
+  // 2. Category / Subcategory drilldown
+  if (searchParams.category && searchParams.category !== "all") {
+    query = query.or(`category_slug.eq.${searchParams.category},parent_category_slug.eq.${searchParams.category}`);
+  }
 
-  let categoryIds: string[] = [];
-  if (categoryFilter && categoryFilter !== "all") {
-    const { data: targetCat } = await supabase.from("categories").select("id").eq("slug", categoryFilter).single();
-    if (targetCat) {
-      const { data: subCats } = await supabase.from("categories").select("id").eq("parent_id", targetCat.id);
-      categoryIds = [targetCat.id, ...(subCats || []).map((c: any) => c.id)];
+  // 3. Brand (supports single or comma-separated multiple brands)
+  if (searchParams.brand && searchParams.brand.trim() !== "") {
+    const brands = searchParams.brand.split(",").map(b => b.trim()).filter(Boolean);
+    if (brands.length > 0) {
+      query = query.in("brand_name", brands);
     }
   }
 
-  let query = supabase.from("products")
-    .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, is_top_rated, created_at, categories(name, slug, parent_id, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)", { count: "exact" })
-    .eq("status", "Active");
-
-  if (categoryIds.length > 0) {
-    query = query.in("category_id", categoryIds);
+  // 4. Price range (compares against dynamically computed active_price)
+  if (searchParams.min_price) {
+    const minPrice = Number(searchParams.min_price);
+    if (!isNaN(minPrice)) {
+      query = query.gte("active_price", minPrice);
+    }
   }
+  if (searchParams.max_price) {
+    const maxPrice = Number(searchParams.max_price);
+    if (!isNaN(maxPrice)) {
+      query = query.lte("active_price", maxPrice);
+    }
+  }
+
+  // 5. Availability (stock and promo filters)
+  const inStockFilter = searchParams.in_stock === "true";
+  const outOfStockFilter = searchParams.out_of_stock === "true";
+  
   if (inStockFilter && !outOfStockFilter) {
     query = query.gt("stock_quantity", 0);
   }
   if (outOfStockFilter && !inStockFilter) {
     query = query.eq("stock_quantity", 0);
   }
-  if (promoFilter) {
+  if (searchParams.promo === "true") {
     query = query.not("sale_price", "is", null);
   }
-  if (minPriceFilter !== null && !isNaN(minPriceFilter)) {
-    query = query.gte("price", minPriceFilter);
+
+  // 6. Rating (compares against computed average_rating)
+  if (searchParams.rating) {
+    const minRating = Number(searchParams.rating);
+    if (!isNaN(minRating)) {
+      query = query.gte("average_rating", minRating);
+    }
   }
-  if (maxPriceFilter !== null && !isNaN(maxPriceFilter)) {
-    query = query.lte("price", maxPriceFilter);
-  }
-  if (brandFilter) {
-    query = query.eq("brands.name", brandFilter);
-  }
 
-  let productsData: any[] = [];
-  let totalCount = 0;
+  // 7. Custom attribute filters (e.g. attr_<id>=value1,value2)
+  Object.entries(searchParams).forEach(([key, val]) => {
+    if (key.startsWith("attr_") && val) {
+      const attrId = key.replace("attr_", "");
+      const attrValues = typeof val === "string" 
+        ? val.split(",").map(v => v.trim()).filter(Boolean) 
+        : Array.isArray(val) ? val : [];
 
-  if (sortMode === "rating") {
-    const { data: allProducts } = await query;
-    const sorted = [...(allProducts || [])];
-    sorted.sort((a, b) => {
-      const aReviews = a.product_reviews || [];
-      const bReviews = b.product_reviews || [];
-      const aAvg = aReviews.length > 0 ? aReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / aReviews.length : 0;
-      const bAvg = bReviews.length > 0 ? bReviews.reduce((acc: number, r: any) => acc + r.rating, 0) / bReviews.length : 0;
+      if (attrValues.length > 0) {
+        query = query.in(`attributes->>${attrId}`, attrValues);
+      }
+    }
+  });
 
-      if (bAvg !== aAvg) return bAvg - aAvg;
-
-      const aTop = a.is_top_rated ? 1 : 0;
-      const bTop = b.is_top_rated ? 1 : 0;
-      return bTop - aTop;
-    });
-    totalCount = sorted.length;
-    productsData = sorted.slice(from, to + 1);
+  // 8. Sorting
+  if (sortMode === "price_asc") {
+    query = query.order("active_price", { ascending: true });
+  } else if (sortMode === "price_desc") {
+    query = query.order("active_price", { ascending: false });
+  } else if (sortMode === "rating") {
+    query = query
+      .order("average_rating", { ascending: false })
+      .order("is_top_rated", { ascending: false });
   } else {
-    query = query.order(orderColumn, orderOptions).range(from, to);
-    const { data, count: dbCount } = await query;
-    productsData = data || [];
-    totalCount = dbCount || 0;
+    // Default: Newest Arrivals
+    query = query.order("created_at", { ascending: false });
   }
 
-  return { products: productsData, totalCount };
+  // 9. Pagination Range
+  query = query.range(from, to);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error("Error fetching filtered products:", error);
+    return { products: [], totalCount: 0 };
+  }
+
+  return {
+    products: data || [],
+    totalCount: count || 0
+  };
+}
+
+/**
+ * Backwards compatible fetch page action.
+ */
+export async function fetchProductsPage(
+  page: number,
+  searchParams: Record<string, string>
+) {
+  return fetchProductsFiltered(page, searchParams);
 }

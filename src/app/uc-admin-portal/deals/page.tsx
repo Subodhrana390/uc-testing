@@ -183,21 +183,6 @@ export default function DealsAdminPage() {
     return () => clearTimeout(timer);
   }, [productSearch]);
 
-  const syncProductSalePrice = async (productId: string | null, discountPercentage: number | null, isActive: boolean) => {
-    if (!productId) return;
-    
-    if (isActive && discountPercentage !== null) {
-      const { data: product } = await supabase.from("products").select("price").eq("id", productId).single();
-      if (product && product.price) {
-        const priceNum = parseFloat(product.price);
-        const salePrice = priceNum - (priceNum * (discountPercentage / 100));
-        await supabase.from("products").update({ sale_price: salePrice }).eq("id", productId);
-      }
-    } else {
-      await supabase.from("products").update({ sale_price: null }).eq("id", productId);
-    }
-  };
-
   const handleOpenDrawer = (deal?: any) => {
     if (deal) {
       setEditingDeal(deal);
@@ -236,10 +221,6 @@ export default function DealsAdminPage() {
         end_date: formData.end_date || null
       };
       
-      if (editingDeal && editingDeal.product_id && editingDeal.product_id !== payload.product_id) {
-        await syncProductSalePrice(editingDeal.product_id, null, false);
-      }
-
       if (editingDeal) {
         const { error } = await supabase.from("deals").update(payload).eq("id", editingDeal.id);
         if (error) throw error;
@@ -249,8 +230,6 @@ export default function DealsAdminPage() {
         if (error) throw error;
         toast.success("Deal created");
       }
-
-      await syncProductSalePrice(payload.product_id, payload.discount_percentage, payload.status);
 
       setIsDrawerOpen(false);
       fetchDeals();
@@ -267,8 +246,6 @@ export default function DealsAdminPage() {
       const { error } = await supabase.from("deals").update({ status: newStatus }).eq("id", deal.id);
       if (error) throw error;
       
-      await syncProductSalePrice(deal.product_id, deal.discount_percentage, newStatus);
-      
       setDeals(deals.map(d => d.id === deal.id ? { ...d, status: newStatus } : d));
       toast.success(newStatus ? "Deal reactivated" : "Deal suspended");
     } catch (error: any) { toast.error(error.message); }
@@ -278,8 +255,6 @@ export default function DealsAdminPage() {
     if (!dealToDelete) return;
     setDeleting(true);
     try {
-      await syncProductSalePrice(dealToDelete.product_id, null, false);
-      
       const { error } = await supabase.from("deals").delete().eq("id", dealToDelete.id);
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== dealToDelete.id));

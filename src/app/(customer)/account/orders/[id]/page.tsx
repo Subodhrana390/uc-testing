@@ -559,8 +559,35 @@ export default function OrderDetailsPage() {
                 <CreditCard className="w-3.5 h-3.5 text-zinc-400" /> Payment Information
               </h4>
               <div className="bg-zinc-50/50 p-4 rounded-xl border border-zinc-100/80 min-h-[120px]">
-                <p className="font-semibold text-zinc-700 text-sm">{order.payment_method || "—"}</p>
+                <p className="font-semibold text-zinc-700 text-sm">
+                  {order.is_emi ? "EMI / Buy Now Pay Later" : (order.payment_method || "—")}
+                </p>
                 <p className="text-zinc-500 text-xs mt-1">Status: <span className="font-semibold text-zinc-750">{order.payment_status || "Unpaid"}</span></p>
+                {order.is_emi && (
+                  <div className="mt-3 p-3 bg-white border border-zinc-200/60 rounded-xl space-y-2 text-xs font-semibold text-zinc-650">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">EMI Summary</p>
+                    <div className="flex justify-between items-center">
+                      <span>Provider:</span>
+                      <span className="text-zinc-950 font-bold">{order.emi_details?.provider_name || "Lender"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Tenure:</span>
+                      <span className="text-zinc-950 font-bold">{order.emi_tenure} Months</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Installment:</span>
+                      <span className="text-zinc-950 font-bold">₹{(Number(order.emi_monthly_installment) || 0).toLocaleString('en-IN')}/mo</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Interest Rate:</span>
+                      <span className="text-zinc-950 font-bold">{order.emi_interest_rate}% p.a.</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-zinc-150 pt-2 text-zinc-800">
+                      <span>Total Payable:</span>
+                      <span className="text-zinc-950 font-black">₹{(Number(order.emi_total_payable) || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                )}
                 {order.transaction_id && (
                   <p className="text-zinc-400 text-[10px] font-mono mt-2 break-all">
                     Txn ID: {order.transaction_id}

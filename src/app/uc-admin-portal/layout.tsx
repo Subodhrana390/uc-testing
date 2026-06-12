@@ -28,7 +28,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Settings2,
-  FolderTree
+  FolderTree,
+  Ticket,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -152,6 +154,8 @@ export default function AdminLayout({
       items: [
         { icon: <ImageIcon className="w-3.5 h-3.5" />, label: "Banners", href: "/uc-admin-portal/banners" },
         { icon: <BadgePercent className="w-3.5 h-3.5" />, label: "Active Deals", href: "/uc-admin-portal/deals" },
+        { icon: <Ticket className="w-3.5 h-3.5" />, label: "Coupons", href: "/uc-admin-portal/coupons" },
+        { icon: <CreditCard className="w-3.5 h-3.5" />, label: "EMI Plans", href: "/uc-admin-portal/emi" },
       ]
     },
     {
@@ -259,6 +263,14 @@ export default function AdminLayout({
         iconColor = "text-pink-500";
         activeBg = "bg-pink-50 border-pink-200 text-pink-700";
         break;
+      case "Coupons":
+        iconColor = "text-teal-600";
+        activeBg = "bg-teal-50 border-teal-200 text-teal-700";
+        break;
+      case "EMI Plans":
+        iconColor = "text-indigo-650";
+        activeBg = "bg-indigo-50 border-indigo-200 text-indigo-750 font-bold";
+        break;
       case "Customers":
         iconColor = "text-teal-500";
         activeBg = "bg-teal-50 border-teal-200 text-teal-700";
@@ -291,6 +303,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/inventory")) return "theme-inventory";
     if (path.startsWith("/uc-admin-portal/banners")) return "theme-banners";
     if (path.startsWith("/uc-admin-portal/deals")) return "theme-deals";
+    if (path.startsWith("/uc-admin-portal/coupons")) return "theme-coupons";
     if (path.startsWith("/uc-admin-portal/customers")) return "theme-customers";
     if (path.startsWith("/uc-admin-portal/security")) return "theme-security";
     return "";

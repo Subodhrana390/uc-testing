@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { createStaticClient } from "@/utils/supabase/static";
+import { fetchProductsFiltered } from "@/app/actions/products";
 import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters";
 import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
 import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
@@ -112,58 +113,26 @@ export default async function CategoryPage({
     categoryIds = [category.id, ...activeSiblingCategories.map(s => s.id)];
   }
 
-  const inStockFilter = searchParams.in_stock === "true";
-  const outOfStockFilter = searchParams.out_of_stock === "true";
-  const promoFilter = searchParams.promo === "true";
-  const minPriceFilter = searchParams.min_price ? Number(searchParams.min_price) : null;
-  const maxPriceFilter = searchParams.max_price ? Number(searchParams.max_price) : null;
-  const brandFilter = searchParams.brand;
-
   const brandsPromise = supabase.from("brands").select("id, name").order("name");
   const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", true).order("name");
+  const attributesPromise = supabase.from("attributes").select("id, name, options").eq("is_filterable", true).order("display_order");
 
-  let query = supabase
-    .from("products")
-    .select(
-      "id, name, slug, price, sale_price, image_url, status, stock_quantity, categories(name, slug, parent:categories!parent_id(name, slug)), brands!inner(name), product_reviews(rating)",
-      { count: "exact" }
-    )
-    .in("category_id", categoryIds)
-    .eq("status", "Active")
-    .order("created_at", { ascending: false });
+  // Fetch filtered products using the unified server action query
+  const { products: safeProducts, totalCount: safeTotalCount } = await fetchProductsFiltered(
+    currentPage,
+    { ...searchParams, category: category.slug }
+  );
 
-  if (inStockFilter && !outOfStockFilter) {
-    query = query.gt("stock_quantity", 0);
-  }
-  if (outOfStockFilter && !inStockFilter) {
-    query = query.eq("stock_quantity", 0);
-  }
-  if (promoFilter) {
-    query = query.not("sale_price", "is", null);
-  }
-  if (minPriceFilter !== null && !isNaN(minPriceFilter)) {
-    query = query.gte("price", minPriceFilter);
-  }
-  if (maxPriceFilter !== null && !isNaN(maxPriceFilter)) {
-    query = query.lte("price", maxPriceFilter);
-  }
-  if (brandFilter) {
-    query = query.eq("brands.name", brandFilter);
-  }
+  const [categoriesResult, brandsResult, attributesResult] = await Promise.all([
+    categoriesPromise,
+    brandsPromise,
+    attributesPromise
+  ]);
 
-  // Apply dynamic pagination range for desktop pagination / initial load
-  query = query.range(from, to);
-
-  const { data: products, count: totalCount } = await query;
-  const safeProducts = products || [];
-  const safeTotalCount = totalCount || 0;
+  const categoriesList = categoriesResult.data || [];
+  const brandsList = brandsResult.data || [];
+  const attributesList = attributesResult.data || [];
   const totalPages = Math.ceil(safeTotalCount / 12);
-
-  const { data: brandsResult } = await brandsPromise;
-  const brandsList = brandsResult || [];
-
-  const { data: categoriesResult } = await categoriesPromise;
-  const categoriesList = categoriesResult || [];
 
   const categoryUrl = `${SITE_URL}/categories/${category.slug}`;
 
@@ -233,6 +202,7 @@ export default async function CategoryPage({
               <ProductSidebarFilters
                 categories={categoriesList}
                 brands={brandsList}
+                attributes={attributesList}
                 currentCategorySlug={category.slug}
                 activeParentCategory={activeParentCategory}
                 activeSiblingCategories={activeSiblingCategories}
