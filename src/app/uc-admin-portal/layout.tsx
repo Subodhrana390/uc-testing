@@ -163,6 +163,7 @@ export default function AdminLayout({
       items: [
         { icon: <Users className="w-3.5 h-3.5" />, label: "Customers", href: "/uc-admin-portal/customers" },
         { icon: <Shield className="w-3.5 h-3.5" />, label: "Security", href: "/uc-admin-portal/security" },
+        { icon: <Settings className="w-3.5 h-3.5" />, label: "Site Settings", href: "/uc-admin-portal/settings" },
       ]
     }
   ];
@@ -279,6 +280,10 @@ export default function AdminLayout({
         iconColor = "text-lime-600";
         activeBg = "bg-lime-50 border-lime-200 text-lime-700";
         break;
+      case "Site Settings":
+        iconColor = "text-zinc-500";
+        activeBg = "bg-zinc-50 border-zinc-200 text-zinc-700";
+        break;
     }
 
     return {
@@ -306,6 +311,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/coupons")) return "theme-coupons";
     if (path.startsWith("/uc-admin-portal/customers")) return "theme-customers";
     if (path.startsWith("/uc-admin-portal/security")) return "theme-security";
+    if (path.startsWith("/uc-admin-portal/settings")) return "theme-settings";
     return "";
   };
 

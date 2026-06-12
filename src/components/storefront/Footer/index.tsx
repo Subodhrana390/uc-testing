@@ -2,20 +2,42 @@ import Link from "next/link";
 import Image from "next/image";
 import { footerLinks, supportEmailHref, supportPhone, supportPhoneHref } from "@/lib/storefront";
 import { Facebook, Instagram, Twitter, Youtube, Linkedin, CreditCard, ShieldCheck, Lock } from "lucide-react";
+import { SiteSettings } from "@/app/actions/settings";
 
-export default function Footer() {
+interface FooterProps {
+  settings?: SiteSettings | null;
+}
+
+export default function Footer({ settings }: FooterProps) {
+  const socialLinks = settings?.social_links || {};
+  const logoSrc = settings?.logo_url || "/logo.png";
+  const siteName = settings?.site_name || "UC Enterprises";
+  const displayPhone = settings?.contact_phone || supportPhone;
+  const displayPhoneHref = settings?.contact_phone ? `tel:${settings.contact_phone.replace(/\s+/g, '')}` : supportPhoneHref;
+  const displayEmail = settings?.contact_email || "ucenterprises1@gmail.com";
+  const displayEmailHref = settings?.contact_email ? `mailto:${settings.contact_email}` : supportEmailHref;
+  const displayAddress = settings?.contact_address || "Shop No. 1, Khairabad Village, Near Bus Stand, Bela Road, Khairabad, Ropar, Punjab - 140001, India.";
+
+  const hasAnySocial = !!(
+    socialLinks.instagram ||
+    socialLinks.facebook ||
+    socialLinks.twitter ||
+    socialLinks.linkedin ||
+    socialLinks.youtube
+  );
+
   return (
     <footer className="border-t border-zinc-200 bg-white">
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto grid gap-12 px-6 py-16 md:grid-cols-4">
 
         {/* Brand & Social Section */}
-        <div className="space-y-6">
+        <div className="space-y-6 text-left">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 overflow-hidden flex items-center justify-center p-1">
-              <Image src="/logo.png" alt="UC Enterprises" width={48} height={48} className="w-full h-full object-contain" />
+              <Image src={logoSrc} alt={siteName} width={48} height={48} className="w-full h-full object-contain" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-zinc-950">UC <span className="text-primary">Enterprises</span></h2>
+              <h2 className="text-lg font-bold tracking-tight text-zinc-950 uppercase">{siteName}</h2>
               <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Lab Equipment & Industrial Tools</p>
             </div>
           </div>
@@ -24,26 +46,56 @@ export default function Footer() {
           </p>
 
           {/* Social Media Icons */}
-          <div className="flex items-center gap-4">
-            <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-              <Twitter className="w-4 h-4" />
-            </a>
-            <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-              <Linkedin className="w-4 h-4" />
-            </a>
-          </div>
+          {hasAnySocial ? (
+            <div className="flex items-center gap-4">
+              {socialLinks.instagram && (
+                <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                  <Instagram className="w-4 h-4" />
+                </a>
+              )}
+              {socialLinks.facebook && (
+                <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                  <Facebook className="w-4 h-4" />
+                </a>
+              )}
+              {socialLinks.twitter && (
+                <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                  <Twitter className="w-4 h-4" />
+                </a>
+              )}
+              {socialLinks.linkedin && (
+                <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                  <Linkedin className="w-4 h-4" />
+                </a>
+              )}
+              {socialLinks.youtube && (
+                <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                  <Youtube className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                <Facebook className="w-4 h-4" />
+              </a>
+              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                <Twitter className="w-4 h-4" />
+              </a>
+              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+                <Linkedin className="w-4 h-4" />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Links: Explore */}
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-950 mb-6">Explore</h3>
-          <ul className="space-y-4 text-sm text-zinc-500 font-medium">
+          <ul className="space-y-4 text-sm text-zinc-500 font-medium text-left">
             {footerLinks.company.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="hover:text-primary transition-colors">
@@ -57,7 +109,7 @@ export default function Footer() {
         {/* Links: Policies */}
         <div>
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-950 mb-6">Policies</h3>
-          <ul className="space-y-4 text-sm text-zinc-500 font-medium">
+          <ul className="space-y-4 text-sm text-zinc-500 font-medium text-left">
             {footerLinks.policies.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="hover:text-primary transition-colors">
@@ -69,20 +121,20 @@ export default function Footer() {
         </div>
 
         {/* Contact Section */}
-        <div>
+        <div className="text-left">
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-950 mb-6">Customer Support</h3>
           <div className="space-y-4 text-sm text-zinc-500 font-medium">
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">Call Us</span>
-              <a href={supportPhoneHref} className="text-zinc-900 hover:text-primary transition-colors">{supportPhone}</a>
+              <a href={displayPhoneHref} className="text-zinc-900 hover:text-primary transition-colors">{displayPhone}</a>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">Email Us</span>
-              <a href={supportEmailHref} className="text-zinc-900 hover:text-primary transition-colors">ucenterprises1@gmail.com</a>
+              <a href={displayEmailHref} className="text-zinc-900 hover:text-primary transition-colors">{displayEmail}</a>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">Our Location</span>
-              <p className="text-zinc-900">Ambala Delhi Highway, Zirakpur, Punjab</p>
+              <p className="text-zinc-900 leading-relaxed">{displayAddress}</p>
             </div>
           </div>
         </div>
@@ -92,11 +144,10 @@ export default function Footer() {
       <div className="border-t border-zinc-100 bg-zinc-50">
         <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-zinc-500 font-medium">
-            © {new Date().getFullYear()} UC Enterprises. All rights reserved. Made in India.
+            © {new Date().getFullYear()} {siteName}. All rights reserved. Made in India.
           </p>
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-6">
-              {/* Generic Payment Icon representing Visa/Mastercard/UPI */}
               <div className="flex items-center gap-2 group">
                 <CreditCard className="w-5 h-5 text-zinc-400 group-hover:text-zinc-600 transition-colors" />
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest group-hover:text-zinc-600 transition-colors">Cards</span>

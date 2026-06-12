@@ -29,6 +29,7 @@ import HeaderSearch from "@/components/storefront/HeaderSearch";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { SiteSettings, NavigationLink } from "@/app/actions/settings";
 
 interface HeaderProps {
   categories: {
@@ -38,15 +39,30 @@ interface HeaderProps {
     parent_id?: string | null;
   }[];
   user: any;
+  settings?: SiteSettings | null;
+  navLinks?: NavigationLink[];
 }
 
-export default function Header({ categories, user }: HeaderProps) {
+export default function Header({ categories, user, settings, navLinks }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Account";
   const firstName = displayName.trim().split(" ")[0];
+
+  const linksToRender = (navLinks && navLinks.length > 0 ? navLinks : primaryNavLinks).map(link => ({
+    href: 'url' in link ? link.url : link.href,
+    label: link.label,
+    isExternal: 'is_external' in link ? link.is_external : false
+  }));
+
+  const displayPhone = settings?.contact_phone || supportPhone;
+  const displayPhoneHref = settings?.contact_phone ? `tel:${settings.contact_phone.replace(/\s+/g, '')}` : supportPhoneHref;
+  const displayEmail = settings?.contact_email || "ucenterprises1@gmail.com";
+  const displayEmailHref = settings?.contact_email ? `mailto:${settings.contact_email}` : supportEmailHref;
+  const logoSrc = settings?.logo_url || "/logo.png";
+  const siteName = settings?.site_name || "UC Enterprises";
 
   // Build login URL with current page as returnTo at click-time (avoids useSearchParams Suspense requirement)
   const goToLogin = () => {
@@ -69,14 +85,14 @@ export default function Header({ categories, user }: HeaderProps) {
           <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-6">
               <a
-                href={supportPhoneHref}
+                href={displayPhoneHref}
                 className="inline-flex items-center gap-2 hover:text-white transition-colors"
               >
                 <Phone className="h-3 w-3 text-primary" />
-                {supportPhone}
+                {displayPhone}
               </a>
               <a
-                href={supportEmailHref}
+                href={displayEmailHref}
                 className="hidden xs:inline-flex items-center gap-2 hover:text-white transition-colors"
               >
                 <Mail className="h-3 w-3 text-primary" />
@@ -109,20 +125,33 @@ export default function Header({ categories, user }: HeaderProps) {
                 >
                   <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 overflow-hidden flex items-center justify-center p-1 transition group-hover:border-primary group-hover:scale-105">
                     <Image
-                      src="/logo.png"
-                      alt="UC Enterprises"
+                      src={logoSrc}
+                      alt={siteName}
                       width={40}
                       height={40}
                       className="w-full h-full object-contain"
                     />
                   </div>
                   <div className="flex flex-col min-w-0 text-left">
-                    <span className="text-base sm:text-xl font-bold tracking-tight text-zinc-900 leading-none truncate">
-                      UC <span className="text-primary">ENTERPRISES</span>
-                    </span>
-                    <span className="text-[9px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5 truncate hidden sm:block">
-                      Quality Industrial Supplies
-                    </span>
+                    {settings?.site_name && settings.site_name !== "UC Enterprises" ? (
+                      <>
+                        <span className="text-base sm:text-xl font-bold tracking-tight text-zinc-900 leading-none truncate uppercase">
+                          {settings.site_name}
+                        </span>
+                        <span className="text-[9px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5 truncate hidden sm:block">
+                          Quality Industrial Supplies
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-base sm:text-xl font-bold tracking-tight text-zinc-900 leading-none truncate">
+                          UC <span className="text-primary">ENTERPRISES</span>
+                        </span>
+                        <span className="text-[9px] sm:text-xs font-bold tracking-wider text-zinc-700 mt-0.5 truncate hidden sm:block">
+                          Quality Industrial Supplies
+                        </span>
+                      </>
+                    )}
                   </div>
                 </Link>
               </div>
@@ -148,106 +177,61 @@ export default function Header({ categories, user }: HeaderProps) {
                     className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                   >
                     <User className="h-4 w-4" />
-                    <span>{firstName}</span>
+                    <span className="max-w-[80px] truncate">{firstName}</span>
                   </Link>
                 )}
 
-                {user && (
-                  <button
-                    onClick={handleLogout}
-                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-red-600 transition-colors border-l border-zinc-100 pl-4"
-                    title="Logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                )}
-
-                <WishlistButton />
-
-                {/* Mobile Profile Icon */}
-                {!user ? (
-                  <button
-                    onClick={goToLogin}
-                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
-                  >
-                    <User className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <Link
-                    href="/account/profile"
-                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
-                  >
-                    <User className="h-4 w-4" />
-                  </Link>
-                )}
-
-                <div className="flex items-center">
-                  <CartButton />
+                <div className="hidden sm:block">
+                  <WishlistButton />
                 </div>
+
+                <CartButton />
               </div>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8 py-3 border-t border-zinc-50 text-sm font-semibold text-zinc-700">
-              <div className="group relative">
-                <button className="inline-flex items-center gap-2 text-primary hover:text-red-700 transition-colors">
+            <nav className="hidden lg:flex items-center gap-8 h-12 text-xs font-bold uppercase tracking-wider text-zinc-600 relative z-10 select-none">
+              {/* Categories Trigger */}
+              <div className="relative h-full flex items-center group/cat border-r border-zinc-100 pr-6 mr-2">
+                <button className="flex items-center gap-1.5 hover:text-primary transition-colors h-full">
                   Categories
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <ChevronDown className="h-3 w-3 text-zinc-400 group-hover/cat:rotate-180 transition duration-300" />
                 </button>
-
-                <div className="invisible absolute left-0 top-full z-50 mt-2 w-[550px] border border-zinc-100 bg-white opacity-0 shadow-2xl rounded-none overflow-hidden transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-y-1 flex">
-                  {/* Main Categories (Left Sidebar) */}
-                  <div className="w-1/3 bg-zinc-50 border-r border-zinc-100 p-2 max-h-[450px] overflow-y-auto custom-scrollbar">
-                    <div className="space-y-1 mt-1">
-                      {categories
-                        .filter((c) => !c.parent_id)
-                        .map((mainCat) => (
-                          <div key={mainCat.id} className="group/main">
-                            <Link
-                              href={`/categories/${mainCat.slug}`}
-                              className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
-                            >
-                              {mainCat.name}
-                              <ChevronDown className="h-4 w-4 -rotate-90 opacity-40 group-hover/main:opacity-100" />
-                            </Link>
-
-                            {/* Subcategories (Right Panel) */}
-                            <div className="invisible absolute left-[33.33%] top-0 w-[66.66%] h-full p-5 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar">
-                              <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
-                                  {mainCat.name}
-                                </h3>
+                {/* Categories Dropdown */}
+                <div className="absolute top-full left-0 w-[580px] bg-white border border-zinc-150 rounded-b-3xl shadow-xl p-6 opacity-0 translate-y-2 pointer-events-none group-hover/cat:opacity-100 group-hover/cat:translate-y-0 group-hover/cat:pointer-events-auto transition-all duration-200 flex gap-6 z-50">
+                  <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-4">
+                    {categories
+                      .filter((c) => !c.parent_id)
+                      .slice(0, 6)
+                      .map((mainCat) => (
+                        <div key={mainCat.id} className="space-y-1 text-left">
+                          <Link
+                            href={`/categories/${mainCat.slug}`}
+                            className="text-[11px] font-black uppercase text-zinc-900 hover:text-primary tracking-wider transition-colors block"
+                          >
+                            {mainCat.name}
+                          </Link>
+                          <div className="flex flex-col gap-1.5 pl-2">
+                            {categories
+                              .filter((sub) => sub.parent_id === mainCat.id)
+                              .slice(0, 3)
+                              .map((subCat) => (
                                 <Link
-                                  href={`/categories/${mainCat.slug}`}
-                                  className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
+                                  key={subCat.id}
+                                  href={`/categories/${subCat.slug}`}
+                                  className="text-[10px] font-bold text-zinc-500 hover:text-primary transition-colors block"
                                 >
-                                  View All
+                                  {subCat.name}
                                 </Link>
-                              </div>
-                              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                {categories
-                                  .filter((sub) => sub.parent_id === mainCat.id)
-                                  .map((subCat) => (
-                                    <Link
-                                      key={subCat.id}
-                                      href={`/categories/${subCat.slug}`}
-                                      className="text-sm font-bold text-zinc-600 hover:text-primary transition-colors py-1"
-                                    >
-                                      {subCat.name}
-                                    </Link>
-                                  ))}
-                              </div>
-                            </div>
+                              ))}
                           </div>
-                        ))}
-                    </div>
+                        </div>
+                      ))}
                   </div>
-
-                  {/* Default Panel (Right) */}
-                  <div className="flex-1 p-6 flex flex-col justify-center text-center bg-white">
-                    <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-[180px] border-l border-zinc-100 pl-6 flex flex-col justify-center items-center text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center p-2 mb-3">
                       <Image
-                        src="/logo.png"
+                        src={logoSrc}
                         alt="Logo"
                         width={32}
                         height={32}
@@ -264,10 +248,12 @@ export default function Header({ categories, user }: HeaderProps) {
                 </div>
               </div>
 
-              {primaryNavLinks.map((link) => (
+              {linksToRender.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
+                  target={link.isExternal ? "_blank" : undefined}
+                  rel={link.isExternal ? "noopener noreferrer" : undefined}
                   className="hover:text-primary transition-colors"
                 >
                   {link.label}
@@ -309,14 +295,16 @@ export default function Header({ categories, user }: HeaderProps) {
                 >
                   <div className="w-7 h-7 flex items-center justify-center">
                     <Image
-                      src="/logo.png"
+                      src={logoSrc}
                       alt="Logo"
                       width={28}
                       height={28}
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  UC <span className="text-primary text-sm">ENTERPRISES</span>
+                  <span className="uppercase text-sm">
+                    {siteName}
+                  </span>
                 </Link>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -362,10 +350,12 @@ export default function Header({ categories, user }: HeaderProps) {
                     <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4 px-2">
                       Menu
                     </p>
-                    {primaryNavLinks.map((link) => (
+                    {linksToRender.map((link) => (
                       <Link
                         key={link.href}
                         href={link.href}
+                        target={link.isExternal ? "_blank" : undefined}
+                        rel={link.isExternal ? "noopener noreferrer" : undefined}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center px-4 py-3 rounded-xl text-zinc-700 hover:bg-zinc-50 hover:text-primary transition-all font-semibold text-sm"
                       >
@@ -426,7 +416,7 @@ export default function Header({ categories, user }: HeaderProps) {
                   </button>
                 )}
                 <div className="flex flex-col gap-1 text-[9px] font-black text-zinc-500 uppercase tracking-widest text-center">
-                  <span>Support: {supportPhone}</span>
+                  <span>Support: {displayPhone}</span>
                 </div>
               </div>
             </motion.aside>

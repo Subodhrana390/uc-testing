@@ -69,7 +69,7 @@ export default async function SearchPage({
 
     if (suggestionsData?.did_you_mean) {
       didYouMean = suggestionsData.did_you_mean;
-      const alternateResults = await fetchProductsFiltered(currentPage, { ...searchParams, q: didYouMean });
+      const alternateResults = await fetchProductsFiltered(currentPage, { ...searchParams, q: didYouMean || undefined });
       if (alternateResults.totalCount > 0) {
         sortedProducts = alternateResults.products;
         totalCount = alternateResults.totalCount;
