@@ -80,6 +80,7 @@ export async function POST(req: Request) {
     }
 
     // 1. If order status is being updated, enforce State Machine transition
+    const updateData: any = {};
     let finalStatus = status;
     if (status !== undefined && status.toUpperCase() !== existingOrder.status.toUpperCase()) {
       const { data: transitionResult, error: rpcError } = await supabase.rpc(
@@ -118,18 +119,87 @@ export async function POST(req: Request) {
           console.error("Auto transition to REFUND_PENDING failed:", autoRpcError.message);
         } else {
           finalStatus = "REFUND_PENDING";
+
+          // Streamlined refund process
+          let refundSuccess = false;
+          if (existingOrder.payment_method === "ONLINE" && existingOrder.razorpay_payment_id) {
+            try {
+              const Razorpay = (await import("razorpay")).default;
+              const razorpay = new Razorpay({
+                key_id: process.env.RAZORPAY_KEY_ID || env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+                key_secret: process.env.RAZORPAY_KEY_SECRET || env.RAZORPAY_KEY_SECRET || "",
+              });
+
+              // Initiate full refund
+              const refund = await razorpay.payments.refund(existingOrder.razorpay_payment_id, {
+                amount: Math.round(parseFloat(existingOrder.total_amount) * 100)
+              });
+              console.log("Auto-refund processed successfully via Razorpay:", refund.id);
+              refundSuccess = true;
+            } catch (err: any) {
+              console.error("Auto-refund failed via Razorpay:", err);
+            }
+          } else {
+            // COD or other offline methods, mark as refund success immediately
+            refundSuccess = true;
+          }
+
+          if (refundSuccess) {
+            // Transition to REFUNDED
+            const { data: refundTransitionResult, error: refundRpcError } = await serviceRoleSupabase.rpc(
+              "transition_order_status",
+              {
+                p_order_id: orderId,
+                p_new_status: "REFUNDED",
+                p_actor_type: "system",
+                p_actor_id: user.id,
+                p_remarks: "Auto-refund processed successfully"
+              }
+            );
+
+            if (refundRpcError) {
+              console.error("Auto transition to REFUNDED failed:", refundRpcError.message);
+            } else {
+              finalStatus = "REFUNDED";
+              updateData.payment_status = "Refunded";
+              
+              // Also update payments table status parallelly
+              await serviceRoleSupabase
+                .from("payments")
+                .update({ status: "refunded" })
+                .eq("order_id", orderId);
+            }
+          }
         }
       }
     }
 
     // 2. Handle metadata updates (tracking ID, carrier, paymentStatus, paymentMethod, etc.)
-    const updateData: any = {};
     if (trackingId !== undefined) updateData.tracking_id = trackingId;
     if (carrier !== undefined) updateData.carrier = carrier;
     if (paymentStatus !== undefined) updateData.payment_status = paymentStatus;
     if (paymentMethod !== undefined) updateData.payment_method = paymentMethod;
     if (razorpayPaymentId !== undefined) updateData.razorpay_payment_id = razorpayPaymentId;
     if (razorpaySignature !== undefined) updateData.razorpay_signature = razorpaySignature;
+
+    // Auto-cancel pending orders if payment fails
+    if (paymentStatus === "Failed" && ["PENDING", "PLACED"].includes(existingOrder.status.toUpperCase())) {
+      const { data: cancelResult, error: cancelError } = await serviceRoleSupabase.rpc(
+        "transition_order_status",
+        {
+          p_order_id: orderId,
+          p_new_status: "CANCELLED",
+          p_actor_type: "system",
+          p_actor_id: user.id,
+          p_remarks: "Auto-cancelled due to payment failure"
+        }
+      );
+      if (cancelError) {
+        console.error("Auto cancellation on payment failure failed:", cancelError.message);
+      } else {
+        finalStatus = "CANCELLED";
+      }
+    }
 
     // Automatically set payment status to Refund Pending when order is returned or refund pending
     if (finalStatus !== undefined && (finalStatus.toUpperCase() === "RETURNED" || finalStatus.toUpperCase() === "REFUND_PENDING")) {
@@ -249,14 +319,15 @@ export async function POST(req: Request) {
       order = currentOrder;
     }
 
-    // 3. Insert/update payment record if paid using Service Role to bypass RLS
-    if (order && order.payment_status === "Paid") {
+    // 3. Insert/update payment record if paid or failed using Service Role to bypass RLS
+    if (order && (order.payment_status === "Paid" || order.payment_status === "Failed")) {
       const serviceRoleSupabase = createServiceRoleClient();
+      const targetStatus = order.payment_status === "Paid" ? "completed" : "failed";
       
       const { data: updatedPayment, error: paymentUpdateError } = await serviceRoleSupabase
         .from("payments")
         .update({
-          status: "completed",
+          status: targetStatus,
           payment_method: order.payment_method || "ONLINE",
           transaction_id: razorpayPaymentId || order.razorpay_payment_id || `tx_${Math.random().toString(36).substring(2, 11)}`
         })
@@ -269,7 +340,7 @@ export async function POST(req: Request) {
           .from("payments")
           .select("id")
           .eq("order_id", orderId)
-          .eq("status", "completed")
+          .eq("status", targetStatus)
           .maybeSingle();
 
         if (!existingPayment) {
@@ -279,12 +350,12 @@ export async function POST(req: Request) {
               order_id: orderId,
               amount: parseFloat(order.total_amount),
               currency: "INR",
-              status: "completed",
+              status: targetStatus,
               payment_method: order.payment_method || "ONLINE",
               transaction_id: razorpayPaymentId || order.razorpay_payment_id || `tx_${Math.random().toString(36).substring(2, 11)}`
             });
           if (paymentError) {
-            console.error("Failed to insert fallback payment record:", paymentError);
+            console.error(`Failed to insert fallback payment record (${targetStatus}):`, paymentError);
           }
         }
       }

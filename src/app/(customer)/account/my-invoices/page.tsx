@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getCustomerInvoices } from "@/app/actions/invoice-customer";
-import { FileText, Download, Receipt, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { FileText, Download, Receipt, Clock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { createClient } from "@/utils/supabase/client";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 export default function MyInvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -33,10 +34,30 @@ export default function MyInvoicesPage() {
     fetchInvoices();
   }, []);
 
-  const handleDownloadPDF = async (pdfUrl: string) => {
-    if (!pdfUrl) return toast.error("PDF is not available for this invoice yet.");
+  const handleDownloadPDF = async (invoiceId: string, initialPdfUrl: string | null) => {
+    if (downloadingId) return;
+    setDownloadingId(invoiceId);
+    const toastId = toast.loading("Preparing invoice PDF...");
     try {
-      const toastId = toast.loading("Downloading invoice...");
+      let pdfUrl = initialPdfUrl;
+      
+      // If PDF URL is not available in database, generate it on the fly
+      if (!pdfUrl) {
+        const { getInvoicePdfUrl } = await import("@/app/actions/invoice-customer");
+        const res = await getInvoicePdfUrl(invoiceId);
+        if (!res.success || !res.pdfUrl) {
+          throw new Error(res.error || "Failed to generate PDF");
+        }
+        pdfUrl = res.pdfUrl;
+        
+        // Update local state so user doesn't have to regenerate if they click again
+        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, pdf_url: pdfUrl } : inv));
+      }
+
+      if (!pdfUrl) {
+        throw new Error("Failed to resolve invoice PDF path");
+      }
+
       // Download via Supabase Storage
       const { data, error } = await supabase.storage.from("invoices").download(pdfUrl);
       
@@ -52,8 +73,11 @@ export default function MyInvoicesPage() {
       URL.revokeObjectURL(url);
       
       toast.success("Download complete", { id: toastId });
-    } catch (error) {
-      toast.error("Failed to securely download PDF");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to securely download PDF", { id: toastId });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -109,10 +133,14 @@ export default function MyInvoicesPage() {
                   variant="outline" 
                   size="sm" 
                   className="gap-2"
-                  disabled={!inv.pdf_url}
-                  onClick={() => handleDownloadPDF(inv.pdf_url)}
+                  disabled={downloadingId === inv.id}
+                  onClick={() => handleDownloadPDF(inv.id, inv.pdf_url)}
                 >
-                  <Download className="w-4 h-4" /> 
+                  {downloadingId === inv.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
                   Download PDF
                 </Button>
               </div>

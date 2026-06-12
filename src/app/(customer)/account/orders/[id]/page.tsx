@@ -24,7 +24,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/format";
-import { getDisplayOrderId } from "@/lib/order";
+import { getDisplayOrderId, getReturnWindowInfo } from "@/lib/order";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,9 @@ export default function OrderDetailsPage() {
             order_items (
               *,
               products (*)
+            ),
+            order_status_history (
+              *
             )
           `)
           .eq("id", orderId)
@@ -426,8 +429,9 @@ export default function OrderDetailsPage() {
     );
   }
 
+  const { isReturnable: isWithinReturnWindow, daysRemaining } = getReturnWindowInfo(order);
   const isCancellable = ["pending", "placed", "confirmed", "processing"].includes(order.status?.toLowerCase());
-  const isReturnable = order.status?.toLowerCase() === "delivered";
+  const isReturnable = order.status?.toLowerCase() === "delivered" && isWithinReturnWindow;
   const isUnpaid = order.payment_status?.toLowerCase() !== "paid" && ["pending", "placed", "confirmed"].includes(order.status?.toLowerCase());
 
   return (
@@ -439,11 +443,13 @@ export default function OrderDetailsPage() {
         </Link>
         
         <div className="flex items-center gap-2">
-          <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}>
-            <Button variant="outline" size="sm" className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs rounded-lg font-medium">
-              Track Order
-            </Button>
-          </Link>
+          {!["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
+            <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}>
+              <Button variant="outline" size="sm" className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs rounded-lg font-medium">
+                Track Order
+              </Button>
+            </Link>
+          )}
           {order.status?.toLowerCase() === "delivered" && (
             <Button
               onClick={handleDownloadInvoice}
@@ -514,14 +520,20 @@ export default function OrderDetailsPage() {
                   </Button>
                 )}
 
-                {isReturnable && (
-                  <Button
-                    onClick={handleOpenReturnDialog}
-                    variant="outline"
-                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-55 text-xs h-9 px-4 rounded-lg font-semibold transition-colors"
-                  >
-                    Return Order
-                  </Button>
+                {order.status?.toLowerCase() === "delivered" && (
+                  isWithinReturnWindow ? (
+                    <Button
+                      onClick={handleOpenReturnDialog}
+                      variant="outline"
+                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-9 px-4 rounded-lg font-semibold transition-colors"
+                    >
+                      Return Order ({daysRemaining}d left)
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-zinc-400 font-medium px-3 py-2 bg-zinc-50 border border-zinc-100 rounded-lg">
+                      Return window expired
+                    </span>
+                  )
                 )}
               </div>
             </div>
@@ -564,6 +576,11 @@ export default function OrderDetailsPage() {
                     Razorpay Payment ID: {order.razorpay_payment_id}
                   </p>
                 )}
+                {order.payment_method === "COD" && (order.payment_status === "Refund Pending" || order.status?.toUpperCase() === "REFUND_PENDING") && (
+                  <div className="mt-3 p-2.5 bg-amber-50 border border-amber-100 rounded-lg text-[11px] text-amber-800 leading-normal">
+                    ℹ️ Cash refunds take 2-3 business days to be processed and credited to your bank account.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -587,7 +604,7 @@ export default function OrderDetailsPage() {
                     </p>
                   )}
                 </div>
-                {order.tracking_id && (
+                {order.tracking_id && !["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
                   <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="inline-block mt-3">
                     <Button variant="link" size="sm" className="text-indigo-600 hover:text-indigo-755 p-0 text-xs font-semibold h-auto">
                       Live tracking view <ChevronRight className="w-3 h-3 ml-0.5" />
@@ -756,7 +773,7 @@ export default function OrderDetailsPage() {
               <div className="space-y-4 pt-4 border-t border-zinc-100 mt-4">
                 <div>
                   <h4 className="text-sm font-bold text-zinc-900">Refund Bank Details</h4>
-                  <p className="text-xs text-zinc-500 mb-4">Since this is a COD order, please provide your bank details for the refund.</p>
+                  <p className="text-xs text-zinc-500 mb-4">Since this is a COD order, please provide your bank details for the refund. Cash refunds take 2-3 business days to be processed and credited to your bank account.</p>
                 </div>
                 <div className="space-y-3">
                   <div>

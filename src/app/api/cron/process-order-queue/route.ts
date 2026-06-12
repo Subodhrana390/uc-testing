@@ -98,7 +98,7 @@ export async function GET(req: Request) {
           transitionTo = "PLACED";
         } else if (targetPaymentStatus === "Failed") {
           shouldTransition = true;
-          transitionTo = "FAILED";
+          transitionTo = "CANCELLED";
         }
 
         const { data: updatedOrder, error: updateError } = await supabase

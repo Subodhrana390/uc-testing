@@ -8,7 +8,7 @@ import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/format";
-import { getDisplayOrderId } from "@/lib/order";
+import { getDisplayOrderId, getReturnWindowInfo } from "@/lib/order";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -243,6 +243,9 @@ export default function OrderHistoryPage() {
             order_items (
               *,
               products (*)
+            ),
+            order_status_history (
+              *
             )
           `)
           .eq("customer_email", user.email)
@@ -439,29 +442,45 @@ export default function OrderHistoryPage() {
                     </Button>
                   )}
 
-                  {order.status?.toLowerCase() === "delivered" && (
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); handleOpenReturnDialog(order); }}
-                      variant="outline"
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-55 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
-                    >
-                      Return
-                    </Button>
-                  )}
+                  {(() => {
+                    const { isReturnable, daysRemaining } = getReturnWindowInfo(order);
+                    if (order.status?.toLowerCase() === "delivered") {
+                      if (isReturnable) {
+                        return (
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); handleOpenReturnDialog(order); }}
+                            variant="outline"
+                            className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
+                          >
+                            Return ({daysRemaining}d left)
+                          </Button>
+                        );
+                      } else {
+                        return (
+                          <span className="text-xs text-zinc-400 font-medium px-2 py-1 bg-zinc-50 border border-zinc-100 rounded-lg">
+                            Return window expired
+                          </span>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`);
-                    }}
-                    title="Track Order"
-                    className="h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 text-xs font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all"
-                  >
-                    <Truck className="w-4 h-4" />
-                    Track
-                  </button>
+                  {!["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`);
+                      }}
+                      title="Track Order"
+                      className="h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 text-xs font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all"
+                    >
+                      <Truck className="w-4 h-4" />
+                      Track
+                    </button>
+                  )}
 
                   <Badge variant={getStatusVariant(order.status)} className="text-[11px] font-medium px-2.5 py-0.5 rounded-full capitalize border-0 shadow-none">
                     {getStatusLabel(order.status)}
@@ -534,7 +553,7 @@ export default function OrderHistoryPage() {
               <div className="space-y-4 pt-4 border-t border-zinc-100 mt-4">
                 <div>
                   <h4 className="text-sm font-bold text-zinc-900">Refund Bank Details</h4>
-                  <p className="text-xs text-zinc-500 mb-4">Since this is a COD order, please provide your bank details for the refund.</p>
+                  <p className="text-xs text-zinc-500 mb-4">Since this is a COD order, please provide your bank details for the refund. Cash refunds take 2-3 business days to be processed and credited to your bank account.</p>
                 </div>
                 <div className="space-y-3">
                   <div>

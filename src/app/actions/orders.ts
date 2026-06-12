@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
+import { getReturnWindowInfo } from '@/lib/order'
 
 export async function createOrder(orderData: {
   fullName: string
@@ -161,6 +162,23 @@ export async function returnOrder(orderId: string, reason: string, bankDetails?:
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return { success: false, error: 'Unauthorized: Please ensure you are logged in.' }
+    }
+
+    // Fetch order details with its status history to validate return period
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*, order_status_history(*)')
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError || !order) {
+      return { success: false, error: 'Order not found.' }
+    }
+
+    const { isReturnable } = getReturnWindowInfo(order)
+    if (!isReturnable) {
+      return { success: false, error: 'The 7-day return period for this order has expired.' }
     }
 
     // Call PostgreSQL RPC transition_order_status to set status to RETURN_REQUESTED

@@ -1,4 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+// Mock next/headers
+vi.mock("next/headers", () => ({
+  cookies: () => ({
+    has: () => false,
+    get: () => null,
+  }),
+}));
+
 import { POST } from "./route";
 
 const mockGetUser = vi.fn();
@@ -39,10 +48,7 @@ vi.mock("@/utils/supabase/service-role", () => {
   chain.select = vi.fn().mockReturnValue(chain);
   chain.eq = vi.fn().mockReturnValue(chain);
   chain.maybeSingle = vi.fn().mockReturnValue({ data: null, error: null });
-  chain.single = vi.fn().mockResolvedValue({
-    data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid" },
-    error: null
-  });
+  chain.single = vi.fn().mockImplementation(() => mockSingle());
   chain.update = vi.fn().mockReturnValue(chain);
   chain.rpc = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
   chain.insert = vi.fn().mockImplementation((...args) => {
@@ -91,8 +97,8 @@ describe("Order Status API Route", () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: "usr_customer" } }, error: null });
     mockMaybeSingle.mockResolvedValueOnce({ data: { role: "customer" }, error: null });
     mockRpc.mockResolvedValueOnce({ data: { success: true }, error: null });
-    mockSingle.mockResolvedValueOnce({
-      data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid" },
+    mockSingle.mockResolvedValue({
+      data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid", user_id: "usr_customer", status: "PENDING" },
       error: null
     });
 
@@ -118,8 +124,8 @@ describe("Order Status API Route", () => {
   it("should return 400 if state machine transition is rejected by RPC", async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: "usr_customer" } }, error: null });
     mockMaybeSingle.mockResolvedValueOnce({ data: { role: "customer" }, error: null });
-    mockSingle.mockResolvedValueOnce({
-      data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid" },
+    mockSingle.mockResolvedValue({
+      data: { id: "ord_123", customer_name: "John Doe", customer_email: "john@example.com", payment_status: "Unpaid", user_id: "usr_customer", status: "PENDING" },
       error: null
     });
     mockRpc.mockResolvedValueOnce({ data: { success: false, error: "Invalid status transition" }, error: null });
@@ -134,4 +140,39 @@ describe("Order Status API Route", () => {
     const data = await res.json();
     expect(data.error).toBe("Invalid status transition");
   });
+
+  it("should record failed payments in payments table", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: "usr_admin" } }, error: null });
+    mockMaybeSingle.mockResolvedValueOnce({ data: { role: "admin" }, error: null });
+    mockSingle
+      .mockResolvedValueOnce({
+        data: { id: "ord_123", total_amount: "1500.00", status: "PENDING", payment_status: "Unpaid", user_id: "usr_customer" },
+        error: null
+      })
+      .mockResolvedValueOnce({
+        data: { id: "ord_123", total_amount: "1500.00", status: "CANCELLED", payment_status: "Failed", user_id: "usr_customer" },
+        error: null
+      });
+    mockRpc.mockResolvedValueOnce({ data: { success: true }, error: null });
+
+    const req = new Request("http://localhost:3000/api/orders/status", {
+      method: "POST",
+      body: JSON.stringify({ orderId: "ord_123", paymentStatus: "Failed" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+
+    expect(mockInsert).toHaveBeenCalledWith({
+      order_id: "ord_123",
+      amount: 1500,
+      currency: "INR",
+      status: "failed",
+      payment_method: "ONLINE",
+      transaction_id: expect.any(String),
+    });
+  });
 });
+

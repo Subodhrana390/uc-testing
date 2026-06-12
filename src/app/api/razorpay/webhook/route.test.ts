@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { POST } from "./route";
 import crypto from "crypto";
+import { env } from "@/env";
 
 const mockMaybeSingle = vi.fn();
 const mockSingle = vi.fn();
@@ -85,7 +86,7 @@ describe("Razorpay Webhook API Route", () => {
     
     const bodyStr = JSON.stringify(payload);
     const signature = crypto
-      .createHmac("sha256", "testsecret")
+      .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET || "testsecret")
       .update(bodyStr)
       .digest("hex");
 
@@ -117,12 +118,10 @@ describe("Razorpay Webhook API Route", () => {
     const data = await res.json();
     expect(data.status).toBe("ok");
     expect(mockInsert).toHaveBeenCalledWith({
-      order_id: "supabase_order_uuid",
-      amount: 1500,
-      currency: "INR",
-      status: "completed",
-      payment_method: "ONLINE",
-      transaction_id: "pay_123"
+      payload: {
+        event: payload,
+        signature: signature
+      }
     });
   });
 
@@ -144,7 +143,7 @@ describe("Razorpay Webhook API Route", () => {
     
     const bodyStr = JSON.stringify(payload);
     const signature = crypto
-      .createHmac("sha256", "testsecret")
+      .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET || "testsecret")
       .update(bodyStr)
       .digest("hex");
 
@@ -176,12 +175,10 @@ describe("Razorpay Webhook API Route", () => {
     const data = await res.json();
     expect(data.status).toBe("ok");
     expect(mockInsert).toHaveBeenCalledWith({
-      order_id: "supabase_order_uuid",
-      amount: 1500,
-      currency: "INR",
-      status: "failed",
-      payment_method: "ONLINE",
-      transaction_id: "pay_123"
+      payload: {
+        event: payload,
+        signature: signature
+      }
     });
   });
 
@@ -201,7 +198,7 @@ describe("Razorpay Webhook API Route", () => {
     
     const bodyStr = JSON.stringify(payload);
     const signature = crypto
-      .createHmac("sha256", "testsecret")
+      .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET || "testsecret")
       .update(bodyStr)
       .digest("hex");
 
@@ -233,12 +230,10 @@ describe("Razorpay Webhook API Route", () => {
     const data = await res.json();
     expect(data.status).toBe("ok");
     expect(mockInsert).toHaveBeenCalledWith({
-      order_id: "supabase_order_uuid",
-      amount: 1500,
-      currency: "INR",
-      status: "refunded",
-      payment_method: "ONLINE",
-      transaction_id: "rfnd_123"
+      payload: {
+        event: payload,
+        signature: signature
+      }
     });
   });
 });

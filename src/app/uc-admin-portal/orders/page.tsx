@@ -1784,7 +1784,7 @@ export default function OrdersPage() {
                                     <DropdownMenuItem className="p-0 cursor-pointer">
                                       <Link href={`/uc-admin-portal/orders/${order.id}/label`} target="_blank" className="flex items-center w-full px-2 py-1.5">
                                         <Download className="w-4 h-4 mr-2 text-zinc-600" />
-                                        Export PDF
+                                        Generate Label
                                       </Link>
                                     </DropdownMenuItem>
 
