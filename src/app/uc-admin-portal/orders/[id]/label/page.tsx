@@ -39,7 +39,7 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
           <Link href="/uc-admin-portal/orders" className="px-4 py-2.5 text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 rounded-xl transition-all shadow-sm">
             Back to Orders
           </Link>
-          <PrintButton />
+          <PrintButton order={order} invoice={invoice} />
         </div>
       </div>
 
