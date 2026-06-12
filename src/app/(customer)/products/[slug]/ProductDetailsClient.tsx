@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
 import DeliveryEstimator from "@/components/storefront/DeliveryEstimator";
-import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTogether";
 import ProductReviews from "@/components/storefront/ProductReviews";
 import { addRecentlyViewed } from "@/lib/recentlyViewed";
 import { addCartItem, isInCart, updateCartItemQuantity } from "@/lib/cart";
@@ -512,8 +511,6 @@ export default function ProductDetailsClient({
           </AnimatePresence>
         </div>
       </section>
-      <FrequentlyBoughtTogether currentProduct={product} />
-
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}

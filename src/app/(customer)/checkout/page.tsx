@@ -390,7 +390,6 @@ export default function CheckoutPage() {
     setIsPlacingOrder(true);
     setSubmitting(true);
 
-    // Track if an order was created so the catch block can clean it up
     let createdOrderId: string | null = null;
 
     try {
@@ -580,7 +579,7 @@ export default function CheckoutPage() {
   // Verifying Payment Screen
   if (verifyingPayment && verificationData) {
     return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-100 p-6 antialiased">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 antialiased">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
         
         {/* Main Card - Separated entirely by a rich, soft shadow */}
