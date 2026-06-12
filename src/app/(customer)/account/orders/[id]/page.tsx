@@ -554,6 +554,16 @@ export default function OrderDetailsPage() {
                     Txn ID: {order.transaction_id}
                   </p>
                 )}
+                {order.razorpay_order_id && (
+                  <p className="text-zinc-400 text-[10px] font-mono mt-1 break-all">
+                    Razorpay Order ID: {order.razorpay_order_id}
+                  </p>
+                )}
+                {order.razorpay_payment_id && (
+                  <p className="text-zinc-400 text-[10px] font-mono mt-1 break-all">
+                    Razorpay Payment ID: {order.razorpay_payment_id}
+                  </p>
+                )}
               </div>
             </div>
 

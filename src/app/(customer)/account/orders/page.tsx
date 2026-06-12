@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
@@ -34,6 +34,7 @@ export default function OrderHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Return Modal State
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
@@ -256,7 +257,7 @@ export default function OrderHistoryPage() {
       }
     }
     fetchOrders();
-  }, [supabase]);
+  }, [supabase, refreshKey]);
 
   const STATUS_LABEL: Record<string, string> = {
     pending: "Pending",
@@ -327,16 +328,26 @@ export default function OrderHistoryPage() {
           <p className="text-sm text-zinc-500 mt-1">Review and track your recent and past orders</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "current" | "archived")}>
-          <TabsList className="bg-zinc-100 rounded-lg h-9">
-            <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
-              Active Orders
-            </TabsTrigger>
-            <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
-              Completed
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => { setLoading(true); setRefreshKey(prev => prev + 1); }}
+            variant="outline"
+            className="h-9 gap-1.5 border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+          <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "current" | "archived")}>
+            <TabsList className="bg-zinc-100 rounded-lg h-9">
+              <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+                Active Orders
+              </TabsTrigger>
+              <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+                Completed
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Search Bar */}
