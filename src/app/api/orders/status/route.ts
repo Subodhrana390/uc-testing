@@ -80,6 +80,7 @@ export async function POST(req: Request) {
     }
 
     // 1. If order status is being updated, enforce State Machine transition
+    let finalStatus = status;
     if (status !== undefined && status.toUpperCase() !== existingOrder.status.toUpperCase()) {
       const { data: transitionResult, error: rpcError } = await supabase.rpc(
         "transition_order_status",
@@ -100,6 +101,25 @@ export async function POST(req: Request) {
       if (!resData.success) {
         return NextResponse.json({ error: resData.error || "Invalid status transition" }, { status: 400 });
       }
+
+      // Automatically transition from RETURNED to REFUND_PENDING
+      if (status.toUpperCase() === "RETURNED") {
+        const { data: autoTransitionResult, error: autoRpcError } = await serviceRoleSupabase.rpc(
+          "transition_order_status",
+          {
+            p_order_id: orderId,
+            p_new_status: "REFUND_PENDING",
+            p_actor_type: "system",
+            p_actor_id: user.id,
+            p_remarks: "Auto-processed to refund pending after product returned"
+          }
+        );
+        if (autoRpcError) {
+          console.error("Auto transition to REFUND_PENDING failed:", autoRpcError.message);
+        } else {
+          finalStatus = "REFUND_PENDING";
+        }
+      }
     }
 
     // 2. Handle metadata updates (tracking ID, carrier, paymentStatus, paymentMethod, etc.)
@@ -110,6 +130,15 @@ export async function POST(req: Request) {
     if (paymentMethod !== undefined) updateData.payment_method = paymentMethod;
     if (razorpayPaymentId !== undefined) updateData.razorpay_payment_id = razorpayPaymentId;
     if (razorpaySignature !== undefined) updateData.razorpay_signature = razorpaySignature;
+
+    // Automatically set payment status to Refund Pending when order is returned or refund pending
+    if (finalStatus !== undefined && (finalStatus.toUpperCase() === "RETURNED" || finalStatus.toUpperCase() === "REFUND_PENDING")) {
+      updateData.payment_status = "Refund Pending";
+      await serviceRoleSupabase
+        .from("payments")
+        .update({ status: "refund_pending" })
+        .eq("order_id", orderId);
+    }
 
     let order = null;
     if (Object.keys(updateData).length > 0) {
@@ -262,19 +291,19 @@ export async function POST(req: Request) {
     }
 
     // 4. Trigger Email Notification for Status Change
-    if (status !== undefined && order) {
+    if (finalStatus !== undefined && order) {
       await serviceRoleSupabase.from('email_queue').insert({
         type: 'STATUS_UPDATE',
         payload: {
           orderId: order.id,
-          status: status.toUpperCase(),
+          status: finalStatus.toUpperCase(),
           remarks: remarks || null
         }
       });
     }
 
     // 5. If status is "Delivered", generate and send invoice
-    if (status === "DELIVERED" || status === "Delivered") {
+    if (finalStatus === "DELIVERED" || finalStatus === "Delivered") {
       await serviceRoleSupabase.from('email_queue').insert({
         type: 'INVOICE',
         payload: { orderId: order.id }

@@ -557,7 +557,14 @@ export default function DealsAdminPage() {
                           checked={deal.status}
                           onCheckedChange={() => handleToggleActive(deal)}
                         />
-                        <span className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border inline-flex items-center gap-1.5", status.color)}>
+                        <span
+                          onClick={() => handleToggleActive(deal)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer select-none transition-all",
+                            status.color,
+                            deal.status ? "hover:bg-teal-100/80" : "hover:bg-zinc-200/80"
+                          )}
+                        >
                           {status.label === "Live" && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />}
                           {status.label}
                         </span>
@@ -577,13 +584,6 @@ export default function DealsAdminPage() {
                             className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                           >
                             <Edit className="w-4 h-4 text-zinc-400" /> Edit Deal
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleToggleActive(deal)}
-                            className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
-                          >
-                            {deal.status ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
-                            {deal.status ? "Suspend" : "Activate"}
                           </DropdownMenuItem>
                           <div className="h-px bg-zinc-100 my-1 mx-1" />
                           <DropdownMenuItem
@@ -743,6 +743,7 @@ export default function DealsAdminPage() {
               <SingleImageUpload
                 value={formData.image_url}
                 onChange={(url: string) => setFormData({ ...formData, image_url: url })}
+                bucket="deals"
               />
             </div>
           </form>

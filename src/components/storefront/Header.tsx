@@ -45,6 +45,9 @@ export default function Header({ categories, user }: HeaderProps) {
   const supabase = createClient();
   const router = useRouter();
 
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Account";
+  const firstName = displayName.trim().split(" ")[0];
+
   // Build login URL with current page as returnTo at click-time (avoids useSearchParams Suspense requirement)
   const goToLogin = () => {
     const returnTo = typeof window !== "undefined"
@@ -145,7 +148,7 @@ export default function Header({ categories, user }: HeaderProps) {
                     className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                   >
                     <User className="h-4 w-4" />
-                    <span>Account</span>
+                    <span>{firstName}</span>
                   </Link>
                 )}
 
@@ -343,7 +346,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm"
                       >
                         <User className="h-4 w-4 text-primary" />
-                        <span>Profile</span>
+                        <span>{firstName}</span>
                       </Link>
                     )}
 

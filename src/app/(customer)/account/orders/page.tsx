@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2, Star, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2 } from "lucide-react";
 
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
@@ -27,19 +27,13 @@ import {
 } from "@/components/ui/dialog";
 
 export default function OrderHistoryPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"current" | "archived">("current");
   const [searchQuery, setSearchQuery] = useState("");
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
-
-  // Review Modal State
-  const [reviewProduct, setReviewProduct] = useState<any>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   // Return Modal State
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
@@ -53,16 +47,6 @@ export default function OrderHistoryPage() {
     accountNumber: "",
     ifscCode: ""
   });
-
-  // Accordion Expand State
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
-
-  const toggleOrderExpand = (orderId: string) => {
-    setExpandedOrders(prev => ({
-      ...prev,
-      [orderId]: !prev[orderId]
-    }));
-  };
 
   const supabase = createClient();
 
@@ -243,57 +227,7 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const handleOpenReviewDialog = (product: any) => {
-    setReviewProduct(product);
-    setReviewRating(5);
-    setReviewText("");
-    setIsReviewOpen(true);
-  };
 
-  const handleSubmitReview = async () => {
-    if (!reviewText.trim()) {
-      toast.error("Please enter your review comments.");
-      return;
-    }
-
-    setReviewSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please login to write a review.");
-        setIsReviewOpen(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const reviewerName = profile?.full_name || user.user_metadata?.full_name || user.email || "Customer";
-
-      const { error } = await supabase.from("product_reviews").insert([
-        {
-          product_id: reviewProduct.id,
-          user_id: user.id,
-          reviewer_name: reviewerName,
-          rating: reviewRating,
-          review: reviewText,
-        },
-      ]);
-
-      if (error) throw error;
-
-      toast.success("Thank you for your rating & review!");
-      setIsReviewOpen(false);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to submit review.");
-    } finally {
-      setReviewSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     async function fetchOrders() {
@@ -424,8 +358,8 @@ export default function OrderHistoryPage() {
 
             {/* Order Meta Info Header */}
             <div
-              onClick={() => toggleOrderExpand(order.id)}
-              className="bg-white cursor-pointer px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none transition-colors"
+              onClick={() => router.push(`/account/orders/${order.id}`)}
+              className="bg-white cursor-pointer px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none transition-colors hover:bg-zinc-50/30"
             >
               {/* Info Group */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-8">
@@ -498,21 +432,11 @@ export default function OrderHistoryPage() {
                     <Button
                       onClick={(e) => { e.stopPropagation(); handleOpenReturnDialog(order); }}
                       variant="outline"
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
+                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-55 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors"
                     >
                       Return
                     </Button>
                   )}
-
-                  <Link
-                    href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="hidden sm:inline-block"
-                  >
-                    <Button variant="outline" className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs h-8 px-3.5 rounded-lg font-medium transition-colors">
-                      Track <ChevronRight className="w-3.5 h-3.5 ml-1 text-zinc-400" />
-                    </Button>
-                  </Link>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -534,111 +458,10 @@ export default function OrderHistoryPage() {
                     <Download className="w-4 h-4" />
                   </button>
 
-                  <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform duration-200 shrink-0", expandedOrders[order.id] && "rotate-180")} />
+                  <ChevronRight className="w-4 h-4 text-zinc-450 shrink-0" />
                 </div>
               </div>
             </div>
-
-            {/* Accordion Content */}
-            {expandedOrders[order.id] && (
-              <div className="border-t border-zinc-100 bg-zinc-50/40 animate-in fade-in slide-in-from-top-1 duration-200">
-
-                {/* Detail Fields Grid */}
-                <div className="px-4 sm:px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm border-b border-zinc-100">
-                  <div className="space-y-1">
-                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Shipping Address</h4>
-                    <p className="font-medium text-zinc-800">{order.customer_name}</p>
-                    <p className="text-zinc-500 text-xs leading-relaxed">{order.shipping_address}</p>
-                    <p className="text-zinc-500 text-xs mt-1">📞 {order.phone || "—"}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Payment Details</h4>
-                    <p className="font-medium text-zinc-700">{order.payment_method || "—"}</p>
-                    <p className="text-zinc-500 text-xs">Status: {order.payment_status || "Unpaid"}</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider">Logistics & Tracking</h4>
-                    {order.tracking_id ? (
-                      <div>
-                        <p className="font-mono font-medium text-zinc-800 text-xs">{order.tracking_id}</p>
-                        <p className="text-zinc-500 text-xs">{order.carrier || "Standard Delivery"}</p>
-                      </div>
-                    ) : (
-                      <p className="text-zinc-400 italic text-xs">Not yet dispatched</p>
-                    )}
-
-                    <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="sm:hidden inline-block mt-1">
-                      <Button variant="outline" className="text-xs h-7 px-3 border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-lg">
-                        Track Order <ChevronRight className="w-3 h-3 ml-0.5 text-zinc-400" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Modern Compact Items List */}
-                <div className="px-4 sm:px-6 py-4 bg-white">
-                  <h4 className="font-semibold text-zinc-400 text-[10px] uppercase tracking-wider mb-3">
-                    Items ({order.order_items?.length || 0})
-                  </h4>
-                  <div className="divide-y divide-zinc-50">
-                    {order.order_items?.map((item: any) => (
-                      <div key={item.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-                        <div className="w-12 h-12 bg-zinc-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
-                          <Image
-                            src={item.products?.image_url || "/images/placeholder.png"}
-                            alt={item.products?.name}
-                            fill
-                            sizes="48px"
-                            className="object-contain p-1"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-xs font-medium text-zinc-800 truncate">{item.products?.name}</h3>
-                          <p className="text-xs text-zinc-400 mt-0.5">
-                            Qty: <span className="font-medium text-zinc-700">{item.quantity}</span>
-                            <span className="mx-2 text-zinc-200">|</span>
-                            <span className="font-medium text-zinc-700">{formatCurrency(item.unit_price)}</span> each
-                          </p>
-                        </div>
-                        {order.status?.toLowerCase() === "delivered" && item.products && (
-                          <Button
-                            variant="outline"
-                            onClick={() => handleOpenReviewDialog(item.products)}
-                            className="shrink-0 text-xs h-7 px-3 border-zinc-200 text-zinc-600 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50/50 rounded-lg transition-all font-medium"
-                          >
-                            <Star className="w-3 h-3 mr-1 text-zinc-400 group-hover:text-orange-500 fill-current" /> Review
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Clean In-Transit Banner */}
-                {order.status?.toLowerCase() === "shipped" && (
-                  <div className="mx-4 sm:mx-6 mb-4 mt-2 p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-500/10 rounded-lg shrink-0">
-                        <Truck className="w-4 h-4 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-indigo-900">
-                          In Transit via {order.carrier || "Standard Carrier"}
-                        </p>
-                        <p className="text-[11px] text-indigo-600/80 font-mono mt-0.5">
-                          Tracking ID: {order.tracking_id || "Updating..."}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="flex items-center gap-1.5 text-[10px] font-semibold text-indigo-600 uppercase tracking-wider bg-indigo-100/50 px-2 py-0.5 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Live
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
           </Card>
         ))}
 
@@ -663,76 +486,7 @@ export default function OrderHistoryPage() {
         )}
       </div>
 
-      <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-md bg-white border border-zinc-150 p-6 rounded-3xl shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-zinc-900">Write a Review</DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500">
-              Share your feedback for {reviewProduct?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {reviewProduct?.image_url && (
-              <div className="flex justify-center mb-2">
-                <div className="w-16 h-16 bg-gray-50 border border-zinc-100 rounded-xl overflow-hidden relative animate-in zoom-in-95 duration-200">
-                  <Image
-                    src={reviewProduct.image_url}
-                    alt={reviewProduct.name}
-                    fill
-                    sizes="64px"
-                    className="object-contain p-2"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="flex justify-center gap-2">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setReviewRating(index + 1)}
-                  className="text-amber-500 transition-transform hover:scale-110 active:scale-95"
-                >
-                  <Star className={`h-8 w-8 ${index < reviewRating ? "fill-current" : "text-zinc-200"}`} />
-                </button>
-              ))}
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-450 uppercase tracking-wider">Your Review</label>
-              <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your experience using this product..."
-                rows={4}
-                className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsReviewOpen(false)}
-              className="w-full sm:w-auto rounded-xl border-zinc-200"
-              disabled={reviewSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitReview}
-              className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl"
-              disabled={reviewSubmitting}
-            >
-              {reviewSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting
-                </>
-              ) : (
-                "Submit Review"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <Dialog open={isReturnOpen} onOpenChange={setIsReturnOpen}>
         <DialogContent className="sm:max-w-md bg-white border border-zinc-150 p-6 rounded-3xl shadow-xl">

@@ -25,10 +25,16 @@ import {
 /* ─────────────────────────── helpers ─────────────────────────── */
 function getStatusStep(status: string) {
   const s = status.toLowerCase();
-  if (s === "pending" || s === "confirmed") return 0;
-  if (s === "processing") return 1;
-  if (s === "shipped") return 2;
-  if (s === "delivered") return 3;
+  if (s === "pending") return 0;
+  if (s === "confirmed") return 1;
+  if (s === "processing") return 2;
+  if (s === "shipped") return 3;
+  if (s === "delivered") return 4;
+  if (s === "return_requested") return 5;
+  if (s === "return_approved") return 6;
+  if (s === "returned") return 7;
+  if (s === "refund_pending") return 8;
+  if (s === "refunded") return 9;
   return -1;
 }
 
@@ -43,13 +49,14 @@ function fmtDate(iso: string, hoursToAdd = 0) {
 
 function statusColor(s: string) {
   const sl = s.toLowerCase();
-  if (sl === "delivered") return "emerald";
+  if (sl === "delivered" || sl === "refunded") return "emerald";
   if (sl === "shipped") return "indigo";
   if (sl === "processing") return "blue";
-  if (sl === "confirmed" || sl === "pending") return "amber";
+  if (sl === "confirmed" || sl === "pending" || sl === "placed" || sl === "order_confirmed") return "amber";
   if (sl === "cancelled" || sl === "failed") return "red";
-  if (["returned", "return_requested", "return_approved"].includes(sl)) return "pink";
-  if (["refund_pending", "refunded"].includes(sl)) return "violet";
+  if (sl === "return_requested") return "pink";
+  if (sl === "return_approved" || sl === "returned") return "rose";
+  if (sl === "refund_pending") return "orange";
   return "zinc";
 }
 
@@ -61,6 +68,8 @@ const COLOR_MAP: Record<string, string> = {
   red: "bg-red-50 text-red-700 border-red-200",
   pink: "bg-pink-50 text-pink-700 border-pink-200",
   violet: "bg-violet-50 text-violet-700 border-violet-200",
+  rose: "bg-rose-50 text-rose-700 border-rose-200",
+  orange: "bg-orange-50 text-orange-700 border-orange-200",
   zinc: "bg-zinc-50 text-zinc-700 border-zinc-200",
 };
 
@@ -84,6 +93,7 @@ function TrackOrderContent() {
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<string>>(new Set());
 
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
@@ -118,6 +128,11 @@ function TrackOrderContent() {
       }]);
       if (error) throw error;
       toast.success("Review submitted!");
+      setReviewedProductIds((prev) => {
+        const next = new Set(prev);
+        next.add(reviewProduct.id);
+        return next;
+      });
       setIsReviewOpen(false);
     } catch (e: any) { toast.error(e.message || "Failed to submit review."); }
     finally { setReviewSubmitting(false); }
@@ -158,15 +173,47 @@ function TrackOrderContent() {
     if (id) { setOrderId(id); performTracking(id); }
   }, [searchParams]);
 
+  useEffect(() => {
+    async function fetchUserReviews() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("product_reviews")
+          .select("product_id")
+          .eq("user_id", user.id);
+        if (data) {
+          setReviewedProductIds(new Set(data.map((r: any) => r.product_id)));
+        }
+      }
+    }
+    fetchUserReviews();
+  }, [supabase]);
+
   /* ── timeline steps ── */
+  const sl = (order?.status || "").toLowerCase();
   const STEPS = [
+    { key: "pending", label: "Order Placed", desc: "Order received, pending payment or verification.", Icon: Clock3 },
     { key: "confirmed", label: "Order Confirmed", desc: "Payment received and order verified.", Icon: BadgeCheck },
     { key: "processing", label: "Processing", desc: "Items picked, inspected and packed.", Icon: Package },
     { key: "shipped", label: "Shipped", desc: "Package handed to delivery partner.", Icon: Truck },
     { key: "delivered", label: "Delivered", desc: "Package received successfully.", Icon: ShieldCheck },
   ];
 
-  const sl = (order?.status || "").toLowerCase();
+  if ([
+    "return_requested",
+    "return_approved",
+    "returned",
+    "refund_pending",
+    "refunded"
+  ].includes(sl)) {
+    STEPS.push(
+      { key: "return_requested", label: "Return Requested", desc: "Return request received. We'll review it shortly.", Icon: RotateCcw },
+      { key: "return_approved", label: "Return Approved", desc: "Return approved. Please ship the item back.", Icon: RotateCcw },
+      { key: "returned", label: "Returned", desc: "Items returned to our warehouse.", Icon: RotateCcw },
+      { key: "refund_pending", label: "Refund Pending", desc: "Refund is being processed.", Icon: RefreshCcw },
+      { key: "refunded", label: "Refunded", desc: "Refund has been completed.", Icon: RefreshCcw }
+    );
+  }
   const step = getStatusStep(sl);
   const isTerminal = step === -1;
   const col = statusColor(sl);
@@ -313,12 +360,18 @@ function TrackOrderContent() {
                               </p>
                             </div>
                             {order.status?.toLowerCase() === "delivered" && item.products && (
-                              <button
-                                onClick={() => { setReviewProduct(item.products); setReviewRating(5); setReviewText(""); setIsReviewOpen(true); }}
-                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95"
-                              >
-                                <Star className="w-3 h-3" /> Review
-                              </button>
+                              reviewedProductIds.has(item.products.id) ? (
+                                <span className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-emerald-700 bg-emerald-50 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Reviewed
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => { setReviewProduct(item.products); setReviewRating(5); setReviewText(""); setIsReviewOpen(true); }}
+                                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95"
+                                >
+                                  <Star className="w-3 h-3" /> Review
+                                </button>
+                              )
                             )}
                           </div>
                         ))}
@@ -354,7 +407,7 @@ function TrackOrderContent() {
                         </p>
                       )}
                     </div>
-                    
+
                     {/* carrier */}
                     {order.tracking_id && (
                       <div className="px-6 py-4 flex items-center justify-between gap-4 bg-indigo-50/50">
@@ -387,6 +440,7 @@ function TrackOrderContent() {
                           const isPending = step < idx;
                           const { Icon } = st;
                           const isLast = idx === STEPS.length - 1;
+                          const stepCol = statusColor(st.key);
 
                           return (
                             <div key={st.key} className="flex gap-4">
@@ -399,7 +453,18 @@ function TrackOrderContent() {
                                   className={cn(
                                     "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10 shrink-0",
                                     isDone && "bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100",
-                                    isCurrent && "bg-zinc-950 border-zinc-950 text-white shadow-lg ring-4 ring-zinc-900/10",
+                                    isCurrent && cn(
+                                      "text-white shadow-lg ring-4",
+                                      stepCol === "emerald" && "bg-emerald-500 border-emerald-500 ring-emerald-500/10",
+                                      stepCol === "indigo" && "bg-indigo-500 border-indigo-500 ring-indigo-500/10",
+                                      stepCol === "blue" && "bg-blue-500 border-blue-500 ring-blue-500/10",
+                                      stepCol === "amber" && "bg-amber-500 border-amber-500 ring-amber-500/10",
+                                      stepCol === "red" && "bg-red-500 border-red-500 ring-red-500/10",
+                                      stepCol === "pink" && "bg-pink-500 border-pink-500 ring-pink-500/10",
+                                      stepCol === "rose" && "bg-rose-500 border-rose-500 ring-rose-500/10",
+                                      stepCol === "orange" && "bg-orange-500 border-orange-500 ring-orange-500/10",
+                                      stepCol === "zinc" && "bg-zinc-950 border-zinc-950 ring-zinc-900/10"
+                                    ),
                                     isPending && "bg-white border-zinc-200 text-zinc-300"
                                   )}
                                 >
@@ -452,7 +517,7 @@ function TrackOrderContent() {
                                       ? fmtDate(order.created_at)
                                       : isCurrent
                                         ? fmtDate(order.updated_at || order.created_at)
-                                        : fmtDate(order.created_at, [0, 4, 12, 36][idx])}
+                                        : fmtDate(order.created_at, [0, 2, 8, 24, 48, 52, 56, 60, 64, 72][idx])}
                                   </p>
                                 )}
                               </div>

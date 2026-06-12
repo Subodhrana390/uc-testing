@@ -125,10 +125,37 @@ export default function PaymentsPage() {
     try {
       let q = supabase
         .from("payments")
-        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)", { count: "exact" });
+        .select("*, orders(id, status, payment_status, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)", { count: "exact" });
 
       if (debouncedSearchQuery) {
-        q = q.or(`transaction_id.ilike.%${debouncedSearchQuery}%,order_id.ilike.%${debouncedSearchQuery}%`);
+        const query = debouncedSearchQuery.trim();
+        
+        // 1. Search orders table for matching customer detail
+        const { data: matchedOrders } = await supabase
+          .from("orders")
+          .select("id")
+          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`);
+        
+        const matchedIds = (matchedOrders || []).map(o => o.id);
+        
+        // Clean up display ID prefix if searched
+        let cleanQuery = query;
+        if (cleanQuery.toUpperCase().startsWith("ORD-")) {
+          cleanQuery = cleanQuery.slice(4);
+        }
+        
+        let orConditions = `transaction_id.ilike.%${query}%`;
+        
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQuery);
+        if (isUuid) {
+          orConditions += `,order_id.eq.${cleanQuery}`;
+        }
+        
+        if (matchedIds.length > 0) {
+          orConditions += `,order_id.in.(${matchedIds.map(id => `"${id}"`).join(",")})`;
+        }
+        
+        q = q.or(orConditions);
       }
 
       if (statusFilter !== "All") {
@@ -226,10 +253,37 @@ export default function PaymentsPage() {
       toast.loading("Exporting payments log...");
       let q = supabase
         .from("payments")
-        .select("*, orders(id, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)");
+        .select("*, orders(id, status, payment_status, created_at, customer_name, customer_email, shipping_address, phone, delivery_estimate)");
 
       if (debouncedSearchQuery) {
-        q = q.or(`transaction_id.ilike.%${debouncedSearchQuery}%,order_id.ilike.%${debouncedSearchQuery}%`);
+        const query = debouncedSearchQuery.trim();
+        
+        // 1. Search orders table for matching customer detail
+        const { data: matchedOrders } = await supabase
+          .from("orders")
+          .select("id")
+          .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,phone.ilike.%${query}%`);
+        
+        const matchedIds = (matchedOrders || []).map(o => o.id);
+        
+        // Clean up display ID prefix if searched
+        let cleanQuery = query;
+        if (cleanQuery.toUpperCase().startsWith("ORD-")) {
+          cleanQuery = cleanQuery.slice(4);
+        }
+        
+        let orConditions = `transaction_id.ilike.%${query}%`;
+        
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQuery);
+        if (isUuid) {
+          orConditions += `,order_id.eq.${cleanQuery}`;
+        }
+        
+        if (matchedIds.length > 0) {
+          orConditions += `,order_id.in.(${matchedIds.map(id => `"${id}"`).join(",")})`;
+        }
+        
+        q = q.or(orConditions);
       }
 
       if (statusFilter !== "All") {
@@ -850,10 +904,15 @@ export default function PaymentsPage() {
                           }} className="cursor-pointer font-semibold text-zinc-700 hover:bg-zinc-50">
                             <Receipt className="w-4 h-4 mr-2 text-zinc-400" /> View Receipt
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-zinc-100" />
-                          <DropdownMenuItem onClick={() => issueRefund(payment.id, payment.order_id)} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
-                            <ArrowDownRight className="w-4 h-4 mr-2" /> Issue Refund
-                          </DropdownMenuItem>
+                          {payment.status && 
+                           ["refund_pending", "refund_processing"].includes(payment.status.toLowerCase()) && (
+                            <>
+                              <DropdownMenuSeparator className="bg-zinc-100" />
+                              <DropdownMenuItem onClick={() => issueRefund(payment.id, payment.order_id)} className="text-rose-600 focus:text-rose-600 cursor-pointer font-semibold hover:bg-zinc-50">
+                                <ArrowDownRight className="w-4 h-4 mr-2" /> Issue Refund
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

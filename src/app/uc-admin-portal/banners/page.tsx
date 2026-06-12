@@ -24,6 +24,7 @@ import { createAdminClient as createClient } from "@/utils/supabase/admin-client
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { Pagination } from "@/components/ui/pagination";
+import SingleImageUpload from "@/components/admin/SingleImageUpload";
 
 // shadcn/ui primitives
 import { Button } from "@/components/ui/button";
@@ -293,11 +294,12 @@ export default function BannersPage() {
                         className="data-[state=checked]:bg-yellow-500"
                       />
                       <span
+                        onClick={() => handleToggleActive(banner.id, banner.status)}
                         className={cn(
-                          "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all inline-flex items-center gap-1.5",
+                          "px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all inline-flex items-center gap-1.5 cursor-pointer select-none",
                           banner.status
-                            ? "bg-yellow-50 text-yellow-800 border-yellow-100"
-                            : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                            ? "bg-yellow-50 text-yellow-800 border-yellow-100 hover:bg-yellow-100/80"
+                            : "bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200/80"
                         )}
                       >
                         {banner.status && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />}
@@ -319,13 +321,6 @@ export default function BannersPage() {
                           className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
                         >
                           <Edit className="w-4 h-4 text-zinc-400" /> Edit Content
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleToggleActive(banner.id, banner.status)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg cursor-pointer"
-                        >
-                          {banner.status ? <EyeOff className="w-4 h-4 text-zinc-400" /> : <Eye className="w-4 h-4 text-zinc-400" />}
-                          {banner.status ? "Hide Banner" : "Show Banner"}
                         </DropdownMenuItem>
                         <div className="h-px bg-zinc-100 my-1 mx-1" />
                         <DropdownMenuItem
@@ -413,28 +408,26 @@ export default function BannersPage() {
               />
             </div>
 
-            {/* Visual URL & Position Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="image_url" className="text-xs font-medium text-zinc-500">Visual Image URL</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={e => setFormData({ ...formData, image_url: e.target.value })}
-                  className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400"
-                  placeholder="Image source path"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="position" className="text-xs font-medium text-zinc-500">Sequence Position</Label>
-                <Input
-                  id="position"
-                  type="number"
-                  value={formData.position}
-                  onChange={e => setFormData({ ...formData, position: parseInt(e.target.value) || 0 })}
-                  className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
-                />
-              </div>
+            {/* Visual URL & Position */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-zinc-500">Banner Image</Label>
+              <SingleImageUpload
+                value={formData.image_url}
+                onChange={(url: string) => setFormData({ ...formData, image_url: url })}
+                label="Select Banner Image"
+                bucket="banners"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="position" className="text-xs font-medium text-zinc-500">Sequence Position</Label>
+              <Input
+                id="position"
+                type="number"
+                value={formData.position}
+                onChange={e => setFormData({ ...formData, position: parseInt(e.target.value) || 0 })}
+                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
+              />
             </div>
 
             {/* Destination Link */}

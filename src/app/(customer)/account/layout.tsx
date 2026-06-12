@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 const sidebarLinks = [
   { name: "My Profile", icon: User, href: "/account/profile" },
   { name: "My Orders", icon: Package, href: "/account/orders" },
-  { name: "My Invoices", icon: FileText, href: "/my-invoices" },
+  { name: "My Invoices", icon: FileText, href: "/account/my-invoices" },
   { name: "Address Book", icon: MapPin, href: "/account/address-book" },
   { name: "Change Password", icon: Settings, href: "/account/change-password" },
   { name: "Email Preferences", icon: Mail, href: "/account/newsletter" },

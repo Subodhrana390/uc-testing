@@ -7,7 +7,6 @@ import {
   Search,
   MoreHorizontal,
   Eye,
-  EyeOff,
   Truck,
   CheckCircle2,
   Filter,
@@ -98,7 +97,7 @@ const getPossibleNextStatuses = (currentStatus: string): string[] => {
   const transitions: Record<string, string[]> = {
     PENDING: ["Confirmed", "Cancelled"],
     CONFIRMED: ["Processing", "Cancelled"],
-    PROCESSING: ["Shipped", "Cancelled"],
+    PROCESSING: ["Cancelled"],
     SHIPPED: ["Delivered"],
     DELIVERED: [],
     RETURN_REQUESTED: ["Return_Approved"],
@@ -449,8 +448,7 @@ export default function OrdersPage() {
   const [maxPrice, setMaxPrice] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [showHidden, setShowHidden] = useState(false);
-  const [hiddenOrderIds, setHiddenOrderIds] = useState<string[]>([]);
+
 
   const [debouncedMinPrice, setDebouncedMinPrice] = useState("");
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState("");
@@ -619,46 +617,9 @@ export default function OrdersPage() {
     return () => clearTimeout(handler);
   }, [maxPrice]);
 
-  // Initialize hidden orders from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("uc_admin_hidden_orders");
-    if (stored) {
-      try {
-        setHiddenOrderIds(JSON.parse(stored));
-      } catch (e) {
-        console.error("Error reading hidden orders from localStorage", e);
-      }
-    }
-  }, []);
 
-  const toggleHideOrder = (orderId: string) => {
-    setHiddenOrderIds((prev) => {
-      const next = prev.includes(orderId)
-        ? prev.filter((id) => id !== orderId)
-        : [...prev, orderId];
-      localStorage.setItem("uc_admin_hidden_orders", JSON.stringify(next));
-      return next;
-    });
-    toast.success("Order visibility updated");
-  };
 
-  const handleBulkHide = (hide: boolean) => {
-    if (selectedOrders.length === 0) return;
-    setHiddenOrderIds((prev) => {
-      let next = [...prev];
-      if (hide) {
-        selectedOrders.forEach(id => {
-          if (!next.includes(id)) next.push(id);
-        });
-      } else {
-        next = next.filter(id => !selectedOrders.includes(id));
-      }
-      localStorage.setItem("uc_admin_hidden_orders", JSON.stringify(next));
-      return next;
-    });
-    toast.success(`${hide ? "Hidden" : "Unhidden"} ${selectedOrders.length} orders`);
-    setSelectedOrders([]);
-  };
+
 
   // Realtime subscription — picks up customer payments and any order field changes instantly
   useEffect(() => {
@@ -699,7 +660,7 @@ export default function OrdersPage() {
     };
   }, [supabase, fetchOrders, fetchTableOrders]);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string): Promise<any> => {
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -707,16 +668,26 @@ export default function OrdersPage() {
         body: JSON.stringify({ orderId: id, status })
       });
 
+      const resData = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const resData = await response.json().catch(() => ({}));
         throw new Error(resData.error || "Update failed");
       }
 
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-      setTableOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-      toast.success(`Order marked as ${status}`);
+      const updatedOrder = resData.order;
+      if (updatedOrder) {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder } : o));
+        setTableOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder, items: o.items } : o));
+        toast.success(`Order marked as ${status}`);
+        return updatedOrder;
+      } else {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+        setTableOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+        toast.success(`Order marked as ${status}`);
+        return null;
+      }
     } catch (error: any) {
       toast.error(error.message);
+      return null;
     }
   };
 
@@ -728,11 +699,19 @@ export default function OrdersPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: id, status })
-        })
+        }).then(r => r.json().catch(() => ({})))
       );
-      await Promise.all(promises);
-      setOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status } : o));
-      setTableOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status } : o));
+      const results = await Promise.all(promises);
+
+      setOrders(prev => prev.map(o => {
+        const res = results.find(r => r.order?.id === o.id);
+        return res?.order ? { ...o, ...res.order } : (selectedOrders.includes(o.id) ? { ...o, status } : o);
+      }));
+      setTableOrders(prev => prev.map(o => {
+        const res = results.find(r => r.order?.id === o.id);
+        return res?.order ? { ...o, ...res.order, items: o.items } : (selectedOrders.includes(o.id) ? { ...o, status } : o);
+      }));
+
       toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`);
       setSelectedOrders([]);
     } catch (error: any) {
@@ -1531,17 +1510,6 @@ export default function OrdersPage() {
                     <SelectItem value="Cancelled">Mark Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs text-zinc-700 border-zinc-200 bg-white hover:bg-zinc-50"
-                  onClick={() => handleBulkHide(true)}
-                >
-                  <EyeOff className="w-3.5 h-3.5 mr-1.5 text-zinc-500" />
-                  Hide Selected
-                </Button>
-
-
 
                 <Button
                   variant="outline"
@@ -1616,154 +1584,147 @@ export default function OrdersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    tableOrders
-                      .filter((order) => !hiddenOrderIds.includes(order.id))
-                      .map((order) => {
-                        return (
-                          <TableRow
-                            key={order.id}
-                            className={cn(
-                              "hover:bg-zinc-50 transition-all duration-200",
-                              selectedOrders.includes(order.id)
-                                ? "bg-blue-50/40"
-                                : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm"
-                            )}
-                          >
-                            <TableCell className="text-center">
-                              <input
-                                type="checkbox"
-                                className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                                checked={selectedOrders.includes(order.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) setSelectedOrders(prev => [...prev, order.id]);
-                                  else setSelectedOrders(prev => prev.filter(id => id !== order.id));
-                                }}
-                              />
+                    tableOrders.map((order) => {
+                      return (
+                        <TableRow
+                          key={order.id}
+                          className={cn(
+                            "hover:bg-zinc-50 transition-all duration-200",
+                            selectedOrders.includes(order.id)
+                              ? "bg-blue-50/40"
+                              : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm"
+                          )}
+                        >
+                          <TableCell className="text-center">
+                            <input
+                              type="checkbox"
+                              className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                              checked={selectedOrders.includes(order.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedOrders(prev => [...prev, order.id]);
+                                else setSelectedOrders(prev => prev.filter(id => id !== order.id));
+                              }}
+                            />
+                          </TableCell>
+                          {visibleColumns.id && (
+                            <TableCell className="font-bold font-mono text-zinc-700 text-xs">
+                              {getDisplayOrderId(order.id, order.created_at)}
                             </TableCell>
-                            {visibleColumns.id && (
-                              <TableCell className="font-bold font-mono text-zinc-700 text-xs">
-                                {getDisplayOrderId(order.id, order.created_at)}
-                              </TableCell>
-                            )}
-                            {visibleColumns.customer && (
-                              <TableCell>
-                                <div className="flex items-center gap-3">
-                                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", getAvatarBg(order.customer_name))}>
-                                    {getInitials(order.customer_name)}
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-sm font-semibold text-[#18181b] block">{order.customer_name}</span>
-                                    <span className="text-[11px] text-zinc-400 block line-clamp-1">{order.customer_email}</span>
-                                  </div>
+                          )}
+                          {visibleColumns.customer && (
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", getAvatarBg(order.customer_name))}>
+                                  {getInitials(order.customer_name)}
                                 </div>
-                              </TableCell>
-                            )}
-                            {visibleColumns.date && (
-                              <TableCell className="text-xs font-medium text-zinc-500">
-                                {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                              </TableCell>
-                            )}
-                            {visibleColumns.amount && (
-                              <TableCell className="font-bold text-sm text-[#18181b]">
-                                ₹{parseFloat(order.total_amount || 0).toLocaleString()}
-                              </TableCell>
-                            )}
-                            {visibleColumns.status && (
-                              <TableCell>
-                                {getStatusBadge(order.status)}
-                              </TableCell>
-                            )}
-                            {visibleColumns.actions && (
-                              <TableCell className="text-right pr-6 relative">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger render={
-                                    <Button variant="ghost" size="icon" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all ml-auto">
-                                      <span className="sr-only">Open menu</span>
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  } />
-                                  <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl">
-                                    <DropdownMenuGroup>
-                                      <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
-                                      <DropdownMenuSeparator />
+                                <div className="space-y-0.5">
+                                  <span className="text-sm font-semibold text-[#18181b] block">{order.customer_name}</span>
+                                  <span className="text-[11px] text-zinc-400 block line-clamp-1">{order.customer_email}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                          )}
+                          {visibleColumns.date && (
+                            <TableCell className="text-xs font-medium text-zinc-500">
+                              {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            </TableCell>
+                          )}
+                          {visibleColumns.amount && (
+                            <TableCell className="font-bold text-sm text-[#18181b]">
+                              ₹{parseFloat(order.total_amount || 0).toLocaleString()}
+                            </TableCell>
+                          )}
+                          {visibleColumns.status && (
+                            <TableCell>
+                              {getStatusBadge(order.status)}
+                            </TableCell>
+                          )}
+                          {visibleColumns.actions && (
+                            <TableCell className="text-right pr-6 relative">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger render={
+                                  <Button variant="ghost" size="icon" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all ml-auto">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                } />
+                                <DropdownMenuContent align="end" className="w-52 bg-white border border-zinc-200 shadow-xl rounded-xl">
+                                  <DropdownMenuGroup>
+                                    <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
 
-                                      {getPossibleNextStatuses(order.status).length > 0 && (
-                                        <DropdownMenuSub>
-                                          <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
-                                            <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                            Change Status
-                                          </DropdownMenuSubTrigger>
-                                          <DropdownMenuSubContent className="w-48 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
-                                            {getPossibleNextStatuses(order.status).map((s) => (
-                                              <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>
-                                                {s}
-                                              </DropdownMenuItem>
-                                            ))}
-                                          </DropdownMenuSubContent>
-                                        </DropdownMenuSub>
-                                      )}
+                                    {getPossibleNextStatuses(order.status).length > 0 && (
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger className="flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none hover:bg-zinc-50">
+                                          <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                          Change Status
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent className="w-48 bg-white border border-zinc-200 shadow-lg rounded-lg p-1 text-zinc-700 z-50">
+                                          {getPossibleNextStatuses(order.status).map((s) => (
+                                            <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>
+                                              {s}
+                                            </DropdownMenuItem>
+                                          ))}
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
+                                    )}
 
-                                      {order.status?.toUpperCase() === 'PROCESSING' && (
-                                        <DropdownMenuItem onClick={() => {
-                                          setSelectedOrder(order);
-                                          setTrackingId(order.tracking_id || "");
-                                          setCarrier(order.carrier || "");
-                                          setTimeout(() => setIsTrackingOpen(true), 50);
-                                        }}>
-                                          <Truck className="w-4 h-4 mr-2 text-blue-600" />
-                                          Update Shipping
-                                        </DropdownMenuItem>
-                                      )}
-
-                                      {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && order.payment_method?.toUpperCase() === 'COD' && (
-                                        <>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
-                                            Mark Paid (Cash)
-                                          </DropdownMenuItem>
-                                        </>
-                                      )}
-
-                                      {order.payment_status === 'Refund Pending' && (
-                                        <>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuItem onClick={() => triggerRefund(order)} disabled={isRefunding}>
-                                            Process Refund
-                                          </DropdownMenuItem>
-                                        </>
-                                      )}
-
-                                      <DropdownMenuSeparator />
-
-                                      <DropdownMenuItem className="p-0 cursor-pointer">
-                                        <Link href={`/uc-admin-portal/orders/${order.id}/label`} target="_blank" className="flex items-center w-full px-2 py-1.5">
-                                          <Printer className="w-4 h-4 mr-2 text-zinc-600" />
-                                          Print Label
-                                        </Link>
-                                      </DropdownMenuItem>
-
+                                    {order.status?.toUpperCase() === 'PROCESSING' && (
                                       <DropdownMenuItem onClick={() => {
                                         setSelectedOrder(order);
-                                        setTimeout(() => setIsDetailsOpen(true), 50);
+                                        setTrackingId(order.tracking_id || "");
+                                        setCarrier(order.carrier || "");
+                                        setTimeout(() => setIsTrackingOpen(true), 50);
                                       }}>
-                                        <Eye className="w-4 h-4 mr-2 text-zinc-600" />
-                                        View Details
+                                        <Truck className="w-4 h-4 mr-2 text-blue-600" />
+                                        Update Shipping
                                       </DropdownMenuItem>
+                                    )}
 
-                                      <DropdownMenuSeparator />
+                                    {order.payment_status?.toLowerCase() !== 'paid' && order.payment_status !== 'Refunded' && order.payment_status !== 'Refund Pending' && order.payment_method?.toUpperCase() === 'COD' && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => updatePaymentStatus(order.id, "Paid", "COD")}>
+                                          Mark Paid (Cash)
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
 
-                                      <DropdownMenuItem onClick={() => toggleHideOrder(order.id)}>
-                                        <EyeOff className="w-4 h-4 mr-2 text-zinc-500" />
-                                        Hide Row
-                                      </DropdownMenuItem>
-                                    </DropdownMenuGroup>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        );
-                      })
+                                    {order.payment_status === 'Refund Pending' && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => triggerRefund(order)} disabled={isRefunding}>
+                                          Process Refund
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem className="p-0 cursor-pointer">
+                                      <Link href={`/uc-admin-portal/orders/${order.id}/label`} target="_blank" className="flex items-center w-full px-2 py-1.5">
+                                        <Printer className="w-4 h-4 mr-2 text-zinc-600" />
+                                        Print Label
+                                      </Link>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedOrder(order);
+                                      setTimeout(() => setIsDetailsOpen(true), 50);
+                                    }}>
+                                      <Eye className="w-4 h-4 mr-2 text-zinc-600" />
+                                      View Details
+                                    </DropdownMenuItem>
+
+
+                                  </DropdownMenuGroup>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -1857,8 +1818,12 @@ export default function OrdersPage() {
                     <Select
                       value={selectedOrder.status}
                       onValueChange={async (newStatus) => {
-                        await updateStatus(selectedOrder.id, newStatus);
-                        setSelectedOrder((prev: any) => ({ ...prev, status: newStatus }));
+                        const updated = await updateStatus(selectedOrder.id, newStatus);
+                        if (updated) {
+                          setSelectedOrder((prev: any) => ({ ...prev, ...updated }));
+                        } else {
+                          setSelectedOrder((prev: any) => ({ ...prev, status: newStatus }));
+                        }
                       }}
                       disabled={getPossibleNextStatuses(selectedOrder.status).length === 0}
                     >

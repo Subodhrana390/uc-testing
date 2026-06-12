@@ -267,6 +267,18 @@ export default function AddProductPage() {
   // Reusable Tailwind Class for Inputs
   const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  const getTabLabel = (tab: string) => {
+    switch (tab) {
+      case 'description': return 'Long Description';
+      case 'key_features': return 'Key Features';
+      case 'attributes': return 'Attributes';
+      case 'applications': return 'Applications & Mfg';
+      case 'warranty': return 'Warranty & Support';
+      case 'images': return 'Product Images';
+      default: return tab;
+    }
+  };
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8 text-gray-900">
@@ -361,11 +373,13 @@ export default function AddProductPage() {
                       const mainId = e.target.value;
                       setSelectedMainCategoryId(mainId);
                       const mainCat = categories.find(c => c.id === mainId);
+                      const taxRate = mainCat ? mainCat.tax_rate : 0;
                       setFormData({
                         ...formData,
                         category_id: mainId,
                         brand_id: "",
-                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate
+                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
+                        is_tax_inclusive: taxRate > 0
                       });
                     }}
                     required
@@ -387,13 +401,23 @@ export default function AddProductPage() {
                       value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
                       onChange={(e) => {
                         const subId = e.target.value;
+                        const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
+                        const taxRate = mainCat ? mainCat.tax_rate : 0;
                         if (!subId) {
-                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
-                          setFormData({ ...formData, category_id: selectedMainCategoryId, tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate });
+                          setFormData({
+                            ...formData,
+                            category_id: selectedMainCategoryId,
+                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
+                            is_tax_inclusive: taxRate > 0
+                          });
                         } else {
                           // Always pull tax_rate from Main Category
-                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
-                          setFormData({ ...formData, category_id: subId, tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate });
+                          setFormData({
+                            ...formData,
+                            category_id: subId,
+                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
+                            is_tax_inclusive: taxRate > 0
+                          });
                         }
                       }}
                     >
@@ -409,7 +433,16 @@ export default function AddProductPage() {
                   <div className="md:col-span-2 flex items-center gap-1.5 px-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">
-                      Auto-applied Tax Rate: {categories.find((c: any) => c.id === formData.category_id)?.tax_rate || 0}%
+                      Auto-applied Tax Rate: {(() => {
+                        const cat = categories.find((c: any) => c.id === formData.category_id);
+                        if (!cat) return 0;
+                        if (cat.tax_rate !== null && cat.tax_rate !== undefined && cat.tax_rate !== 0) return cat.tax_rate;
+                        if (cat.parent_id) {
+                          const parentCat = categories.find((c: any) => c.id === cat.parent_id);
+                          return parentCat?.tax_rate || 0;
+                        }
+                        return 0;
+                      })()}%
                     </span>
                   </div>
                 )}
@@ -466,7 +499,7 @@ export default function AddProductPage() {
               <h2 className="text-lg font-semibold">Pricing & Inventory</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="cost_price">Cost Price (₹)</label>
                   <input
@@ -503,27 +536,42 @@ export default function AddProductPage() {
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-full">
-                      <input
-                        id="tax_rate"
-                        type="number"
-                        className={inputClass}
-                        value={formData.tax_rate}
-                        onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">%</span>
-                    </div>
-                    <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap text-sm text-gray-700 bg-gray-50 border border-gray-200 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_tax_inclusive}
-                        onChange={(e) => setFormData({ ...formData, is_tax_inclusive: e.target.checked })}
-                        className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300"
-                      />
-                      <span className="font-medium">Inclusive</span>
-                    </label>
-                  </div>
+                  <select
+                    id="tax_rate"
+                    className={inputClass}
+                    value={formData.tax_rate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const rate = parseFloat(val) || 0;
+                      setFormData({
+                        ...formData,
+                        tax_rate: val,
+                        is_tax_inclusive: rate > 0
+                      });
+                    }}
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                    {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
+                      <option value={formData.tax_rate}>{formData.tax_rate}%</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="tax_inclusive">Tax Type</label>
+                  <label id="tax_inclusive" className="flex items-center justify-center gap-2 cursor-not-allowed h-10 text-sm text-gray-400 bg-gray-100 border border-gray-200 px-3 rounded-md transition-colors w-full">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_tax_inclusive}
+                      disabled
+                      onChange={() => {}}
+                      className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-not-allowed"
+                    />
+                    <span className="font-semibold">GST Inclusive</span>
+                  </label>
                 </div>
               </div>
 
@@ -556,7 +604,7 @@ export default function AddProductPage() {
           {/* Tabs Section */}
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="flex border-b bg-gray-50/50 overflow-x-auto no-scrollbar">
-              {['description', 'attributes', 'specification', 'logistics', 'relations', 'seo'].map((tab) => (
+              {['description', 'key_features', 'attributes', 'applications', 'warranty', 'images'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -565,7 +613,7 @@ export default function AddProductPage() {
                     : "border-transparent text-gray-500 hover:text-gray-700"
                     }`}
                 >
-                  {tab}
+                  {getTabLabel(tab)}
                 </button>
               ))}
             </div>
@@ -573,13 +621,16 @@ export default function AddProductPage() {
               {activeTab === 'description' && (
                 <div className="space-y-6">
                   <RichTextEditor
-                    label="Product Long Description"
                     value={formData.long_description}
                     onChange={(content) => handleEditorChange("long_description", content)}
                   />
+                </div>
+              )}
+
+              {activeTab === 'key_features' && (
+                <div className="space-y-6">
                   <RichTextEditor
-                    label="Key Features"
-                    value={formData.specification} // Re-using specification as Features for now or map correctly
+                    value={formData.specification}
                     onChange={(content) => handleEditorChange("specification", content)}
                   />
                 </div>
@@ -637,177 +688,32 @@ export default function AddProductPage() {
                 </div>
               )}
 
-              {activeTab === 'specification' && (
+              {activeTab === 'applications' && (
                 <div className="space-y-6">
                   <RichTextEditor
-                    label="Technical Specifications"
-                    value={formData.specification}
-                    onChange={(content) => handleEditorChange("specification", content)}
-                  />
-                  <RichTextEditor
-                    label="Applications"
                     value={formData.manufacturing_info}
                     onChange={(content) => handleEditorChange("manufacturing_info", content)}
                   />
                 </div>
               )}
 
-              {activeTab === 'logistics' && (
+              {activeTab === 'warranty' && (
                 <div className="space-y-6">
                   <RichTextEditor
-                    label="Manufacturing Information"
-                    value={formData.manufacturing_info}
-                    onChange={(content) => handleEditorChange("manufacturing_info", content)}
-                  />
-                  <RichTextEditor
-                    label="Warranty & Support"
                     value={formData.warranty_info}
                     onChange={(content) => handleEditorChange("warranty_info", content)}
                   />
                 </div>
               )}
 
-              {activeTab === 'relations' && (
+              {activeTab === 'images' && (
                 <div className="space-y-6">
-                  <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Relation Type</label>
-                        <select 
-                          className={inputClass}
-                          value={relationType}
-                          onChange={(e) => setRelationType(e.target.value)}
-                        >
-                          <option value="related">Related Products</option>
-                          <option value="similar">Similar Products</option>
-                          <option value="frequently_bought">Frequently Bought Together</option>
-                          <option value="cross_sell">Cross Sell Products</option>
-                          <option value="alternative">Alternative Products</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Search Product to Add</label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            className={`${inputClass} pl-10`}
-                            placeholder="Type product name..."
-                            value={searchTerm}
-                            onChange={(e) => searchProducts(e.target.value)}
-                          />
-                          {searchResults.length > 0 && (
-                            <div className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
-                              {searchResults.map((p) => (
-                                <button
-                                  key={p.id}
-                                  onClick={() => addRelatedProduct(p)}
-                                  className="w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center justify-between border-b last:border-0 transition-colors"
-                                >
-                                  <div>
-                                    <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{p.sku || "NO-SKU"}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 rounded-full">Add as {relationType.replace('_', ' ')}</span>
-                                    <Plus className="w-4 h-4 text-primary" />
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    {['related', 'similar', 'frequently_bought', 'cross_sell', 'alternative'].map((type) => {
-                      const typedProducts = relatedProducts.filter(p => p.relation_type === type);
-                      if (typedProducts.length === 0) return null;
-
-                      return (
-                        <div key={type} className="space-y-3">
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                            <div className="h-1 w-1 rounded-full bg-primary" />
-                            {type.replace('_', ' ')}
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {typedProducts.map((rp) => (
-                              <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-lg bg-zinc-50 border flex items-center justify-center text-zinc-300 font-black text-xs">
-                                    {rp.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-bold text-zinc-900">{rp.name}</p>
-                                    <p className="text-[10px] text-zinc-400 font-mono">{rp.sku || "N/A"} • ₹{rp.price}</p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => setRelatedProducts(relatedProducts.filter(p => !(p.id === rp.id && p.relation_type === type)))}
-                                  className="p-2 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {relatedProducts.length === 0 && (
-                      <div className="py-12 text-center bg-zinc-50/50 rounded-2xl border-2 border-dashed border-zinc-100">
-                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest italic">No connections established yet.</p>
-                      </div>
-                    )}
-                  </div>
+                  <MultiImageUpload
+                    images={formData.images}
+                    onChange={(images) => setFormData(prev => ({ ...prev, images }))}
+                  />
                 </div>
               )}
-
-              {activeTab === 'seo' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className={labelClass}>SEO Title</label>
-                      <input
-                        className={inputClass}
-                        value={formData.seo_title}
-                        onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>SEO Keywords</label>
-                      <input
-                        className={inputClass}
-                        placeholder="comma, separated, keywords"
-                        value={formData.seo_keywords}
-                        onChange={(e) => setFormData({ ...formData, seo_keywords: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>SEO Meta Description</label>
-                      <textarea
-                        className={`${inputClass} min-h-[100px]`}
-                        value={formData.seo_description}
-                        onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Product Images Section */}
-          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Product Images</h2>
-            </div>
-            <div className="p-6">
-              <MultiImageUpload
-                images={formData.images}
-                onChange={(images) => setFormData(prev => ({ ...prev, images }))}
-              />
             </div>
           </section>
         </div>
@@ -867,6 +773,128 @@ export default function AddProductPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b bg-gray-50/50">
+              <h2 className="text-lg font-semibold">Related Products</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-600">Relation Type</label>
+                <select 
+                  className={inputClass}
+                  value={relationType}
+                  onChange={(e) => setRelationType(e.target.value)}
+                >
+                  <option value="related">Related Products</option>
+                  <option value="similar">Similar Products</option>
+                  <option value="frequently_bought">Frequently Bought Together</option>
+                  <option value="cross_sell">Cross Sell Products</option>
+                  <option value="alternative">Alternative Products</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-600">Search Product to Add</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    className={`${inputClass} pl-10`}
+                    placeholder="Type product name..."
+                    value={searchTerm}
+                    onChange={(e) => searchProducts(e.target.value)}
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                      {searchResults.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => addRelatedProduct(p)}
+                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center justify-between border-b last:border-0 transition-colors"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{p.name}</p>
+                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{p.sku || "NO-SKU"}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 rounded-full">Add</span>
+                            <Plus className="w-4 h-4 text-primary" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 border-t">
+                {['related', 'similar', 'frequently_bought', 'cross_sell', 'alternative'].map((type) => {
+                  const typedProducts = relatedProducts.filter(p => p.relation_type === type);
+                  if (typedProducts.length === 0) return null;
+
+                  return (
+                    <div key={type} className="space-y-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-primary" />
+                        {type.replace('_', ' ')}
+                      </h4>
+                      <div className="space-y-1.5">
+                        {typedProducts.map((rp) => (
+                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group text-xs">
+                            <div className="truncate pr-2">
+                              <p className="font-bold text-zinc-900 truncate text-[13px]">{rp.name}</p>
+                              <p className="text-[10px] text-zinc-400 font-mono truncate">{rp.sku || "N/A"} • ₹{rp.price}</p>
+                            </div>
+                            <button
+                              onClick={() => setRelatedProducts(relatedProducts.filter(p => !(p.id === rp.id && p.relation_type === type)))}
+                              className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {relatedProducts.length === 0 && (
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic text-center py-2">No connections established yet.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b bg-gray-50/50">
+              <h2 className="text-lg font-semibold">SEO Settings</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className={labelClass}>SEO Title</label>
+                <input
+                  className={inputClass}
+                  value={formData.seo_title}
+                  onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>SEO Keywords</label>
+                <input
+                  className={inputClass}
+                  placeholder="comma, separated, keywords"
+                  value={formData.seo_keywords}
+                  onChange={(e) => setFormData({ ...formData, seo_keywords: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>SEO Meta Description</label>
+                <textarea
+                  className={`${inputClass} min-h-[100px]`}
+                  value={formData.seo_description}
+                  onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
+                />
               </div>
             </div>
           </section>

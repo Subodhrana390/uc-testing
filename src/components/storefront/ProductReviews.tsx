@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { formatDate } from "@/lib/format";
 import toast from "react-hot-toast";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLoginRedirect } from "@/hooks/useLoginRedirect";
 
 const REVIEWS_PER_PAGE = 3;
 
@@ -29,6 +30,7 @@ type Review = {
 
 export default function ProductReviews({ productId }: { productId: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const { redirectToLogin } = useLoginRedirect();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(5);
@@ -104,6 +106,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
 
     if (!user) {
       toast("Please login to write a review");
+      redirectToLogin();
       return;
     }
 

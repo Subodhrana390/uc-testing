@@ -82,19 +82,21 @@ export default function CheckoutPage() {
   const totals = items.reduce(
     (acc, item) => {
       const rate = item.tax_rate || 0;
+      const itemTotal = item.price * item.quantity;
+      acc.subtotal += itemTotal;
+      
       if (item.is_tax_inclusive) {
-        const basePrice = item.price / (1 + rate / 100);
-        const taxAmount = item.price - basePrice;
-        acc.subtotal += basePrice * item.quantity;
-        acc.taxTotal += taxAmount * item.quantity;
+        const basePrice = itemTotal / (1 + rate / 100);
+        const taxAmount = itemTotal - basePrice;
+        acc.taxTotal += taxAmount;
       } else {
-        const taxAmount = item.price * (rate / 100);
-        acc.subtotal += item.price * item.quantity;
-        acc.taxTotal += taxAmount * item.quantity;
+        const taxAmount = itemTotal * (rate / 100);
+        acc.taxTotal += taxAmount;
+        acc.taxExclusiveTotal += taxAmount;
       }
       return acc;
     },
-    { subtotal: 0, taxTotal: 0 }
+    { subtotal: 0, taxTotal: 0, taxExclusiveTotal: 0 }
   );
 
   const subtotal = items.length > 0 ? totals.subtotal : getCartTotal();
@@ -102,7 +104,7 @@ export default function CheckoutPage() {
 
   const [deliveryCharge, setDeliveryCharge] = useState<number>(50);
 
-  const grandTotal = subtotal + taxTotal + deliveryCharge;
+  const grandTotal = subtotal + totals.taxExclusiveTotal + deliveryCharge;
 
   useEffect(() => {
     const cartItems = getCartItems();
@@ -959,7 +961,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="flex justify-between text-sm font-medium text-zinc-600">
-                    <span>Estimated Tax</span>
+                    <span>Estimated Tax {items.some(i => i.is_tax_inclusive) && <span className="text-xs text-zinc-400 font-normal">(Included)</span>}</span>
                     <span className="font-bold text-zinc-950">{formatCurrency(taxTotal)}</span>
                   </div>
 
