@@ -28,6 +28,7 @@ interface ProductInput {
   averageRating?: number | string;
   reviewCount?: number;
   brandName?: string | null;
+  manufacturerName?: string | null;
   categoryName?: string | null;
 }
 
@@ -160,6 +161,12 @@ export function productSchema(p: ProductInput) {
   const price = p.sale_price ?? p.price;
   const inStock =
     p.status === "Active" && (p.stock_quantity === undefined || p.stock_quantity > 0);
+  const fallbackImage = `${SITE_URL}/images/prod_main.png`;
+  const brandName = p.brandName?.trim() || SITE_NAME;
+  const manufacturerName = p.manufacturerName?.trim() || p.brandName?.trim() || SITE_NAME;
+  const imageUrls = [...(p.images || []), p.image_url]
+    .map((img) => normalizeSchemaImageUrl(img))
+    .filter((img): img is string => Boolean(img));
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -172,11 +179,15 @@ export function productSchema(p: ProductInput) {
       p.description ||
       `${p.name}${p.categoryName ? ` — ${p.categoryName}` : ""} available at UC Enterprises. Pan-India delivery with competitive pricing.`,
     sku: p.sku || p.id,
-    image: p.images?.length
-      ? p.images.map((img) => ({ "@type": "ImageObject", url: img }))
-      : p.image_url
-      ? [{ "@type": "ImageObject", url: p.image_url }]
-      : [`${SITE_URL}/images/prod_main.png`],
+    image: imageUrls.length ? imageUrls : [fallbackImage],
+    brand: {
+      "@type": "Brand",
+      name: brandName,
+    },
+    manufacturer: {
+      "@type": "Organization",
+      name: manufacturerName,
+    },
     offers: {
       "@type": "Offer",
       url,
@@ -195,12 +206,6 @@ export function productSchema(p: ProductInput) {
         url: SITE_URL,
       },
     },
-    manufacturer: p.brandName
-      ? { "@type": "Organization", name: p.brandName }
-      : undefined,
-    brand: p.brandName
-      ? { "@type": "Brand", name: p.brandName }
-      : { "@type": "Brand", name: SITE_NAME },
     category: p.categoryName || undefined,
   };
 
@@ -219,6 +224,27 @@ export function productSchema(p: ProductInput) {
 }
 
 // ─── BreadcrumbList Schema ────────────────────────────────────────────────────
+function normalizeSchemaImageUrl(imageUrl?: string | null) {
+  if (!imageUrl) return null;
+
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\/(?:encrypted-tbn\d*\.gstatic\.com|.*\.gstatic\.com|.*googleusercontent\.com)/i.test(trimmed)) {
+    return null;
+  }
+
+  if (trimmed.startsWith("/")) {
+    return `${SITE_URL}${trimmed}`;
+  }
+
+  try {
+    return new URL(trimmed).toString();
+  } catch {
+    return `${SITE_URL}/${trimmed.replace(/^\/+/, "")}`;
+  }
+}
+
 export function breadcrumbSchema(items: BreadcrumbItem[]) {
   return {
     "@context": "https://schema.org",

@@ -148,7 +148,7 @@ export default async function HomePage() {
             .map((category) => (
               <Link
                 key={category.id}
-                href={`/search?main=${category.slug}`}
+                href={`/categories/${category.slug}`}
                 className="bg-white overflow-hidden"
               >
                 {/* Image */}

@@ -27,8 +27,10 @@ export async function generateStaticParams() {
 // ─── Dynamic metadata ────────────────────────────────────────────────────────
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string };
 }): Promise<Metadata> {
   const supabase = createStaticClient();
   const { data: category } = await supabase
@@ -47,12 +49,15 @@ export async function generateMetadata({
     .select("id", { count: "exact", head: true })
     .eq("category_id", category.id);
 
+  const pageNum = searchParams.page ? parseInt(searchParams.page, 10) : 1;
+
   return categoryMetadata({
     name: category.seo_title || category.name,
     slug: category.slug,
     description: category.seo_description || category.description,
     image_url: category.image_url,
     productCount: count || undefined,
+    page: !isNaN(pageNum) && pageNum > 0 ? pageNum : 1,
   });
 }
 

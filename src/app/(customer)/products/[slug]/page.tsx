@@ -1,42 +1,9 @@
 import { notFound } from "next/navigation";
-import { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import ProductDetailsClient from "./ProductDetailsClient";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
 import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
 import RelatedProducts from "@/components/storefront/RelatedProducts";
-import JsonLd from "@/components/seo/JsonLd";
-import { productSchema } from "@/lib/jsonld";
-
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const supabase = await createClient();
-  const { data: product } = await supabase
-    .from("products")
-    .select("*, categories(name)")
-    .eq("slug", params.slug)
-    .single();
-
-  if (!product) return {};
-
-  return {
-    title: product.seo_title || `${product.name} | UC Enterprises`,
-    description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
-    openGraph: {
-      title: product.seo_title || product.name,
-      description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
-      images: product.image_url ? [{ url: product.image_url }] : [],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: product.seo_title || product.name,
-      description: product.seo_description || product.short_description || `Buy ${product.name} at UC Enterprises. High-quality products and industrial equipment.`,
-      images: product.image_url ? [product.image_url] : [],
-    },
-    alternates: {
-      canonical: `https://uc-enterprises.vercel.app/products/${product.slug}`,
-    },
-  };
-}
 
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const supabase = await createClient();
@@ -82,27 +49,6 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
 
   return (
     <div className="bg-white min-h-screen">
-      <JsonLd data={[
-        productSchema({
-          id: product.id,
-          seo_title: product.seo_title,
-          seo_description: product.seo_description,
-          name: product.name,
-          slug: product.slug,
-          description: product.short_description || product.description,
-          price: product.price,
-          sale_price: product.sale_price,
-          image_url: product.image_url,
-          images: product.images,
-          status: product.status,
-          stock_quantity: product.stock_quantity,
-          sku: product.sku,
-          averageRating: product.averageRating,
-          reviewCount: product.reviewCount,
-          brandName: product.brands?.name,
-          categoryName: product.categories?.name,
-        })
-      ]} />
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8">
         <ProductDetailsClient product={product} attributes={attrData || []} />
 

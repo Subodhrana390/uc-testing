@@ -92,12 +92,12 @@ export default async function CategoriesPage({
               </div>
 
               <div className="relative z-10 flex flex-col h-full">
-                <Link href={`/search?main=${main.slug}`} className="mb-6 flex h-16 w-16 items-center justify-center bg-orange-50 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                <Link href={`/categories/${main.slug}`} className="mb-6 flex h-16 w-16 items-center justify-center bg-orange-50 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
                   <FolderTree className="h-8 w-8" />
                 </Link>
 
                 <div className="space-y-4 flex-1">
-                  <Link href={`/search?main=${main.slug}`} className="block group/title">
+                  <Link href={`/categories/${main.slug}`} className="block group/title">
                     <h2 className="text-2xl font-black text-zinc-950 uppercase tracking-tight group-hover/title:text-primary transition-colors">
                       {main.name}
                     </h2>
@@ -109,7 +109,7 @@ export default async function CategoriesPage({
                       {main.subs.map((sub) => (
                         <Link
                           key={sub.id}
-                          href={`/search?main=${main.slug}&sub=${sub.slug}`}
+                          href={`/categories/${sub.slug}`}
                           className={`flex items-center gap-2 text-[11px] font-bold transition-colors ${subFilter === sub.slug ? "text-primary" : "text-zinc-500 hover:text-primary"
                             }`}
                         >
@@ -128,7 +128,7 @@ export default async function CategoriesPage({
                 </div>
 
                 <Link
-                  href={`/search?main=${main.slug}`}
+                  href={`/categories/${main.slug}`}
                   className="mt-8 pt-6 border-t border-orange-50 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-primary transition-colors"
                 >
                   <span>Explore Department</span>

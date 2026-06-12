@@ -112,6 +112,8 @@ interface ProductMetaInput {
   name: string;
   slug: string;
   description?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
   price: number;
   sale_price?: number | null;
   image_url?: string | null;
@@ -128,13 +130,14 @@ export function productMetadata(p: ProductMetaInput): Metadata {
     maximumFractionDigits: 0,
   }).format(price);
 
-  const title = `${p.name}${p.brandName ? ` by ${p.brandName}` : ""}${p.categoryName ? ` — ${p.categoryName}` : ""}`;
+  const title = p.seo_title || `${p.name}${p.brandName ? ` by ${p.brandName}` : ""}${p.categoryName ? ` — ${p.categoryName}` : ""}`;
   const description =
+    p.seo_description ||
     p.description?.slice(0, 155) ||
     `Buy ${p.name}${p.categoryName ? ` (${p.categoryName})` : ""} at ${priceStr}. ${p.inStock ? "In stock" : "Available to order"} — fast pan-India delivery from UC Enterprises.`;
 
   const url = canonicalUrl(`/products/${p.slug}`);
-  const image = p.image_url || OG_IMAGE;
+  const image = normalizeSeoImageUrl(p.image_url) || OG_IMAGE;
 
   return baseMetadata({
     title,
@@ -159,26 +162,54 @@ export function productMetadata(p: ProductMetaInput): Metadata {
 }
 
 // ─── Category metadata ────────────────────────────────────────────────────────
+function normalizeSeoImageUrl(imageUrl?: string | null) {
+  if (!imageUrl) return null;
+
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\/(?:encrypted-tbn\d*\.gstatic\.com|.*\.gstatic\.com|.*googleusercontent\.com)/i.test(trimmed)) {
+    return null;
+  }
+
+  if (trimmed.startsWith("/")) {
+    return `${SITE_URL}${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 interface CategoryMetaInput {
   name: string;
   slug: string;
   description?: string | null;
   image_url?: string | null;
   productCount?: number;
+  page?: number;
 }
 
 export function categoryMetadata(c: CategoryMetaInput): Metadata {
-  const title = `${c.name} — Buy Online at Best Price`;
+  const page = c.page || 1;
+  const isFirstPage = page <= 1;
+
+  const title = page > 1 
+    ? `${c.name} — Page ${page}`
+    : `${c.name} — Buy Online at Best Price`;
+
   const description =
     c.description?.slice(0, 155) ||
     `Shop ${c.name} from UC Enterprises. ${c.productCount ? `${c.productCount}+ products` : "Wide range"} with competitive wholesale pricing and pan-India delivery.`;
+  
   const url = canonicalUrl(`/categories/${c.slug}`);
-  const image = c.image_url || OG_IMAGE;
+  const image = normalizeSeoImageUrl(c.image_url) || OG_IMAGE;
 
   return baseMetadata({
     title,
     description,
     alternates: { canonical: url },
+    robots: isFirstPage
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
     openGraph: {
       type: "website",
       locale: "en_IN",
@@ -187,6 +218,12 @@ export function categoryMetadata(c: CategoryMetaInput): Metadata {
       title,
       description,
       images: [{ url: image, width: 800, height: 600, alt: c.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
     },
   });
 }

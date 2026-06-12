@@ -204,7 +204,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         .map((mainCat) => (
                           <div key={mainCat.id} className="group/main">
                             <Link
-                              href={`/search?main=${mainCat.slug}`}
+                              href={`/categories/${mainCat.slug}`}
                               className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
                             >
                               {mainCat.name}
@@ -218,7 +218,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                   {mainCat.name}
                                 </h3>
                                 <Link
-                                  href={`/search?main=${mainCat.slug}`}
+                                  href={`/categories/${mainCat.slug}`}
                                   className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
                                 >
                                   View All
@@ -230,7 +230,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                   .map((subCat) => (
                                     <Link
                                       key={subCat.id}
-                                      href={`/search?main=${mainCat.slug}&sub=${subCat.slug}`}
+                                      href={`/categories/${subCat.slug}`}
                                       className="text-sm font-bold text-zinc-600 hover:text-primary transition-colors py-1"
                                     >
                                       {subCat.name}
@@ -385,7 +385,7 @@ export default function Header({ categories, user }: HeaderProps) {
                         .map((mainCat) => (
                           <div key={mainCat.id} className="space-y-1">
                             <Link
-                              href={`/search?main=${mainCat.slug}`}
+                              href={`/categories/${mainCat.slug}`}
                               onClick={() => setIsMobileMenuOpen(false)}
                               className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-zinc-900 bg-zinc-50 hover:bg-zinc-100 transition-colors"
                             >
@@ -397,7 +397,7 @@ export default function Header({ categories, user }: HeaderProps) {
                                 .map((subCat) => (
                                   <Link
                                     key={subCat.id}
-                                    href={`/search?main=${mainCat.slug}&sub=${subCat.slug}`}
+                                    href={`/categories/${subCat.slug}`}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-primary hover:bg-orange-50 transition-colors"
                                   >

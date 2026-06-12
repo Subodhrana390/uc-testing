@@ -30,7 +30,7 @@ export async function generateMetadata({
   const { data: p } = await supabase
     .from("products")
     .select(
-      "name, slug, description, price, sale_price, image_url, status, stock_quantity, categories(name), brands(name)"
+      "name, slug, description, short_description, seo_title, seo_description, price, sale_price, image_url, status, stock_quantity, categories(name), brands(name)"
     )
     .eq("slug", slug)
     .single();
@@ -44,7 +44,9 @@ export async function generateMetadata({
   return productMetadata({
     name: p.name,
     slug: p.slug,
-    description: p.description,
+    description: p.seo_description || p.short_description || p.description,
+    seo_title: p.seo_title,
+    seo_description: p.seo_description,
     price: p.price,
     sale_price: p.sale_price,
     image_url: p.image_url,
@@ -134,6 +136,7 @@ export default async function ProductDetailLayout({
             averageRating,
             reviewCount,
             brandName: (p.brands as any)?.name,
+            manufacturerName: (p.brands as any)?.name,
             categoryName: (p.categories as any)?.name,
           }),
           breadcrumbSchema(breadcrumbs),
@@ -142,7 +145,6 @@ export default async function ProductDetailLayout({
             description:
               p.description || `Buy ${p.name} at UC Enterprises`,
             url: productUrl,
-            type: "Product",
           }),
         ]}
       />
