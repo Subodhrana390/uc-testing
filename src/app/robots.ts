@@ -1,55 +1,35 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = "https://uc-enterprises.vercel.app";
+  // The Host directive requires just the domain name, not the full URL scheme
+  const hostDomain = new URL(SITE_URL).host;
 
   return {
     rules: [
-      // Allow all well-behaved bots including AI crawlers
       {
-        userAgent: [
-          "Googlebot",
-          "Bingbot",
-          "Slurp",
-          "DuckDuckBot",
-          "Baiduspider",
-          "YandexBot",
-          "facebot",
-          "ia_archiver",
-          // AI search crawlers — allow for AEO/GEO optimization
-          "GPTBot",
-          "Google-Extended",
-          "PerplexityBot",
-          "ClaudeBot",
-          "anthropic-ai",
-          "cohere-ai",
-        ],
+        // Use wildcard to allow all search engines, AI crawlers, and general bots
+        // unless explicitly disallowed below or in subsequent rules.
+        userAgent: "*",
         allow: "/",
         disallow: [
-          "/uc-admin-portal",
           "/uc-admin-portal/",
           "/api/",
-          "/checkout",
           "/checkout/",
-          "/cart",
-          "/account",
+          "/cart/",
           "/account/",
-          "/search",
           "/search/",
-          "/*?q=*",
-          "/*?*sort=*",
-          "/*?*main=*",
-          "/*?*sub=*",
+          "/*?q=*", // Block internal search queries from indexation to save crawl budget
           "/_next/",
         ],
       },
-      // Disallow scrapers and bad bots
+      // Block known scrapers and aggressive SEO tools
       {
         userAgent: ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot"],
         disallow: "/",
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: hostDomain,
   };
 }
