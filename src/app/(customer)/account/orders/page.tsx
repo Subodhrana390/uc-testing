@@ -440,6 +440,18 @@ export default function OrderHistoryPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`);
+                    }}
+                    title="Track Order"
+                    className="h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 text-xs font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all"
+                  >
+                    <Truck className="w-4 h-4" />
+                    Track
+                  </button>
+
                   <Badge variant={getStatusVariant(order.status)} className="text-[11px] font-medium px-2.5 py-0.5 rounded-full capitalize border-0 shadow-none">
                     {getStatusLabel(order.status)}
                   </Badge>

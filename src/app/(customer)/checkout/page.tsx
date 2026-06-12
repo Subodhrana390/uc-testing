@@ -16,6 +16,7 @@ import {
   Lock,
   Check,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -579,50 +580,78 @@ export default function CheckoutPage() {
   // Verifying Payment Screen
   if (verifyingPayment && verificationData) {
     return (
-      <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white border border-zinc-200 rounded-3xl p-8 text-center space-y-6 shadow-lg">
-            {/* Animated Verification Icon */}
-            <div className="flex justify-center">
-              <div className="relative w-24 h-24">
-                <div className="absolute inset-0 rounded-full border-4 border-zinc-200"></div>
-                <div 
-                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary border-r-primary animate-spin"
-                  style={{ animationDuration: '2s' }}
-                ></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <CreditCard className="w-10 h-10 text-primary animate-pulse" />
-                </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-100 p-6 antialiased">
+      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+        
+        {/* Main Card - Separated entirely by a rich, soft shadow */}
+        <div className="bg-white rounded-3xl p-8 text-center space-y-8 shadow-2xl shadow-zinc-300/40">
+          
+          {/* Animated Verification Icon Container */}
+          <div className="flex justify-center pt-2">
+            <div className="relative w-28 h-28 flex items-center justify-center">
+              
+              {/* Outer soft pulsing background glow */}
+              <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-75" style={{ animationDuration: '3s' }} />
+              
+              {/* Spinning background layer using gradients instead of borders */}
+              <div 
+                className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-primary/10 to-primary animate-spin"
+                style={{ animationDuration: '1.5s' }}
+              />
+              
+              {/* Solid inner core mask that creates a clean gap without using lines */}
+              <div className="absolute inset-1.5 bg-zinc-50 rounded-full" />
+              
+              {/* Floating Center Icon Wrapper */}
+              <div className="absolute inset-3 bg-white rounded-full shadow-lg shadow-zinc-200 flex items-center justify-center">
+                <CreditCard className="w-9 h-9 text-primary animate-pulse" style={{ animationDuration: '2s' }} />
               </div>
             </div>
+          </div>
 
-            {/* Text Content */}
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-zinc-950">Verifying Payment</h2>
-              <p className="text-sm text-zinc-600">Please wait while we confirm your payment...</p>
+          {/* Text Content */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Verifying Payment</h2>
+            <p className="text-sm text-zinc-500 max-w-[280px] mx-auto leading-relaxed">
+              Please hold tight while we securely process your transaction...
+            </p>
+          </div>
+
+          {/* Order Details Panel - Uses a solid light background for separation */}
+          <div className="bg-zinc-50 rounded-2xl p-5 text-left space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Order ID</span>
+              <span className="text-sm font-semibold text-zinc-700 font-mono bg-zinc-200/60 px-3 py-1 rounded-lg">
+                {getDisplayOrderId(verificationData.orderId, new Date().toISOString())}
+              </span>
             </div>
-
-            {/* Order Details */}
-            <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 text-left space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Order ID</span>
-                <span className="text-sm font-bold text-zinc-950 font-mono">{getDisplayOrderId(verificationData.orderId, new Date().toISOString())}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Amount</span>
-                <span className="text-sm font-bold text-primary">{formatCurrency(verificationData.total)}</span>
-              </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount Paid</span>
+              <span className="text-xl font-extrabold text-zinc-900 tracking-tight">
+                {formatCurrency(verificationData.total)}
+              </span>
             </div>
+          </div>
 
-            {/* Status Message */}
-            <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700 font-medium">Do not close this page. Your payment is being verified and your order will be confirmed shortly.</p>
+          {/* Status Message - Uses color contrast to stand out safely */}
+          <div className="flex items-start gap-3 bg-amber-50 rounded-2xl p-4 text-left">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-amber-900">Don't refresh or close this tab</p>
+              <p className="text-xs text-amber-700/90 leading-relaxed">To prevent double charges, leave this window open until confirmation completes.</p>
             </div>
           </div>
         </div>
+
+        {/* Bottom Trust Badge */}
+        <div className="flex items-center justify-center gap-1.5 mt-6 text-zinc-400">
+          <ShieldCheck className="w-4 h-4 text-zinc-400" />
+          <span className="text-xs font-semibold tracking-wide uppercase">Secured End-to-End Encryption</span>
+        </div>
       </div>
-    );
+    </div>
+  );
   }
 
   return (
