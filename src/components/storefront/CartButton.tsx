@@ -6,13 +6,13 @@ import { useCartStore } from "@/store/useCartStore";
 import { useEffect, useState } from "react";
 
 export default function CartButton() {
-  const getCartCount = useCartStore((state) => state.getCartCount);
+  const items = useCartStore((state) => state.items);
   
   // Hydration fix for Zustand persist
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => setIsMounted(true), []);
   
-  const count = isMounted ? getCartCount() : 0;
+  const count = isMounted ? items.reduce((total, item) => total + item.quantity, 0) : 0;
 
   return (
     <Link href="/cart" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors">
