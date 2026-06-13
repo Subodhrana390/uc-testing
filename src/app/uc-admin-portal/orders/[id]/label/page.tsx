@@ -257,16 +257,38 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span className="text-zinc-800">
-                    ₹{order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0).toLocaleString('en-IN')}
+                    ₹{order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
+                {parseFloat(order.tax_amount || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>GST (Tax):</span>
+                    <span className="text-zinc-800">
+                      ₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Shipping Fee:</span>
-                  <span className="text-emerald-600 font-bold">FREE</span>
+                  {parseFloat(order.shipping_amount || 0) > 0 ? (
+                    <span className="text-zinc-800">
+                      ₹{parseFloat(order.shipping_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 font-bold">FREE</span>
+                  )}
                 </div>
+                {parseFloat(order.discount_amount || 0) > 0 && (
+                  <div className="flex justify-between text-rose-600">
+                    <span>Coupon Discount{order.coupon_code ? ` (${order.coupon_code})` : ''}:</span>
+                    <span className="font-bold">
+                      -₹{parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-zinc-150 pt-2 text-sm font-black text-zinc-900">
                   <span>Grand Total:</span>
-                  <span>₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+                  <span>₹{Number(order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>

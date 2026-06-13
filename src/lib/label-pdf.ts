@@ -341,15 +341,30 @@ export const generateShippingLabelAndInvoicePDF = async ({ order, invoice }: Gen
     foot: [
       [
         { content: 'Subtotal', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `INR ${subtotal.toLocaleString('en-IN')}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        { content: `INR ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
       ],
+      ...(parseFloat(order.tax_amount || 0) > 0 ? [[
+        { content: 'GST (Tax)', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `INR ${parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
+      ]] : []),
       [
         { content: 'Shipping Fee', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: 'FREE', styles: { halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129] } }
+        { 
+          content: parseFloat(order.shipping_amount || 0) > 0 ? `INR ${parseFloat(order.shipping_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'FREE', 
+          styles: { halign: 'right', fontStyle: 'bold', textColor: parseFloat(order.shipping_amount || 0) > 0 ? undefined : [16, 185, 129] } 
+        }
       ],
+      ...(parseFloat(order.discount_amount || 0) > 0 ? [[
+        { 
+          content: order.coupon_code ? `Coupon Discount (${order.coupon_code})` : 'Coupon Discount', 
+          colSpan: 5, 
+          styles: { halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] } 
+        },
+        { content: `-INR ${parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] } }
+      ]] : []),
       [
         { content: 'Grand Total', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10 } },
-        { content: `INR ${Number(order.total_amount).toLocaleString('en-IN')}`, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, textColor: [37, 99, 235] } }
+        { content: `INR ${Number(order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, textColor: [37, 99, 235] } }
       ]
     ],
     margin: { left: a4MarginX, right: a4MarginX }
