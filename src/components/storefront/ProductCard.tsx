@@ -206,9 +206,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Category & Rating */}
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[75%]" title={displayCategory}>{displayCategory}</span>
-          <div className="flex items-center gap-0.5 text-amber-500">
-            <Star className="h-3 w-3 fill-amber-500" />
-            <span className="text-[11px] font-black text-zinc-900">{avgRating}</span>
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 text-amber-500">
+              <Star className="h-3 w-3 fill-amber-500" />
+              <span className="text-[11px] font-black text-zinc-900">{avgRating}</span>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-bold ml-1">({reviews.length})</span>
           </div>
         </div>
 
