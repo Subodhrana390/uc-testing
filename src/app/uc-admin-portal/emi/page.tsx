@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { CreditCard, Plus, Trash2, Edit, AlertCircle, ToggleLeft, ToggleRight, Loader2, Sparkles } from 'lucide-react'
+import { createAdminClient } from '@/utils/supabase/admin-client'
+import Link from 'next/link'
 import {
   getEMIProvidersAdmin,
   createEMIProviderAction,
@@ -39,6 +41,9 @@ export default function AdminEMIPage() {
   const [providers, setProviders] = useState<EMIProvider[]>([])
   const [plans, setPlans] = useState<Record<string, EMIPlan[]>>({})
   const [loading, setLoading] = useState(true)
+  const [emiEnabled, setEmiEnabled] = useState(true)
+
+  const supabase = useMemo(() => createAdminClient(), [])
   const [submittingProvider, setSubmittingProvider] = useState(false)
   const [submittingPlan, setSubmittingPlan] = useState(false)
   
@@ -66,6 +71,15 @@ export default function AdminEMIPage() {
   const fetchProviders = async () => {
     setLoading(true)
     try {
+      // Fetch emi_enabled toggle status
+      const { data: settingsData } = await supabase
+        .from('site_settings')
+        .select('emi_enabled')
+        .maybeSingle()
+      if (settingsData) {
+        setEmiEnabled(settingsData.emi_enabled ?? true)
+      }
+
       const res = await getEMIProvidersAdmin()
       if (res.success && res.providers) {
         setProviders(res.providers)
@@ -302,6 +316,16 @@ export default function AdminEMIPage() {
           <Plus className="w-4 h-4" /> Add Provider
         </button>
       </div>
+
+      {!emiEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800 text-xs font-semibold shadow-sm animate-in fade-in duration-300">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <span>EMI payments are currently <strong>disabled</strong> on the storefront. You can change this in </span>
+            <Link href="/uc-admin-portal/settings" className="text-indigo-650 hover:underline font-bold">Site Settings</Link>.
+          </div>
+        </div>
+      )}
 
       {/* Main content grid */}
       {loading ? (

@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FileText, Download, Share2, Star } from "lucide-react";
+import { FileText, Download, Share2, Star, CreditCard, AlertCircle, Loader2, ShieldCheck, Wallet, Banknote } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
@@ -28,6 +29,11 @@ export default function ProductDetailsClient({
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  const [emiPlans, setEmiPlans] = useState<any[]>([]);
+  const [lowestEMI, setLowestEMI] = useState<number | null>(null);
+  const [isEmiModalOpen, setIsEmiModalOpen] = useState(false);
+  const [fetchingEmi, setFetchingEmi] = useState(false);
 
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
@@ -79,6 +85,39 @@ export default function ProductDetailsClient({
         category_name: product.categories?.name ?? null,
       });
       setActiveImage(product.images?.[0] || product.image_url || null);
+    }
+  }, [product]);
+
+  // Fetch EMI options on mount
+  useEffect(() => {
+    const price = Number(product.sale_price || product.price) || 0;
+    if (price >= 3000) {
+      setFetchingEmi(true);
+      import("@/app/actions/emi").then(({ getEligibleEMIOptions }) => {
+        getEligibleEMIOptions(price).then((res) => {
+          if (res.success && res.providers) {
+            setEmiPlans(res.providers);
+            let lowest = Infinity;
+            res.providers.forEach((prov: any) => {
+              prov.plans.forEach((plan: any) => {
+                if (plan.emi < lowest) {
+                  lowest = plan.emi;
+                }
+              });
+            });
+            if (lowest !== Infinity) {
+              setLowestEMI(lowest);
+            }
+          }
+          setFetchingEmi(false);
+        }).catch((err) => {
+          console.error("Error fetching EMI options:", err);
+          setFetchingEmi(false);
+        });
+      }).catch((err) => {
+        console.error("Error loading EMI module:", err);
+        setFetchingEmi(false);
+      });
     }
   }, [product]);
 
@@ -395,6 +434,23 @@ export default function ProductDetailsClient({
               </span>
             </div>
 
+            {lowestEMI !== null && (
+              <div className="flex items-center gap-3 p-4 bg-indigo-50/50 border border-indigo-100/80 rounded-2xl max-w-md animate-in fade-in duration-300">
+                <CreditCard className="w-5 h-5 text-indigo-650 shrink-0" />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-semibold text-zinc-650">
+                    Easy EMI available from <strong className="text-zinc-950 font-extrabold">{formatCurrency(lowestEMI)}/month</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEmiModalOpen(true)}
+                  className="text-xs font-black text-indigo-650 hover:text-indigo-800 hover:underline shrink-0"
+                >
+                  View Plans
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className={`flex items-center shrink-0 ${isOutOfStock ? "opacity-50 pointer-events-none" : ""}`}>
@@ -444,6 +500,49 @@ export default function ProductDetailsClient({
             </div>
           </div>
           <DeliveryEstimator />
+
+          {/* Accepted Payment Methods */}
+          <div className="pt-6 border-t border-zinc-150 space-y-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Accepted Payment Methods</h3>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+                <CreditCard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>Visa</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+                <CreditCard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>Mastercard</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+                <Wallet className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>UPI / NetBanking</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+                <Banknote className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <span>Cash on Delivery</span>
+              </div>
+              {lowestEMI !== null && (
+                <button
+                  onClick={() => setIsEmiModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50/60 border border-indigo-150 hover:bg-indigo-50 text-indigo-750 rounded-xl cursor-pointer transition-colors text-xs font-bold tracking-tight shadow-sm"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-650 shrink-0" />
+                  <span>Easy EMI Plans</span>
+                  <span className="bg-indigo-100 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-indigo-800">
+                    From {formatCurrency(lowestEMI)}/mo
+                  </span>
+                </button>
+              )}
+            </div>
+            
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
+              100% Safe & Secure Checkout Guaranteed.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -519,6 +618,61 @@ export default function ProductDetailsClient({
         url={typeof window !== "undefined" ? window.location.href : `https://uc-enterprises.vercel.app/products/${product.slug}`}
         imageUrl={product.image_url || product.images?.[0]}
       />
+
+      <Dialog open={isEmiModalOpen} onOpenChange={setIsEmiModalOpen}>
+        <DialogContent className="sm:max-w-lg bg-white rounded-3xl p-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          <DialogHeader className="text-left border-b border-zinc-100 pb-4">
+            <DialogTitle className="text-base font-black uppercase tracking-wide text-zinc-900 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-indigo-650" />
+              <span>EMI Payment Plans</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400 font-medium">
+              Calculated installments for **{product.name}** at {formatCurrency(product.sale_price || product.price)}
+            </DialogDescription>
+          </DialogHeader>
+
+          {fetchingEmi ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+              <p className="text-xs font-semibold text-zinc-400 tracking-wider uppercase">Fetching lender plans...</p>
+            </div>
+          ) : emiPlans.length === 0 ? (
+            <div className="py-12 text-center space-y-3">
+              <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto border border-amber-100">
+                <AlertCircle className="w-6 h-6 text-amber-500" />
+              </div>
+              <p className="text-xs font-bold text-zinc-500">No EMI options available for this product.</p>
+            </div>
+          ) : (
+            <div className="py-4 space-y-6">
+              {emiPlans.map((provider) => (
+                <div key={provider.id} className="border border-zinc-150 rounded-2xl p-4 space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-zinc-100">
+                    <span className="text-sm font-black text-zinc-900">{provider.name}</span>
+                    <span className="text-[10px] text-zinc-400 font-semibold uppercase">Min. spend: {formatCurrency(provider.minOrderAmount)}</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {provider.plans.map((plan: any) => (
+                      <div key={plan.id} className="p-3 bg-zinc-50/50 hover:bg-zinc-50 border border-zinc-100 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors">
+                        <div>
+                          <span className="font-black text-zinc-800">{plan.tenureMonths} Months</span>
+                          <span className="text-[10px] text-zinc-400 font-medium ml-2">
+                            Interest: <strong className="text-zinc-700 font-bold">{plan.interestRate}% p.a.</strong>
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-extrabold text-zinc-900 block">{formatCurrency(plan.emi)}/mo</span>
+                          <span className="text-[9px] text-zinc-400 block font-semibold">Total: {formatCurrency(plan.totalPayable)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

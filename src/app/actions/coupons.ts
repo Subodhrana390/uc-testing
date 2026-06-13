@@ -1,11 +1,22 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin-server'
 import { revalidatePath } from 'next/cache'
 
 export async function validateCouponAction(code: string, subtotal: number) {
   try {
     const supabase = await createClient()
+
+    // Verify if coupon feature is active in site settings
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('coupons_enabled')
+      .maybeSingle()
+
+    if (settings && settings.coupons_enabled === false) {
+      return { success: false, error: 'Coupon feature is currently disabled.' }
+    }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -98,7 +109,7 @@ async function checkAdminRole(supabase: any) {
 
 export async function getCouponsAction() {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const isAdmin = await checkAdminRole(supabase)
     if (!isAdmin) {
       return { success: false, error: 'Unauthorized: Admin access required.' }
@@ -130,7 +141,7 @@ export async function createCouponAction(data: {
   active?: boolean
 }) {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const isAdmin = await checkAdminRole(supabase)
     if (!isAdmin) {
       return { success: false, error: 'Unauthorized: Admin access required.' }
@@ -176,7 +187,7 @@ export async function createCouponAction(data: {
 
 export async function toggleCouponActiveAction(id: string, active: boolean) {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const isAdmin = await checkAdminRole(supabase)
     if (!isAdmin) {
       return { success: false, error: 'Unauthorized: Admin access required.' }
@@ -199,7 +210,7 @@ export async function toggleCouponActiveAction(id: string, active: boolean) {
 
 export async function deleteCouponAction(id: string) {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const isAdmin = await checkAdminRole(supabase)
     if (!isAdmin) {
       return { success: false, error: 'Unauthorized: Admin access required.' }

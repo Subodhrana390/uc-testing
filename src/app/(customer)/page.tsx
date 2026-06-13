@@ -10,6 +10,7 @@ import { faqItems } from "@/lib/storefront";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { homepageMetadata, SITE_URL } from "@/lib/seo";
+import { formatCurrency } from "@/lib/format";
 import dynamic from "next/dynamic";
 
 const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/RecentlyViewedProducts"));
@@ -45,15 +46,62 @@ export default async function HomePage() {
 
   const allActiveProducts = activeProductsData || [];
 
+  // Mathematical calculation for deals:
+  // Calculate discount percentage and absolute savings, then sort by highest discount percentage.
+  const calculatedDeals = allActiveProducts
+    .filter(p => {
+      const pPrice = Number(p.price) || 0;
+      const pSalePrice = Number(p.sale_price) || 0;
+      return pPrice > 0 && pSalePrice > 0 && pSalePrice < pPrice;
+    })
+    .map(p => {
+      const pPrice = Number(p.price) || 0;
+      const pSalePrice = Number(p.sale_price) || 0;
+      const discountPercentage = Math.round(((pPrice - pSalePrice) / pPrice) * 100);
+      const savings = pPrice - pSalePrice;
+      return {
+        ...p,
+        discountPercentage,
+        savings,
+        priceNum: pPrice,
+        salePriceNum: pSalePrice,
+      };
+    })
+    .sort((a, b) => b.discountPercentage - a.discountPercentage);
+
   const safeFeatured = allActiveProducts.filter(p => p.is_featured).slice(0, 12);
   const safeBestSellers = allActiveProducts.filter(p => p.is_best_seller).slice(0, 12);
   const safeNewArrivals = allActiveProducts.filter(p => p.is_new_arrival).slice(0, 12);
   const safeTrending = allActiveProducts.filter(p => p.is_trending).slice(0, 12);
   const safeCategories = categories || [];
   const safeBanners = banners || [];
-  const safeFlashDeals = allActiveProducts.filter(p => p.sale_price !== null).slice(0, 12);
+
+  // Use dynamically computed and mathematically sorted deals for the Flash Deals carousel
+  const safeFlashDeals = calculatedDeals.slice(0, 12);
   const safeDeals = (deals as any[]) || [];
   const safeTopSelling = topSelling || [];
+
+  // Construct dynamic banners based on mathematically calculated best deals, falling back to static database banners
+  const deal1 = calculatedDeals[0] ? {
+    title: `Save ${calculatedDeals[0].discountPercentage}% on ${calculatedDeals[0].name}`,
+    description: `Limited time deal! Purchase today for only ${formatCurrency(calculatedDeals[0].salePriceNum)} (Save ${formatCurrency(calculatedDeals[0].savings)} instantly).`,
+    link_url: `/products/${calculatedDeals[0].slug}`,
+    image_url: calculatedDeals[0].image_url,
+  } : safeDeals[0];
+
+  const deal2 = calculatedDeals[1] ? {
+    title: `Hot Offer: ${calculatedDeals[1].discountPercentage}% OFF ${calculatedDeals[1].name}`,
+    description: `Premium industrial grade quality. Buy now for only ${formatCurrency(calculatedDeals[1].salePriceNum)} (Regular price: ${formatCurrency(calculatedDeals[1].priceNum)}).`,
+    link_url: `/products/${calculatedDeals[1].slug}`,
+    image_url: calculatedDeals[1].image_url,
+  } : safeDeals[1];
+
+  const deal3 = calculatedDeals[2] ? {
+    title: `Top Value: ${calculatedDeals[2].discountPercentage}% Off ${calculatedDeals[2].name}`,
+    description: `Procure this best-selling equipment now and save ${formatCurrency(calculatedDeals[2].savings)}! Price: ${formatCurrency(calculatedDeals[2].salePriceNum)}.`,
+    link_url: `/products/${calculatedDeals[2].slug}`,
+    image_url: calculatedDeals[2].image_url,
+  } : safeDeals[2];
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/20 to-white min-h-screen relative overflow-hidden">
@@ -110,21 +158,20 @@ export default async function HomePage() {
       )}
 
       {/* Deal 1: After Flash Sale */}
-      {safeDeals[0] && (
+      {deal1 && (
         <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
           <div className="hover:scale-[1.005] transition-transform duration-500">
             <DealBanner
-              title={safeDeals[0].title}
-              subtitle={safeDeals[0].description}
+              title={deal1.title}
+              subtitle={deal1.description}
               linkText="Claim Offer"
-              linkUrl={safeDeals[0].link_url}
-              imageUrl={safeDeals[0].image_url}
+              linkUrl={deal1.link_url}
+              imageUrl={deal1.image_url}
               gradient="from-zinc-950 via-zinc-900 to-zinc-950"
             />
           </div>
         </section>
-      )
-      }
+      )}
 
       {/* Primary Category Deck */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
@@ -181,23 +228,21 @@ export default async function HomePage() {
       </section >
 
       {/* Deal 2: After Categories */}
-      {
-        safeDeals[1] && (
-          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-            <div className="hover:scale-[1.005] transition-transform duration-500">
-              <DealBanner
-                title={safeDeals[1].title}
-                subtitle={safeDeals[1].description}
-                linkText="Bulk Offer"
-                linkUrl={safeDeals[1].link_url}
-                imageUrl={safeDeals[1].image_url}
-                gradient="from-zinc-900 via-zinc-950 to-zinc-900"
-              />
-            </div>
-          </section>
+      {deal2 && (
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
+          <div className="hover:scale-[1.005] transition-transform duration-500">
+            <DealBanner
+              title={deal2.title}
+              subtitle={deal2.description}
+              linkText="Bulk Offer"
+              linkUrl={deal2.link_url}
+              imageUrl={deal2.image_url}
+              gradient="from-zinc-900 via-zinc-950 to-zinc-900"
+            />Implement dynamic product sections that automatically populate products based on real-time business rules and analytics, without manual product flagging. Generate sections such as Featured, Recommended, Best Seller, Trending, New Arrival, On Sale, Hot Deal, Top Rated, Industrial, In Stock, and High Demand using sales data, views, ratings, inventory levels, discounts, customer behavior, and product freshness. Ensure products update automatically, avoid duplicates across sections where possible, support caching and pagination, and allow admins to configure section criteria. Build with scalable, reusable logic and clean architecture without unnecessary dependencies or boilerplate.
 
-        )
-      }
+          </div>
+        </section>
+      )}
 
       {/* Featured Products Segment */}
       {
@@ -221,22 +266,20 @@ export default async function HomePage() {
       }
 
       {/* Deal 3: After Featured */}
-      {
-        safeDeals[2] && (
-          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-            <div className="hover:scale-[1.005] transition-transform duration-500">
-              <DealBanner
-                title={safeDeals[2].title}
-                subtitle={safeDeals[2].description}
-                linkText="New Arrivals"
-                linkUrl={safeDeals[2].link_url}
-                imageUrl={safeDeals[2].image_url}
-                gradient="from-zinc-950 via-zinc-900 to-zinc-950"
-              />
-            </div>
-          </section>
-        )
-      }
+      {deal3 && (
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
+          <div className="hover:scale-[1.005] transition-transform duration-500">
+            <DealBanner
+              title={deal3.title}
+              subtitle={deal3.description}
+              linkText="New Arrivals"
+              linkUrl={deal3.link_url}
+              imageUrl={deal3.image_url}
+              gradient="from-zinc-950 via-zinc-900 to-zinc-950"
+            />
+          </div>
+        </section>
+      )}
 
       {/* Best Sellers Segment */}
       {

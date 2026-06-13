@@ -189,13 +189,23 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                     <span>Login</span>
                   </button>
                 ) : (
-                  <Link
-                    href="/account/profile"
-                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
-                  >
-                    <User className="h-4 w-4" />
-                    <span className="max-w-[80px] truncate">{firstName}</span>
-                  </Link>
+                  <div className="hidden sm:flex items-center gap-3">
+                    <Link
+                      href="/account/profile"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
+                    >
+                      <User className="h-4 w-4 shrink-0" />
+                      <span className="max-w-[150px] truncate">{displayName}</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-red-600 transition-colors border border-zinc-200 hover:border-red-155 bg-zinc-50/50 hover:bg-red-50/30 px-2.5 py-1.5 rounded-xl shadow-sm cursor-pointer"
+                      title="Logout"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
                 )}
 
                 <WishlistButton />
@@ -365,10 +375,10 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                       <Link
                         href="/account/profile"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm"
+                        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm min-w-0"
                       >
-                        <User className="h-4 w-4 text-primary" />
-                        <span>{firstName}</span>
+                        <User className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate max-w-[75px]">{displayName}</span>
                       </Link>
                     )}
 

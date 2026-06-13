@@ -86,6 +86,9 @@ export default function CheckoutPage() {
     postalCode: "",
   });
 
+  const [emiEnabledSetting, setEmiEnabledSetting] = useState(true);
+  const [couponsEnabledSetting, setCouponsEnabledSetting] = useState(true);
+
   const [couponCodeInput, setCouponCodeInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
@@ -229,6 +232,21 @@ export default function CheckoutPage() {
         router.push("/login?returnTo=/checkout");
 
         return;
+      }
+
+      // Fetch feature toggles from site settings
+      try {
+        const { data: settingsData } = await supabase
+          .from("site_settings")
+          .select("emi_enabled, coupons_enabled")
+          .maybeSingle();
+
+        if (settingsData) {
+          setEmiEnabledSetting(settingsData.emi_enabled ?? true);
+          setCouponsEnabledSetting(settingsData.coupons_enabled ?? true);
+        }
+      } catch (err) {
+        console.error("Error reading site settings:", err);
       }
 
       const { data: products } = await supabase
@@ -1001,21 +1019,23 @@ export default function CheckoutPage() {
                       {paymentMethod === "COD" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
                     </div>
 
-                    <div
-                      onClick={() => setPaymentMethod("EMI")}
-                      className={cn(
-                        "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
-                        paymentMethod === "EMI"
-                          ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
-                          : "border-zinc-200 hover:border-zinc-400"
-                      )}
-                    >
-                      <p className="font-bold text-sm text-zinc-950">Pay in EMI</p>
-                      {paymentMethod === "EMI" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
-                    </div>
+                    {emiEnabledSetting && (
+                      <div
+                        onClick={() => setPaymentMethod("EMI")}
+                        className={cn(
+                          "p-5 border rounded-2xl cursor-pointer transition-all flex items-center justify-between",
+                          paymentMethod === "EMI"
+                            ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
+                            : "border-zinc-200 hover:border-zinc-400"
+                        )}
+                      >
+                        <p className="font-bold text-sm text-zinc-950">Pay in EMI</p>
+                        {paymentMethod === "EMI" && <CheckCircle2 className="w-5 h-5 text-zinc-950" />}
+                      </div>
+                    )}
                   </div>
 
-                  {paymentMethod === "EMI" && (
+                  {emiEnabledSetting && paymentMethod === "EMI" && (
                     <div className="mt-6 pt-6 border-t border-zinc-100 space-y-6 animate-in fade-in duration-300">
                       <div>
                         <h3 className="text-sm font-bold text-zinc-950 mb-1">Select EMI Provider</h3>
@@ -1273,7 +1293,9 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Coupon / Promo</span>
                     </div>
-                    {appliedCoupon ? (
+                    {!couponsEnabledSetting ? (
+                      <p className="text-xs font-bold text-zinc-400 italic">Coupons are currently disabled.</p>
+                    ) : appliedCoupon ? (
                       <div className="flex items-center justify-between bg-emerald-50/50 border border-emerald-100 p-3 rounded-2xl">
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-emerald-800 bg-emerald-100/50 px-2.5 py-1 rounded-lg inline-block w-fit tracking-wide">

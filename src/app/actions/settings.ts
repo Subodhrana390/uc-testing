@@ -25,6 +25,8 @@ export interface SiteSettings {
   whatsapp_number: string | null
   whatsapp_message: string | null
   whatsapp_enabled: boolean
+  emi_enabled: boolean
+  coupons_enabled: boolean
   created_at?: string
   updated_at?: string
 }

@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Ticket, Plus, Trash2, Calendar, Lock, AlertCircle, ToggleLeft, ToggleRight, Loader2, Sparkles } from 'lucide-react'
 import { getCouponsAction, createCouponAction, toggleCouponActiveAction, deleteCouponAction } from '@/app/actions/coupons'
+import { createAdminClient } from '@/utils/supabase/admin-client'
+import Link from 'next/link'
 import { formatCurrency } from '@/lib/format'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -25,6 +27,9 @@ interface Coupon {
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [loading, setLoading] = useState(true)
+  const [couponsEnabled, setCouponsEnabled] = useState(true)
+
+  const supabase = useMemo(() => createAdminClient(), [])
   const [submitting, setSubmitting] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -44,6 +49,15 @@ export default function AdminCouponsPage() {
   const fetchCoupons = async () => {
     setLoading(true)
     try {
+      // Fetch coupons_enabled toggle status
+      const { data: settingsData } = await supabase
+        .from('site_settings')
+        .select('coupons_enabled')
+        .maybeSingle()
+      if (settingsData) {
+        setCouponsEnabled(settingsData.coupons_enabled ?? true)
+      }
+
       const res = await getCouponsAction()
       if (res.success && res.coupons) {
         setCoupons(res.coupons as any)
@@ -188,6 +202,16 @@ export default function AdminCouponsPage() {
           <Plus className="w-4 h-4" /> Create Coupon
         </button>
       </div>
+
+      {!couponsEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800 text-xs font-semibold shadow-sm animate-in fade-in duration-300">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <span>Coupons and promotions are currently <strong>disabled</strong> on the storefront. You can change this in </span>
+            <Link href="/uc-admin-portal/settings" className="text-indigo-650 hover:underline font-bold">Site Settings</Link>.
+          </div>
+        </div>
+      )}
 
       {/* Coupons List */}
       <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm">

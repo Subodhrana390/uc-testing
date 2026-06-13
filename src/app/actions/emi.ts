@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin-server'
 import { revalidatePath } from 'next/cache'
 
 // EMI Installment Calculator (Reducing Balance Interest Formula)
@@ -30,6 +31,16 @@ function calculateEMI(principal: number, interestRate: number, tenureMonths: num
 export async function getEligibleEMIOptions(amount: number) {
   try {
     const supabase = await createClient()
+
+    // Verify if EMI option is active in site settings
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('emi_enabled')
+      .maybeSingle()
+
+    if (settings && settings.emi_enabled === false) {
+      return { success: false, error: 'EMI option is currently disabled.' }
+    }
 
     // 1. Fetch active EMI providers
     const { data: providers, error: providersError } = await supabase
@@ -90,7 +101,7 @@ export async function getEligibleEMIOptions(amount: number) {
 // ADMIN ACTIONS
 
 async function checkAdminAuth() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return false
 
@@ -109,7 +120,7 @@ export async function getEMIProvidersAdmin() {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data, error } = await supabase
       .from('emi_providers')
       .select('*')
@@ -134,7 +145,7 @@ export async function createEMIProviderAction(data: {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data: newProvider, error } = await supabase
       .from('emi_providers')
       .insert([data])
@@ -164,7 +175,7 @@ export async function updateEMIProviderAction(
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data: updatedProvider, error } = await supabase
       .from('emi_providers')
       .update(data)
@@ -186,7 +197,7 @@ export async function deleteEMIProviderAction(id: string) {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { error } = await supabase
       .from('emi_providers')
       .delete()
@@ -206,7 +217,7 @@ export async function getEMIPlansAdmin(providerId: string) {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data, error } = await supabase
       .from('emi_plans')
       .select('*')
@@ -231,7 +242,7 @@ export async function createEMIPlanAction(data: {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data: newPlan, error } = await supabase
       .from('emi_plans')
       .insert([data])
@@ -259,7 +270,7 @@ export async function updateEMIPlanAction(
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data: updatedPlan, error } = await supabase
       .from('emi_plans')
       .update(data)
@@ -281,7 +292,7 @@ export async function deleteEMIPlanAction(id: string) {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { error } = await supabase
       .from('emi_plans')
       .delete()

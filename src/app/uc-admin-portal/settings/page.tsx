@@ -87,6 +87,11 @@ export default function SettingsPage() {
     seo_keywords_default: "",
   });
 
+  const [featuresForm, setFeaturesForm] = useState({
+    emi_enabled: true,
+    coupons_enabled: true,
+  });
+
   // Saving state
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -148,6 +153,10 @@ export default function SettingsPage() {
           seo_title_default: settingsData.seo_title_default || "",
           seo_description_default: settingsData.seo_description_default || "",
           seo_keywords_default: (settingsData.seo_keywords_default || []).join(", "),
+        });
+        setFeaturesForm({
+          emi_enabled: settingsData.emi_enabled ?? true,
+          coupons_enabled: settingsData.coupons_enabled ?? true,
         });
       }
 
@@ -218,6 +227,8 @@ export default function SettingsPage() {
           seo_description_default: seoForm.seo_description_default,
           seo_keywords_default: keywords,
         };
+      } else if (activeTab === "features") {
+        updatePayload = { ...featuresForm };
       }
 
       const result = await updateSiteSettingsAction(updatePayload);
@@ -412,6 +423,12 @@ export default function SettingsPage() {
               className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <PlusCircle className="w-4 h-4" /> Header Menu Links
+            </TabsTrigger>
+            <TabsTrigger
+              value="features"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+            >
+              <Settings className="w-4 h-4" /> Store Features
             </TabsTrigger>
           </TabsList>
         </div>
@@ -838,6 +855,56 @@ export default function SettingsPage() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Features settings tab */}
+          <TabsContent value="features" className="m-0 focus:outline-none">
+            <Card className="bg-white border border-zinc-150 shadow-sm rounded-2xl overflow-hidden py-0 gap-0">
+              <CardHeader className="border-b border-zinc-100 p-6 text-left">
+                <CardTitle className="text-lg font-black text-zinc-900 uppercase">Store Features</CardTitle>
+                <CardDescription className="text-xs font-medium text-zinc-400 mt-1">Enable or disable specific features across the storefront.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleSaveSettings} className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                    <div className="space-y-0.5 text-left">
+                      <Label htmlFor="emi_enabled" className="text-sm font-bold text-zinc-800 cursor-pointer">Enable EMI Payment Option</Label>
+                      <p className="text-[10px] text-zinc-400 font-medium leading-normal">Toggle customer ability to pay using EMI options at checkout.</p>
+                    </div>
+                    <Switch
+                      id="emi_enabled"
+                      checked={featuresForm.emi_enabled}
+                      onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, emi_enabled: checked })}
+                      className="data-[state=checked]:bg-zinc-900 bg-zinc-200"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                    <div className="space-y-0.5 text-left">
+                      <Label htmlFor="coupons_enabled" className="text-sm font-bold text-zinc-800 cursor-pointer">Enable Coupons & Promotions</Label>
+                      <p className="text-[10px] text-zinc-400 font-medium leading-normal">Toggle customer ability to apply discount coupon codes at checkout.</p>
+                    </div>
+                    <Switch
+                      id="coupons_enabled"
+                      checked={featuresForm.coupons_enabled}
+                      onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, coupons_enabled: checked })}
+                      className="data-[state=checked]:bg-zinc-900 bg-zinc-200"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t border-zinc-100">
+                    <Button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="bg-zinc-900 hover:bg-zinc-800 text-white font-bold h-11 px-6 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Store Features
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>

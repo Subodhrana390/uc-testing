@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin-server'
 import { revalidatePath } from 'next/cache'
 import Razorpay from 'razorpay'
 
@@ -16,7 +16,7 @@ async function logAudit(supabase: any, adminId: string, action: string, entityTy
 }
 
 export async function approveReturn(orderId: string, adminNotes: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user || !user.email?.endsWith('@ucenterprises.com')) {
@@ -53,7 +53,7 @@ export async function approveReturn(orderId: string, adminNotes: string) {
 }
 
 export async function processRefund(orderId: string, amount: number, reason: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user || !user.email?.endsWith('@ucenterprises.com')) {
@@ -120,7 +120,7 @@ export async function processRefund(orderId: string, amount: number, reason: str
 }
 
 export async function adjustInventory(productId: string, adjustmentType: 'stock_quantity' | 'damaged_stock' | 'returned_stock', delta: number, reason: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user || !user.email?.endsWith('@ucenterprises.com')) {
