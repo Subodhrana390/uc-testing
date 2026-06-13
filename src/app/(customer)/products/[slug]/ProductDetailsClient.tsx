@@ -508,7 +508,7 @@ export default function ProductDetailsClient({
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Accepted Payment Methods</h3>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
                 <CreditCard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
@@ -526,20 +526,8 @@ export default function ProductDetailsClient({
                 <Banknote className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Cash on Delivery</span>
               </div>
-              {lowestEMI !== null && (
-                <button
-                  onClick={() => setIsEmiModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50/60 border border-indigo-150 hover:bg-indigo-50 text-indigo-750 rounded-xl cursor-pointer transition-colors text-xs font-bold tracking-tight shadow-sm"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-indigo-650 shrink-0" />
-                  <span>Easy EMI Plans</span>
-                  <span className="bg-indigo-100 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-indigo-800">
-                    From {formatCurrency(lowestEMI)}/mo
-                  </span>
-                </button>
-              )}
             </div>
-            
+
             <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
               100% Safe & Secure Checkout Guaranteed.
             </p>
@@ -562,8 +550,8 @@ export default function ProductDetailsClient({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 text-sm lg:text-base font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
-                  ? "border-primary text-zinc-900"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700"
+                ? "border-primary text-zinc-900"
+                : "border-transparent text-zinc-500 hover:text-zinc-700"
                 }`}
             >
               {tab.label}

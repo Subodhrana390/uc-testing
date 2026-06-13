@@ -20,7 +20,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/format";
 
 export default function CartPage() {
-  const { items, updateQuantity: updateCartItemQuantity, removeItem: removeCartItem, getCartTotal } = useCartStore();
+  const { items, updateQuantity: updateCartItemQuantity, removeItem: removeCartItem, getCartTotal, getCartCount } = useCartStore();
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => setIsMounted(true), []);
@@ -175,7 +175,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                  <span>Subtotal ({items.length} items)</span>
+                  <span>Subtotal ({getCartCount()} items)</span>
                   <span className="font-bold text-zinc-950">{formatCurrency(getCartTotal())}</span>
                 </div>
 

@@ -248,15 +248,15 @@
 }
 
 .prose img {
-  border: none !important;
-  box-shadow: none !important;
-  max-width: 448px !important;
-  width: 100% !important;
-  height: auto !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  display: block !important;
-  border-radius: var(--radius) !important;
+  border: none;
+  box-shadow: none;
+  max-width: 448px;
+  width: 100%;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  border-radius: var(--radius);
 }
 
 .ProseMirror hr {

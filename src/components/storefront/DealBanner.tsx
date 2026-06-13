@@ -34,8 +34,8 @@ export default function DealBanner({
             className="w-full h-full object-cover object-center"
           />
           {/* Advanced localized lighting protection overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/80 to-transparent md:from-zinc-950/90 md:via-zinc-950/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-60 md:opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/70 via-zinc-950/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/50 via-transparent to-transparent opacity-40 md:opacity-10" />
         </div>
       )}
 

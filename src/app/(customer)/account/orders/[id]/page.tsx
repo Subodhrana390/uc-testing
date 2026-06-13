@@ -55,7 +55,7 @@ export default function OrderDetailsPage() {
   // Interactive Action States
   const [paying, setPaying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  
+
   // Review Modal State
   const [reviewProduct, setReviewProduct] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState(5);
@@ -433,15 +433,8 @@ export default function OrderDetailsPage() {
         <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-indigo-600 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </Link>
-        
+
         <div className="flex items-center gap-2">
-          {!["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
-            <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`}>
-              <Button variant="outline" size="sm" className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs rounded-lg font-medium">
-                Track Order
-              </Button>
-            </Link>
-          )}
           {order.status?.toLowerCase() === "delivered" && (
             <Button
               onClick={handleDownloadInvoice}
@@ -639,7 +632,7 @@ export default function OrderDetailsPage() {
             <h3 className="font-bold text-zinc-400 text-[10px] uppercase tracking-wider mb-4">
               Items Ordered ({order.order_items?.length || 0})
             </h3>
-            
+
             <div className="divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden bg-white">
               {order.order_items?.map((item: any) => {
                 const isReviewed = reviewedProductIds.has(item.products?.id);
@@ -681,7 +674,7 @@ export default function OrderDetailsPage() {
                           <Star className="w-3.5 h-3.5 text-zinc-400 fill-zinc-200" /> Write Review
                         </Button>
                       )}
-                      
+
                       {isReviewed && (
                         <Badge variant="outline" className="text-emerald-700 bg-emerald-50/50 border-emerald-100 text-xs px-2.5 py-1 rounded-lg font-medium shrink-0 flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Reviewed

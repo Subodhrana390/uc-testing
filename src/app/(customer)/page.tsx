@@ -203,8 +203,7 @@ export default async function HomePage() {
               linkUrl={deal2.link_url}
               imageUrl={deal2.image_url}
               gradient="from-zinc-900 via-zinc-950 to-zinc-900"
-            />Implement dynamic product sections that automatically populate products based on real-time business rules and analytics, without manual product flagging. Generate sections such as Featured, Recommended, Best Seller, Trending, New Arrival, On Sale, Hot Deal, Top Rated, Industrial, In Stock, and High Demand using sales data, views, ratings, inventory levels, discounts, customer behavior, and product freshness. Ensure products update automatically, avoid duplicates across sections where possible, support caching and pagination, and allow admins to configure section criteria. Build with scalable, reusable logic and clean architecture without unnecessary dependencies or boilerplate.
-
+            />
           </div>
         </section>
       )}

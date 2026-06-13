@@ -111,8 +111,8 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
                   priority={index === 0}
                 />
                 {/* Advanced localized lighting protection overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-transparent md:from-slate-950/85 md:via-slate-950/40" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 md:opacity-20" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-slate-950/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent opacity-40 md:opacity-10" />
               </div>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-blue-950">

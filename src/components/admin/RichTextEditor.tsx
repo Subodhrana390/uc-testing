@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+// @ts-ignore
+import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -129,6 +130,69 @@ const Video = Node.create({
   },
 });
 
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+      },
+      alt: {
+        default: null,
+      },
+      title: {
+        default: null,
+      },
+      width: {
+        default: "50%",
+        parseHTML: element => element.style.width || element.getAttribute("width") || "50%",
+        renderHTML: attributes => {
+          return { width: attributes.width };
+        },
+      },
+      align: {
+        default: "center",
+        parseHTML: element => {
+          if (element.style.float === "left") return "left";
+          if (element.style.float === "right") return "right";
+          if (element.style.display === "block" && element.style.marginLeft === "auto") return "center";
+          return "center";
+        },
+        renderHTML: attributes => {
+          return { align: attributes.align };
+        },
+      },
+    };
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const { width, align, src, alt, title } = HTMLAttributes;
+    
+    let style = "max-width: 100%; height: auto;";
+    if (width) {
+      style += ` width: ${width};`;
+    }
+    
+    if (align === "left") {
+      style += " float: left; margin-right: 1.5rem; margin-bottom: 1.5rem; display: inline-block;";
+    } else if (align === "right") {
+      style += " float: right; margin-left: 1.5rem; margin-bottom: 1.5rem; display: inline-block;";
+    } else {
+      style += " display: block; margin-left: auto; margin-right: auto; clear: both; margin-top: 1rem; margin-bottom: 1rem;";
+    }
+
+    return [
+      "img",
+      {
+        src,
+        alt,
+        title,
+        style,
+        class: "rounded-xl",
+      },
+    ];
+  },
+});
+
 interface RichTextEditorProps {
   value?: string;
   onChange?: (content: string) => void;
@@ -177,11 +241,7 @@ export default function RichTextEditor({ value, onChange, label }: RichTextEdito
           class: "text-zinc-950 underline font-medium cursor-pointer",
         },
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: "rounded-xl max-w-md w-full my-4 mx-auto block",
-        },
-      }),
+      CustomImage,
       Table.configure({
         resizable: true,
       }),
@@ -716,7 +776,119 @@ export default function RichTextEditor({ value, onChange, label }: RichTextEdito
         </div>
 
         {/* Editor Area */}
-        <div className="custom-scrollbar overflow-y-auto max-h-[500px]">
+        <div className="custom-scrollbar overflow-y-auto max-h-[500px] relative">
+          {editor && (
+            <BubbleMenu
+              editor={editor}
+              tippyOptions={{ duration: 100 }}
+              shouldShow={({ editor }: any) => editor.isActive("image")}
+            >
+              <div className="flex items-center gap-1 bg-white border border-zinc-200 shadow-md rounded-xl p-1.5 text-xs font-semibold text-zinc-700">
+                {/* Alignment Options */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const align = editor.getAttributes("image").align === "left" ? "center" : "left";
+                    editor.chain().focus().updateAttributes("image", { align }).run();
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg hover:bg-zinc-50 transition-all",
+                    editor.getAttributes("image").align === "left" && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Align Left"
+                >
+                  <AlignLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().updateAttributes("image", { align: "center" }).run();
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg hover:bg-zinc-50 transition-all",
+                    (editor.getAttributes("image").align === "center" || !editor.getAttributes("image").align) && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Align Center"
+                >
+                  <AlignCenter className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const align = editor.getAttributes("image").align === "right" ? "center" : "right";
+                    editor.chain().focus().updateAttributes("image", { align }).run();
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg hover:bg-zinc-50 transition-all",
+                    editor.getAttributes("image").align === "right" && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Align Right"
+                >
+                  <AlignRight className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="w-px h-4 bg-zinc-200 mx-1" />
+
+                {/* Size Presets */}
+                <button
+                  type="button"
+                  onClick={() => editor.chain().focus().updateAttributes("image", { width: "25%" }).run()}
+                  className={cn(
+                    "px-2 py-1 rounded-lg hover:bg-zinc-50 transition-all text-[10px]",
+                    editor.getAttributes("image").width === "25%" && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Small (25%)"
+                >
+                  25%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editor.chain().focus().updateAttributes("image", { width: "50%" }).run()}
+                  className={cn(
+                    "px-2 py-1 rounded-lg hover:bg-zinc-50 transition-all text-[10px]",
+                    (editor.getAttributes("image").width === "50%" || editor.getAttributes("image").width === "448px") && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Medium (50%)"
+                >
+                  50%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editor.chain().focus().updateAttributes("image", { width: "75%" }).run()}
+                  className={cn(
+                    "px-2 py-1 rounded-lg hover:bg-zinc-50 transition-all text-[10px]",
+                    editor.getAttributes("image").width === "75%" && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Large (75%)"
+                >
+                  75%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editor.chain().focus().updateAttributes("image", { width: "100%" }).run()}
+                  className={cn(
+                    "px-2 py-1 rounded-lg hover:bg-zinc-50 transition-all text-[10px]",
+                    editor.getAttributes("image").width === "100%" && "bg-zinc-950 text-white hover:bg-zinc-950"
+                  )}
+                  title="Full Width (100%)"
+                >
+                  100%
+                </button>
+
+                <div className="w-px h-4 bg-zinc-200 mx-1" />
+
+                {/* Delete Image */}
+                <button
+                  type="button"
+                  onClick={() => editor.chain().focus().deleteSelection().run()}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-650 transition-all"
+                  title="Remove Image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </BubbleMenu>
+          )}
           <EditorContent editor={editor} />
         </div>
       </div>

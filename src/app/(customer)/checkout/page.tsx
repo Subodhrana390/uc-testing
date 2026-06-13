@@ -90,6 +90,7 @@ export default function CheckoutPage() {
     city: "",
     state: "",
     postalCode: "",
+    country: "India",
   });
 
   const [couponCodeInput, setCouponCodeInput] = useState("");
@@ -319,6 +320,7 @@ export default function CheckoutPage() {
 
         setForm((prev) => ({
           ...prev,
+          fullName: defaultAddr.full_name || prev.fullName,
           address: `${defaultAddr.address_line1}${defaultAddr.address_line2
             ? ", " +
             defaultAddr.address_line2
@@ -326,8 +328,8 @@ export default function CheckoutPage() {
             }`,
           city: defaultAddr.city || "",
           state: defaultAddr.state || "",
-          postalCode:
-            defaultAddr.postal_code || "",
+          postalCode: defaultAddr.postal_code || "",
+          country: defaultAddr.country || "India",
         }));
       }
 
@@ -342,6 +344,7 @@ export default function CheckoutPage() {
 
     setForm((prev) => ({
       ...prev,
+      fullName: addr.full_name || prev.fullName,
       address: `${addr.address_line1}${addr.address_line2
         ? ", " + addr.address_line2
         : ""
@@ -349,6 +352,7 @@ export default function CheckoutPage() {
       city: addr.city || "",
       state: addr.state || "",
       postalCode: addr.postal_code || "",
+      country: addr.country || "India",
     }));
   };
 
@@ -929,8 +933,14 @@ export default function CheckoutPage() {
                           <p className="text-sm font-black text-zinc-950 mb-1">
                             {addr.full_name}
                           </p>
-                          <p className="text-xs font-medium text-zinc-500 leading-relaxed line-clamp-2">
-                            {addr.address_line1} {addr.address_line2 ? `, ${addr.address_line2}` : ""}
+                          <p className="text-xs font-semibold text-zinc-700 leading-relaxed">
+                            {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ""}
+                          </p>
+                          <p className="text-xs text-zinc-500 font-medium">
+                            {addr.city}, {addr.state} — {addr.postal_code}
+                          </p>
+                          <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                            {addr.country}
                           </p>
                         </div>
                       ))}
@@ -1165,8 +1175,22 @@ export default function CheckoutPage() {
                         <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
                       </div>
                       <p className="font-bold text-sm text-zinc-950">{form.fullName}</p>
-                      <p className="text-sm text-zinc-600">{form.address}, {form.city}, {form.state} {form.postalCode}</p>
-                      <p className="text-sm text-zinc-600">{form.phone}</p>
+                      <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
+                      <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
+                      <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
+                      
+                      <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Phone</span>
+                          <span className="font-medium text-zinc-700">{form.phone}</span>
+                        </div>
+                        {form.email && (
+                          <div>
+                            <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Email</span>
+                            <span className="font-medium text-zinc-700 truncate block" title={form.email}>{form.email}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="p-5 border border-zinc-200 rounded-2xl">

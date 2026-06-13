@@ -53,7 +53,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
         <ProductDetailsClient product={product} attributes={attrData || []} />
 
         {/* Similar Products */}
-        <SimilarProducts categoryId={product.category_id} currentProductId={product.id} />
+        <SimilarProducts categoryId={product.category_id} currentProductId={product.id} price={product.price} />
 
         {/* Related Products */}
         <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
@@ -67,12 +67,13 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
   );
 }
 
-async function SimilarProducts({ categoryId, currentProductId }: { categoryId: string | null; currentProductId: string }) {
+async function SimilarProducts({ categoryId, currentProductId, price }: { categoryId: string | null; currentProductId: string; price?: number }) {
   const { getSimilarProducts } = await import("@/app/actions/recommendationEngine");
   
   const matchedProducts = await getSimilarProducts({
     id: currentProductId,
     category_id: categoryId,
+    price: price,
   });
 
   if (!matchedProducts || matchedProducts.length === 0) return null;
