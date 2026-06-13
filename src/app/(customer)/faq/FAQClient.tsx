@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, X, HelpCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { faqItems } from "@/lib/storefront";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/seo";
+import { createClient } from "@/utils/supabase/client";
 
 const CATEGORIES = [
   { id: "all", label: "All Questions" },
@@ -22,9 +23,37 @@ const CATEGORIES = [
 export default function FAQPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadFaqs() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("faqs")
+          .select("id, question, answer, category")
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setFaqs(data);
+        } else {
+          setFaqs(faqItems);
+        }
+      } catch (err) {
+        console.error("Error loading FAQs:", err);
+        setFaqs(faqItems);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadFaqs();
+  }, []);
 
   const filteredItems = useMemo(() => {
-    return faqItems.filter((item) => {
+    return faqs.filter((item) => {
       const matchesSearch =
         item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.answer.toLowerCase().includes(searchQuery.toLowerCase());
@@ -34,7 +63,7 @@ export default function FAQPage() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [faqs, searchQuery, selectedCategory]);
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/15 to-white min-h-screen relative overflow-hidden py-12">
@@ -49,7 +78,7 @@ export default function FAQPage() {
           url: `${SITE_URL}/faq`,
           type: "FAQPage",
         }),
-        faqSchema(faqItems),
+        faqSchema(faqs.length > 0 ? faqs : faqItems),
       ]} />
       {/* Decorative blurs */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-red-500/[0.012] rounded-full blur-[130px] pointer-events-none -z-10" />
@@ -114,7 +143,17 @@ export default function FAQPage() {
 
         {/* Accordions */}
         <div className="max-w-3xl mx-auto">
-          {filteredItems.length > 0 ? (
+          {loading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="border border-zinc-200/80 rounded-2xl bg-white p-6 animate-pulse space-y-3">
+                  <div className="h-4 bg-zinc-200 rounded w-2/3" />
+                  <div className="h-3.5 bg-zinc-100 rounded w-full" />
+                  <div className="h-3.5 bg-zinc-100 rounded w-5/6" />
+                </div>
+              ))}
+            </div>
+          ) : filteredItems.length > 0 ? (
             <FAQAccordion items={filteredItems} />
           ) : (
             <div className="text-center py-16 bg-white border border-zinc-200/60 rounded-3xl p-8 shadow-sm">

@@ -24,7 +24,10 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     // 2. Fetch Invoice Items
     const { data: items, error: itemsError } = await supabase
       .from("invoice_items")
-      .select("*")
+      .select(`
+        *,
+        products:product_id (*)
+      `)
       .eq("invoice_id", invoiceId);
 
     if (itemsError) throw new Error("Invoice items not found");
@@ -84,34 +87,55 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text(splitAddress, 120, 77);
 
     // Table
-    const tableData = items.map((item, index) => {
-      const unitPrice = parseFloat(item.unit_price);
+    const tableData = items.map((item: any, index) => {
       const qty = item.quantity;
-      const amount = parseFloat(item.line_total);
-      const hsn = item.hsn_code || "-";
+      const unitPrice = parseFloat(item.unit_price);
+      const itemTotal = unitPrice * qty;
+      const rate = item.products?.tax_rate || 0;
+      const isTaxInclusive = item.products?.is_tax_inclusive || false;
+      
+      let baseTotal = itemTotal;
+      let taxAmount = 0;
+      let lineTotal = itemTotal;
+      
+      if (rate > 0) {
+        if (isTaxInclusive) {
+          baseTotal = itemTotal / (1 + rate / 100);
+          taxAmount = itemTotal - baseTotal;
+        } else {
+          taxAmount = itemTotal * (rate / 100);
+          lineTotal = itemTotal + taxAmount;
+        }
+      }
+      
+      const baseUnitPrice = baseTotal / qty;
+      const hsn = item.products?.hsn_code || item.hsn_code || "-";
+
       return [
         index + 1,
         item.product_name,
         hsn,
+        baseUnitPrice.toFixed(2),
         qty,
-        unitPrice.toFixed(2),
-        amount.toFixed(2)
+        rate > 0 ? `${rate}% (${taxAmount.toFixed(2)})` : "0%",
+        lineTotal.toFixed(2)
       ];
     });
 
     (doc as any).autoTable({
       startY: Math.max(85, 77 + (splitAddress.length * 5)),
-      head: [['#', 'Description', 'HSN', 'Qty', 'Unit Price', 'Amount']],
+      head: [['#', 'Description', 'HSN', 'Price (Excl. GST)', 'Qty', 'GST', 'Amount']],
       body: tableData,
       theme: 'striped',
       headStyles: { fillColor: [249, 115, 22], textColor: 255 },
       columnStyles: {
         0: { cellWidth: 10 },
         1: { cellWidth: 'auto' },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 15, halign: 'center' },
-        4: { cellWidth: 25, halign: 'right' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 15, halign: 'center' },
         5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 30, halign: 'right' },
       },
     });
 
@@ -122,15 +146,42 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     
-    // Subtotal
-    doc.text(`Subtotal:`, 140, currentY);
-    doc.text(`${invoice.currency} ${parseFloat(invoice.subtotal).toFixed(2)}`, 190, currentY, { align: "right" });
+    // Calculate accurate Excl. GST subtotal and GST total
+    let subtotalExcl = 0;
+    let calculatedTax = 0;
+
+    items.forEach((item: any) => {
+      const qty = item.quantity;
+      const unitPrice = parseFloat(item.unit_price);
+      const itemTotal = unitPrice * qty;
+      const rate = item.products?.tax_rate || 0;
+      const isTaxInclusive = item.products?.is_tax_inclusive || false;
+      
+      let baseTotal = itemTotal;
+      let taxAmount = 0;
+      
+      if (rate > 0) {
+        if (isTaxInclusive) {
+          baseTotal = itemTotal / (1 + rate / 100);
+          taxAmount = itemTotal - baseTotal;
+        } else {
+          taxAmount = itemTotal * (rate / 100);
+        }
+      }
+      subtotalExcl += baseTotal;
+      calculatedTax += taxAmount;
+    });
+
+    // Subtotal (Excl. GST)
+    doc.text(`Subtotal (Excl. GST):`, 130, currentY);
+    doc.text(`${invoice.currency} ${subtotalExcl.toFixed(2)}`, 190, currentY, { align: "right" });
     currentY += 6;
 
     // GST (Tax)
-    if (parseFloat(invoice.tax_amount) > 0) {
-      doc.text(`GST:`, 140, currentY);
-      doc.text(`${invoice.currency} ${parseFloat(invoice.tax_amount).toFixed(2)}`, 190, currentY, { align: "right" });
+    const finalTax = calculatedTax > 0 ? calculatedTax : parseFloat(invoice.tax_amount || 0);
+    if (finalTax > 0) {
+      doc.text(`GST:`, 130, currentY);
+      doc.text(`${invoice.currency} ${finalTax.toFixed(2)}`, 190, currentY, { align: "right" });
       currentY += 6;
     }
 

@@ -17,7 +17,7 @@ export function useOrders() {
           *,
           order_items (
             id, quantity, unit_price,
-            products (id, name, slug, image_url, tax_rate, is_tax_inclusive)
+            products (id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)
           ),
           payments (*)
         `)
@@ -45,7 +45,7 @@ export function useOrderDetails(orderId: string) {
           *,
           order_items (
             id, quantity, unit_price,
-            products (id, name, slug, image_url, tax_rate, is_tax_inclusive)
+            products (id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)
           ),
           payments (*)
         `)

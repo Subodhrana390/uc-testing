@@ -9,7 +9,6 @@ import {
   Truck,
   ChevronLeft,
   ChevronRight,
-  Download,
   Box,
   Clock,
   CheckCircle2,
@@ -277,31 +276,7 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const handleDownloadInvoice = async () => {
-    if (!order) return;
-    try {
-      const { generateInvoicePDF } = await import("@/lib/invoice");
-      const invoiceData = {
-        orderId: order.id,
-        date: order.created_at,
-        customerName: order.customer_name,
-        customerEmail: order.customer_email,
-        customerPhone: order.phone,
-        address: order.shipping_address || "N/A",
-        items: order.order_items || [],
-        totalAmount: parseFloat(order.total_amount),
-        taxAmount: parseFloat(order.tax_amount || 0),
-        shippingAmount: parseFloat(order.shipping_amount || 0),
-        discountAmount: parseFloat(order.discount_amount || 0),
-      };
-      const doc = await generateInvoicePDF(invoiceData);
-      doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
-      toast.success("Invoice downloaded successfully!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to generate/download invoice.");
-    }
-  };
+
 
   const handleOpenReviewDialog = (product: any) => {
     setReviewProduct(product);
@@ -438,16 +413,6 @@ export default function OrderDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {order.status?.toLowerCase() === "delivered" && (
-            <Button
-              onClick={handleDownloadInvoice}
-              variant="outline"
-              size="sm"
-              className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs rounded-lg font-medium gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" /> Invoice
-            </Button>
-          )}
         </div>
       </div>
 
@@ -642,54 +607,188 @@ export default function OrderDetailsPage() {
               Items Ordered ({order.order_items?.length || 0})
             </h3>
 
-            <div className="divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden bg-white">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-hidden border border-zinc-100 rounded-xl bg-white shadow-sm">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-505 font-bold uppercase text-[10px] tracking-wider">
+                    <th className="px-4 py-3">Product details</th>
+                    <th className="px-4 py-3 text-center">HSN Code</th>
+                    <th className="px-4 py-3 text-center">Qty</th>
+                    <th className="px-4 py-3 text-right">Price (Excl. GST)</th>
+                    <th className="px-4 py-3 text-right">GST</th>
+                    <th className="px-4 py-3 text-right">Total (Incl. GST)</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 font-medium">
+                  {order.order_items?.map((item: any) => {
+                    const isReviewed = reviewedProductIds.has(item.products?.id);
+                    const quantity = item.quantity;
+                    const unitPrice = parseFloat(item.unit_price);
+                    const itemTotal = quantity * unitPrice;
+                    const rate = item.products?.tax_rate || 0;
+                    const isTaxInclusive = item.products?.is_tax_inclusive || false;
+
+                    let baseTotal = itemTotal;
+                    let taxAmount = 0;
+                    let lineTotal = itemTotal;
+
+                    if (rate > 0) {
+                      if (isTaxInclusive) {
+                        baseTotal = itemTotal / (1 + rate / 100);
+                        taxAmount = itemTotal - baseTotal;
+                      } else {
+                        taxAmount = itemTotal * (rate / 100);
+                        lineTotal = itemTotal + taxAmount;
+                      }
+                    }
+
+                    const baseUnitPrice = baseTotal / quantity;
+
+                    return (
+                      <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
+                        <td className="px-4 py-3 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-zinc-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
+                            <Image
+                              src={item.products?.image_url || "/images/placeholder.png"}
+                              alt={item.products?.name || "Product image"}
+                              fill
+                              sizes="40px"
+                              className="object-contain p-1"
+                            />
+                          </div>
+                          <span className="font-semibold text-zinc-900 line-clamp-2 pr-2">
+                            {item.products?.name || "Deleted Product"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-zinc-505">
+                          {item.products?.hsn_code || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-center font-bold text-zinc-800">
+                          {quantity}
+                        </td>
+                        <td className="px-4 py-3 text-right text-zinc-750">
+                          {formatCurrency(baseUnitPrice)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-zinc-650">
+                          {rate > 0 ? `${rate}% (${formatCurrency(taxAmount)})` : "0%"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-black text-zinc-900">
+                          {formatCurrency(lineTotal)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {order.status?.toLowerCase() === "delivered" && item.products && !isReviewed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenReviewDialog(item.products)}
+                              className="text-[10px] h-7 px-2 border-zinc-200 text-zinc-600 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50/50 rounded-lg transition-all font-semibold gap-1 inline-flex items-center shrink-0"
+                            >
+                              <Star className="w-3 h-3 text-zinc-400 fill-zinc-200" /> Review
+                            </Button>
+                          )}
+                          {isReviewed && (
+                            <Badge variant="outline" className="text-emerald-700 bg-emerald-50/50 border-emerald-100 text-[10px] px-2 py-0.5 rounded-lg font-medium inline-flex items-center gap-0.5">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Reviewed
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stack View */}
+            <div className="block md:hidden divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden bg-white shadow-sm">
               {order.order_items?.map((item: any) => {
                 const isReviewed = reviewedProductIds.has(item.products?.id);
+                const quantity = item.quantity;
+                const unitPrice = parseFloat(item.unit_price);
+                const itemTotal = quantity * unitPrice;
+                const rate = item.products?.tax_rate || 0;
+                const isTaxInclusive = item.products?.is_tax_inclusive || false;
+
+                let baseTotal = itemTotal;
+                let taxAmount = 0;
+                let lineTotal = itemTotal;
+
+                if (rate > 0) {
+                  if (isTaxInclusive) {
+                    baseTotal = itemTotal / (1 + rate / 100);
+                    taxAmount = itemTotal - baseTotal;
+                  } else {
+                    taxAmount = itemTotal * (rate / 100);
+                    lineTotal = itemTotal + taxAmount;
+                  }
+                }
+
+                const baseUnitPrice = baseTotal / quantity;
+
                 return (
-                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 hover:bg-zinc-50/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-zinc-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
+                  <div key={item.id} className="p-4 space-y-3 hover:bg-zinc-50/50 transition-colors">
+                    <div className="flex gap-3">
+                      <div className="w-12 h-12 bg-zinc-50 rounded-lg relative shrink-0 overflow-hidden border border-zinc-100">
                         <Image
                           src={item.products?.image_url || "/images/placeholder.png"}
                           alt={item.products?.name || "Product image"}
                           fill
-                          sizes="64px"
-                          className="object-contain p-1.5"
+                          sizes="48px"
+                          className="object-contain p-1"
                         />
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-zinc-900">{item.products?.name || "Deleted Product"}</h4>
-                        <p className="text-xs text-zinc-500 mt-1">
-                          Qty: <span className="font-semibold text-zinc-800">{item.quantity}</span>
-                          <span className="mx-2 text-zinc-200">|</span>
-                          Price: <span className="font-semibold text-zinc-800">{formatCurrency(item.unit_price)}</span> each
-                        </p>
+                      <div className="space-y-0.5">
+                        <h4 className="text-xs font-semibold text-zinc-900 leading-snug">
+                          {item.products?.name || "Deleted Product"}
+                        </h4>
+                        {item.products?.hsn_code && (
+                          <p className="text-[10px] text-zinc-400 font-medium font-mono">
+                            HSN: {item.products.hsn_code}
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-50">
-                      <div className="text-left sm:text-right">
-                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block sm:hidden">Subtotal</span>
-                        <span className="text-sm font-bold text-zinc-900">{formatCurrency(item.quantity * parseFloat(item.unit_price))}</span>
+                    <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1.5 border-t border-zinc-50">
+                      <div className="flex flex-col">
+                        <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">Quantity</span>
+                        <span className="text-zinc-800 font-bold">{quantity}</span>
                       </div>
-
-                      {order.status?.toLowerCase() === "delivered" && item.products && !isReviewed && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenReviewDialog(item.products)}
-                          className="text-xs h-8 px-3 border-zinc-200 text-zinc-600 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50/50 rounded-lg transition-all font-semibold gap-1 shrink-0"
-                        >
-                          <Star className="w-3.5 h-3.5 text-zinc-400 fill-zinc-200" /> Write Review
-                        </Button>
-                      )}
-
-                      {isReviewed && (
-                        <Badge variant="outline" className="text-emerald-700 bg-emerald-50/50 border-emerald-100 text-xs px-2.5 py-1 rounded-lg font-medium shrink-0 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Reviewed
-                        </Badge>
-                      )}
+                      <div className="flex flex-col text-right">
+                        <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">Price (Excl. GST)</span>
+                        <span className="text-zinc-800">{formatCurrency(baseUnitPrice)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">GST</span>
+                        <span className="text-zinc-700">{rate > 0 ? `${rate}% (${formatCurrency(taxAmount)})` : "0%"}</span>
+                      </div>
+                      <div className="flex flex-col text-right">
+                        <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">Total (Incl. GST)</span>
+                        <span className="text-zinc-950 font-extrabold">{formatCurrency(lineTotal)}</span>
+                      </div>
                     </div>
+
+                    {(order.status?.toLowerCase() === "delivered" && item.products && !isReviewed) || isReviewed ? (
+                      <div className="pt-2 flex justify-end">
+                        {order.status?.toLowerCase() === "delivered" && item.products && !isReviewed && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenReviewDialog(item.products)}
+                            className="text-[10px] h-7 px-3 border-zinc-200 text-zinc-600 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50/50 rounded-lg transition-all font-semibold gap-1 inline-flex items-center"
+                          >
+                            <Star className="w-3.5 h-3.5 text-zinc-400 fill-zinc-200" /> Write Review
+                          </Button>
+                        )}
+                        {isReviewed && (
+                          <Badge variant="outline" className="text-emerald-700 bg-emerald-50/50 border-emerald-100 text-[10px] px-2.5 py-0.5 rounded-lg font-medium inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Reviewed
+                          </Badge>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -704,37 +803,37 @@ export default function OrderDetailsPage() {
               order.order_items?.forEach((item: any) => {
                 const itemTotal = item.quantity * parseFloat(item.unit_price);
                 const rate = item.products?.tax_rate || 0;
-                
+
                 if (rate > 0) {
                   let taxAmount = 0;
                   let basePrice = itemTotal;
-                  
+
                   if (item.products?.is_tax_inclusive) {
                     basePrice = itemTotal / (1 + rate / 100);
                     taxAmount = itemTotal - basePrice;
                   } else {
                     taxAmount = itemTotal * (rate / 100);
                   }
-                  
+
                   baseSubtotal += basePrice;
-                  
+
                   if (!taxBreakdown[rate]) taxBreakdown[rate] = 0;
                   taxBreakdown[rate] += taxAmount;
                 } else {
                   baseSubtotal += itemTotal;
                 }
               });
-              
+
               const hasBreakdown = Object.keys(taxBreakdown).length > 0;
 
               // Fallback if there are no itemized taxes but an aggregate tax amount exists
               const aggregateTax = parseFloat(order.tax_amount || 0);
               if (!hasBreakdown && aggregateTax > 0) {
-                 const grossSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
-                 // We don't know if grossSubtotal includes tax, but if we don't have breakdown, we assume it does based on the requirement
-                 baseSubtotal = grossSubtotal - aggregateTax;
+                const grossSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                // We don't know if grossSubtotal includes tax, but if we don't have breakdown, we assume it does based on the requirement
+                baseSubtotal = grossSubtotal - aggregateTax;
               } else if (!hasBreakdown && aggregateTax === 0) {
-                 baseSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                baseSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
               }
 
               return (
@@ -743,19 +842,6 @@ export default function OrderDetailsPage() {
                     <span>SUBTOTAL (EXCL. GST)</span>
                     <span>₹{baseSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                  {hasBreakdown ? (
-                    Object.entries(taxBreakdown).map(([rate, amount]) => (
-                      <div key={rate} className="flex justify-between text-xs font-bold text-zinc-500">
-                        <span>GST ({rate}%)</span>
-                        <span>₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    ))
-                  ) : parseFloat(order.tax_amount || 0) > 0 ? (
-                    <div className="flex justify-between text-xs font-bold text-zinc-500">
-                      <span>GST</span>
-                      <span>₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  ) : null}
                   {parseFloat(order.shipping_amount || 0) > 0 && (
                     <div className="flex justify-between text-xs font-bold text-zinc-500">
                       <span>DELIVERY CHARGE</span>

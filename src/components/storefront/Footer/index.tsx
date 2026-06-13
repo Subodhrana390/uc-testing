@@ -46,50 +46,62 @@ export default function Footer({ settings }: FooterProps) {
           </p>
 
           {/* Social Media Icons */}
-          {hasAnySocial ? (
-            <div className="flex items-center gap-4">
-              {socialLinks.instagram && (
-                <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-                  <Instagram className="w-4 h-4" />
-                </a>
-              )}
-              {socialLinks.facebook && (
-                <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-                  <Facebook className="w-4 h-4" />
-                </a>
-              )}
-              {socialLinks.twitter && (
-                <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-                  <Twitter className="w-4 h-4" />
-                </a>
-              )}
-              {socialLinks.linkedin && (
-                <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-                  <Linkedin className="w-4 h-4" />
-                </a>
-              )}
-              {socialLinks.youtube && (
-                <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
-                  <Youtube className="w-4 h-4" />
-                </a>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+          <div className="flex items-center gap-4">
+            {socialLinks.instagram && (
+              <a
+                href={socialLinks.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-pink-50 border border-pink-200 text-pink-600 hover:bg-pink-600 hover:text-white transition-all shadow-sm"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+            )}
+
+            {socialLinks.facebook && (
+              <a
+                href={socialLinks.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+              >
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+            )}
+
+            {socialLinks.twitter && (
+              <a
+                href={socialLinks.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-sky-50 border border-sky-200 text-sky-500 hover:bg-sky-500 hover:text-white transition-all shadow-sm"
+              >
                 <Twitter className="w-4 h-4" />
               </a>
-              <a href="#" className="p-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-primary hover:border-primary hover:text-white transition-all shadow-sm">
+            )}
+
+            {socialLinks.linkedin && (
+              <a
+                href={socialLinks.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-blue-50 border border-blue-200 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-all shadow-sm"
+              >
                 <Linkedin className="w-4 h-4" />
               </a>
-            </div>
-          )}
+            )}
+
+            {socialLinks.youtube && (
+              <a
+                href={socialLinks.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+              >
+                <Youtube className="w-4 h-4" />
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Links: Explore */}

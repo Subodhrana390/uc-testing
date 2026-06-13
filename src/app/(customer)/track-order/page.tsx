@@ -153,7 +153,7 @@ function TrackOrderContent() {
       if (isNaN(ts)) { setError("Invalid Order ID format."); return; }
       const { data, error: err } = await supabase
         .from("orders")
-        .select("*, order_items(*, products(name, image_url)), payments(*)")
+        .select("*, order_items(*, products(id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)), payments(*)")
         .gte("created_at", new Date(ts - 5000).toISOString())
         .lte("created_at", new Date(ts + 5000).toISOString());
       if (err) throw err;

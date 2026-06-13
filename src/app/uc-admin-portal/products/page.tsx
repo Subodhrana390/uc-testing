@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
-  RefreshCw
+  RefreshCw,
+  Star
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -627,6 +628,25 @@ export default function ProductsPage() {
     deleteProductMutation.mutate(productToDelete.id);
   };
 
+  const handleToggleFeatured = async (product: any) => {
+    const toastId = toast.loading("Updating featured status...");
+    try {
+      const newFeatured = !product.is_featured;
+      const { error } = await supabase
+        .from("products")
+        .update({ is_featured: newFeatured })
+        .eq("id", product.id);
+
+      if (error) throw error;
+
+      toast.success(newFeatured ? "Product marked as Featured!" : "Product removed from Featured.", { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ["admin-products-table"] });
+    } catch (error: any) {
+      console.error("Error updating featured status:", error);
+      toast.error(error.message || "Failed to update featured status", { id: toastId });
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     const base = "text-[11px] font-medium px-2.5 py-0.5 border rounded-lg flex items-center gap-1.5 w-fit";
     switch (status.toLowerCase()) {
@@ -1076,6 +1096,7 @@ export default function ProductsPage() {
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Product Details</th>
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider w-52">Inventory Level & Gauge</th>
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Commercial Price</th>
+                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider w-32">Featured</th>
                 <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Store Status</th>
                 <th className="w-20 pr-8 text-right"></th>
               </tr>
@@ -1083,7 +1104,7 @@ export default function ProductsPage() {
             <tbody className="divide-y divide-zinc-100">
               {tableLoading ? (
                 <tr>
-                  <td colSpan={6} className="h-60 text-center">
+                  <td colSpan={7} className="h-60 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
                       <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
                       <p className="text-xs font-semibold">Loading products...</p>
@@ -1092,7 +1113,7 @@ export default function ProductsPage() {
                 </tr>
               ) : tableProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-60 text-center">
+                  <td colSpan={7} className="h-60 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
                       <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
                         <Search className="w-5 h-5" />
@@ -1178,6 +1199,21 @@ export default function ProductsPage() {
                           </span>
                         )}
                       </div>
+                    </td>
+
+                    {/* Featured */}
+                    <td className="px-6 py-4">
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleToggleFeatured(product)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer select-none transition-all",
+                          product.is_featured ? "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100/80" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
+                        )}
+                      >
+                        <Star className={cn("w-3.5 h-3.5", product.is_featured ? "fill-amber-500 text-amber-500" : "")} />
+                        {product.is_featured ? "Featured" : "Standard"}
+                      </Button>
                     </td>
 
                     {/* Status */}

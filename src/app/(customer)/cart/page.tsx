@@ -130,10 +130,10 @@ export default function CartPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Save to Wishlist */}
+                        {/* Save for Later */}
                         <WishlistToggleButton
                           productId={item.id}
-                          label="Save"
+                          variant="save-later"
                           onAdded={() => removeCartItem(item.id)}
                           className="!h-auto !py-1.5 !px-3 !bg-transparent !border-transparent text-xs sm:text-sm font-bold text-zinc-400 hover:!text-primary hover:!bg-primary/5 !rounded-lg"
                         />

@@ -11,7 +11,6 @@ import { faqItems } from "@/lib/storefront";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { homepageMetadata, SITE_URL } from "@/lib/seo";
-import { formatCurrency } from "@/lib/format";
 import dynamic from "next/dynamic";
 import { getDynamicSections } from "@/app/actions/productAnalytics";
 
@@ -29,7 +28,7 @@ export default async function HomePage() {
   const supabase = await createClient();
 
   const [
-    { flashDeals, sections },
+    { flashDeals, newArrivals, featuredProducts, sections },
     { data: categories },
     { data: banners },
     { data: deals }
@@ -46,27 +45,9 @@ export default async function HomePage() {
   const safeFlashDeals = flashDeals || [];
   const safeDeals = (deals as any[]) || [];
 
-  // Construct dynamic banners based on mathematically calculated best deals, falling back to static database banners
-  const deal1 = safeFlashDeals[0] ? {
-    title: `Save ${safeFlashDeals[0].discountPercentage}% on ${safeFlashDeals[0].name}`,
-    description: `Limited time deal! Purchase today for only ${formatCurrency(safeFlashDeals[0].salePriceNum!)} (Save ${formatCurrency(safeFlashDeals[0].savings!)} instantly).`,
-    link_url: `/products/${safeFlashDeals[0].slug}`,
-    image_url: safeFlashDeals[0].image_url,
-  } : safeDeals[0];
-
-  const deal2 = safeFlashDeals[1] ? {
-    title: `Hot Offer: ${safeFlashDeals[1].discountPercentage}% OFF ${safeFlashDeals[1].name}`,
-    description: `Premium industrial grade quality. Buy now for only ${formatCurrency(safeFlashDeals[1].salePriceNum!)} (Regular price: ${formatCurrency(safeFlashDeals[1].priceNum!)}).`,
-    link_url: `/products/${safeFlashDeals[1].slug}`,
-    image_url: safeFlashDeals[1].image_url,
-  } : safeDeals[1];
-
-  const deal3 = safeFlashDeals[2] ? {
-    title: `Top Value: ${safeFlashDeals[2].discountPercentage}% Off ${safeFlashDeals[2].name}`,
-    description: `Procure this best-selling equipment now and save ${formatCurrency(safeFlashDeals[2].savings!)}! Price: ${formatCurrency(safeFlashDeals[2].salePriceNum!)}.`,
-    link_url: `/products/${safeFlashDeals[2].slug}`,
-    image_url: safeFlashDeals[2].image_url,
-  } : safeDeals[2];
+  // Load promotional campaigns directly from the database table managed via the admin portal
+  const deal1 = safeDeals[0];
+  const deal2 = safeDeals[1];
 
   return (
     <div className="bg-gradient-to-b from-white via-zinc-50/20 to-white min-h-screen relative overflow-hidden">
@@ -129,7 +110,7 @@ export default async function HomePage() {
             <DealBanner
               title={deal1.title}
               subtitle={deal1.description}
-              linkText="Claim Offer"
+              linkText={deal1.badge_text || "Claim Offer"}
               linkUrl={deal1.link_url}
               imageUrl={deal1.image_url}
               gradient="from-zinc-950 via-zinc-900 to-zinc-950"
@@ -199,12 +180,50 @@ export default async function HomePage() {
             <DealBanner
               title={deal2.title}
               subtitle={deal2.description}
-              linkText="Bulk Offer"
+              linkText={deal2.badge_text || "Bulk Offer"}
               linkUrl={deal2.link_url}
               imageUrl={deal2.image_url}
               gradient="from-zinc-900 via-zinc-950 to-zinc-900"
             />
           </div>
+        </section>
+      )}
+
+      {/* New Arrivals Section */}
+      {newArrivals && newArrivals.length > 0 && (
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
+          <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
+            <div className="relative pl-4 border-l-4 border-primary">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Fresh</p>
+              <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">New Arrivals</h2>
+            </div>
+            <Link
+              href="/products?sort=latest"
+              className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
+            >
+              Browse all <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <ProductCarousel products={newArrivals} />
+        </section>
+      )}
+
+      {/* Featured Products Section */}
+      {featuredProducts && featuredProducts.length > 0 && (
+        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
+          <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
+            <div className="relative pl-4 border-l-4 border-primary">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Curated</p>
+              <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Featured Products</h2>
+            </div>
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
+            >
+              Browse all <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <ProductCarousel products={featuredProducts} />
         </section>
       )}
 
@@ -227,17 +246,17 @@ export default async function HomePage() {
             <ProductCarousel products={section.products} />
           </section>
 
-          {/* Inject Deal 3 after the first section */}
-          {idx === 0 && deal3 && (
+          {/* Inject dynamic deals after sections (Deal 3, 4, 5, 6 etc.) */}
+          {safeDeals[2 + idx] && (
             <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
               <div className="hover:scale-[1.005] transition-transform duration-500">
                 <DealBanner
-                  title={deal3.title}
-                  subtitle={deal3.description}
-                  linkText="New Arrivals"
-                  linkUrl={deal3.link_url}
-                  imageUrl={deal3.image_url}
-                  gradient="from-zinc-950 via-zinc-900 to-zinc-950"
+                  title={safeDeals[2 + idx].title}
+                  subtitle={safeDeals[2 + idx].description}
+                  linkText={safeDeals[2 + idx].badge_text || "Explore Offer"}
+                  linkUrl={safeDeals[2 + idx].link_url}
+                  imageUrl={safeDeals[2 + idx].image_url}
+                  gradient={idx % 2 === 0 ? "from-zinc-950 via-zinc-900 to-zinc-950" : "from-zinc-900 via-zinc-950 to-zinc-900"}
                 />
               </div>
             </section>

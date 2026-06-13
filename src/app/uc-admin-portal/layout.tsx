@@ -30,7 +30,9 @@ import {
   Settings2,
   FolderTree,
   Ticket,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -136,6 +138,8 @@ export default function AdminLayout({
         { icon: <IndianRupee className="w-3.5 h-3.5" />, label: "Payments", href: "/uc-admin-portal/payments" },
         { icon: <Activity className="w-3.5 h-3.5" />, label: "Delivery", href: "/uc-admin-portal/delivery" },
         { icon: <Terminal className="w-3.5 h-3.5" />, label: "Invoices", href: "/uc-admin-portal/invoices" },
+        { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Reviews", href: "/uc-admin-portal/reviews" },
+        { icon: <HelpCircle className="w-3.5 h-3.5" />, label: "FAQ", href: "/uc-admin-portal/faq" },
       ]
     },
     {
@@ -232,6 +236,10 @@ export default function AdminLayout({
         iconColor = "text-indigo-500";
         activeBg = "bg-indigo-50 border-indigo-200 text-indigo-700";
         break;
+      case "Reviews":
+        iconColor = "text-violet-600";
+        activeBg = "bg-violet-50 border-violet-200 text-violet-750 font-bold";
+        break;
       case "Products":
         iconColor = "text-orange-500";
         activeBg = "bg-orange-50 border-orange-200 text-orange-700";
@@ -284,6 +292,10 @@ export default function AdminLayout({
         iconColor = "text-zinc-500";
         activeBg = "bg-zinc-50 border-zinc-200 text-zinc-700";
         break;
+      case "FAQ":
+        iconColor = "text-cyan-500";
+        activeBg = "bg-cyan-50 border-cyan-200 text-cyan-750 font-bold";
+        break;
     }
 
     return {
@@ -300,6 +312,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/payments")) return "theme-payments";
     if (path.startsWith("/uc-admin-portal/delivery")) return "theme-delivery";
     if (path.startsWith("/uc-admin-portal/invoices")) return "theme-invoices";
+    if (path.startsWith("/uc-admin-portal/reviews")) return "theme-reviews";
     if (path.startsWith("/uc-admin-portal/products")) return "theme-products";
     if (path.startsWith("/uc-admin-portal/categories/main")) return "theme-categories-main";
     if (path.startsWith("/uc-admin-portal/categories/sub")) return "theme-categories-sub";
@@ -312,6 +325,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/customers")) return "theme-customers";
     if (path.startsWith("/uc-admin-portal/security")) return "theme-security";
     if (path.startsWith("/uc-admin-portal/settings")) return "theme-settings";
+    if (path.startsWith("/uc-admin-portal/faq")) return "theme-faq";
     return "";
   };
 

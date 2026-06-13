@@ -1,32 +1,38 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Heart, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLoginRedirect } from "@/hooks/useLoginRedirect";
 import { useWishlistStatus, useToggleWishlist } from "@/hooks/api/useWishlist";
+import { useAuthStore } from "@/store/useAuthStore";
 
 type Props = {
   productId: string;
   className?: string;
   label?: string;
   onAdded?: () => void;
+  variant?: "wishlist" | "save-later";
 };
 
-export default function WishlistToggleButton({ productId, className, label = "Save", onAdded }: Props) {
+export default function WishlistToggleButton({
+  productId,
+  className,
+  label,
+  onAdded,
+  variant = "wishlist"
+}: Props) {
   const { redirectToLogin } = useLoginRedirect();
+  const user = useAuthStore((state) => state.user);
   const { data: entryId, isLoading } = useWishlistStatus(productId);
   const { mutate: toggleWishlist, isPending } = useToggleWishlist();
 
   const handleToggle = () => {
-    // We can't synchronously check auth here easily without flashing, but the mutation handles the auth error gracefully.
-    // Actually, to redirect properly, we can rely on the mutation error, but catching it here is better.
-    // For now, the mutation throws an error which toast catches. But we also want to redirect.
+    if (!user) {
+      redirectToLogin();
+      return;
+    }
+
     toggleWishlist({ productId, entryId: entryId || null }, {
-      onError: (err) => {
-        if (err.message.includes("login")) {
-          redirectToLogin();
-        }
-      },
       onSuccess: (data) => {
         if (data.action === "added" && onAdded) {
           onAdded();
@@ -34,6 +40,9 @@ export default function WishlistToggleButton({ productId, className, label = "Sa
       }
     });
   };
+
+  const Icon = variant === "save-later" ? Bookmark : Heart;
+  const buttonLabel = label !== undefined ? label : (variant === "save-later" ? "Save for Later" : "Save");
 
   return (
     <button
@@ -44,10 +53,14 @@ export default function WishlistToggleButton({ productId, className, label = "Sa
         className
       )}
     >
-      <Heart
-        className={`h-5 w-5 ${entryId ? "fill-current text-primary" : "text-zinc-400"} ${label ? "mr-2" : ""}`}
+      <Icon
+        className={cn(
+          "h-5 w-5",
+          entryId ? "fill-current text-primary" : "text-zinc-400",
+          buttonLabel ? "mr-2" : ""
+        )}
       />
-      {label && (entryId ? "Saved" : label)}
+      {buttonLabel && (entryId ? "Saved" : buttonLabel)}
     </button>
   );
 }

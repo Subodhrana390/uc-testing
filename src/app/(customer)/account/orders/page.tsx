@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Package, Truck, ChevronRight, Search, Download, Box, Clock, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { Package, Truck, ChevronRight, Search, Box, Clock, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
@@ -206,30 +206,7 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const handleDownloadInvoice = async (order: any) => {
-    try {
-      const { generateInvoicePDF } = await import("@/lib/invoice");
-      const invoiceData = {
-        orderId: order.id,
-        date: order.created_at,
-        customerName: order.customer_name,
-        customerEmail: order.customer_email,
-        customerPhone: order.phone,
-        address: order.shipping_address || "N/A",
-        items: order.order_items || [],
-        totalAmount: parseFloat(order.total_amount),
-        taxAmount: parseFloat(order.tax_amount || 0),
-        shippingAmount: parseFloat(order.shipping_amount || 0),
-        discountAmount: parseFloat(order.discount_amount || 0),
-      };
-      const doc = await generateInvoicePDF(invoiceData);
-      doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
-      toast.success("Invoice downloaded successfully!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to generate/download invoice.");
-    }
-  };
+
 
 
 
@@ -467,19 +444,7 @@ export default function OrderHistoryPage() {
                     {getStatusLabel(order.status)}
                   </Badge>
 
-                  <button
-                    disabled={order.status?.toLowerCase() !== "delivered"}
-                    onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(order); }}
-                    title={order.status?.toLowerCase() === "delivered" ? "Download Invoice" : "Invoice will generate after delivery"}
-                    className={cn(
-                      "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
-                      order.status?.toLowerCase() === "delivered"
-                        ? "hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900 active:scale-95"
-                        : "text-zinc-300 cursor-not-allowed"
-                    )}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
+
 
                   <ChevronRight className="w-4 h-4 text-zinc-450 shrink-0" />
                 </div>

@@ -78,6 +78,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+  const [discountType, setDiscountType] = useState("none");
+  const [discountValue, setDiscountValue] = useState("");
 
   const taxRateVal = parseFloat(formData.tax_rate) || 0;
   const priceVal = parseFloat(formData.price) || 0;
@@ -135,7 +137,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     if (initialData?.product) {
       const { product, categories: catsRes, attributes } = initialData;
-      
+
       const productCatId = product.category_id || "";
       const productCat = catsRes?.find((c: any) => c.id === productCatId);
       if (productCat?.parent_id) {
@@ -197,6 +199,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         });
         setAttributeValues(values);
       }
+
+      // Reverse-calculate discount if sale_price exists
+      if (baseSalePrice && basePrice > 0) {
+        const sp = parseFloat(baseSalePrice.toString());
+        if (!isNaN(sp) && sp > 0 && sp < basePrice) {
+          const pctOff = ((basePrice - sp) / basePrice) * 100;
+          const rounded = Math.round(pctOff * 100) / 100;
+          setDiscountType("percentage");
+          setDiscountValue(rounded.toString());
+        }
+      }
     }
   }, [initialData]);
 
@@ -255,6 +268,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           is_tax_inclusive: true,
           datasheet_url: formData.datasheet_url,
           visibility: formData.visibility,
+          is_featured: formData.is_featured,
           seo_title: formData.seo_title,
           seo_keywords: formData.seo_keywords,
           seo_description: formData.seo_description,
@@ -566,100 +580,180 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </section>
 
           {/* Pricing & Inventory Section */}
-          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Pricing & Inventory</h2>
+          <section className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+            {/* Header */}
+            <div className="p-5 border-b border-zinc-100 bg-zinc-50/50">
+              <h2 className="text-base font-semibold text-zinc-900">Pricing & Inventory</h2>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                <div>
-                  <label className={labelClass} htmlFor="cost_price">Cost Price (₹)</label>
-                  <input
-                    id="cost_price"
-                    type="number"
-                    className={inputClass}
-                    value={formData.cost_price}
-                    onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
-                  />
-                </div>
-                 <div>
-                  <label className={labelClass} htmlFor="price">Sales Price (₹) *</label>
-                  <input
-                    id="price"
-                    type="number"
-                    className={inputClass}
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
-                  />
-                  {formData.price && taxRateVal > 0 && (
-                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
-                      Final Price: <span className="text-zinc-900 font-extrabold">₹{finalPrice.toFixed(2)}</span> (GST Included)
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="sale_price">Discounted Price (₹)</label>
-                  <input
-                    id="sale_price"
-                    type="number"
-                    className={inputClass}
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                  />
-                  {formData.sale_price && taxRateVal > 0 && (
-                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
-                      Final Discounted: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (GST Included)
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
-                  <select
-                    id="tax_rate"
-                    className={inputClass}
-                    value={formData.tax_rate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData({
-                        ...formData,
-                        tax_rate: val,
-                        is_tax_inclusive: true
-                      });
-                    }}
-                  >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="12">12%</option>
-                    <option value="18">18%</option>
-                    <option value="28">28%</option>
-                    {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
-                      <option value={formData.tax_rate}>{formData.tax_rate}%</option>
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass} htmlFor="tax_inclusive">Tax Type</label>
-                  <label id="tax_inclusive" className="flex items-center justify-center gap-2 cursor-not-allowed h-10 text-sm text-gray-400 bg-gray-100 border border-gray-200 px-3 rounded-md transition-colors w-full">
+
+            <div className="p-6 space-y-6">
+              {/* Grid Segment 1: Financials & Discounts */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* Left Column: Direct Pricing (Spans 7/12) */}
+                <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass} htmlFor="cost_price">Cost Price (₹)</label>
                     <input
-                      type="checkbox"
-                      checked={true}
-                      disabled
-                      onChange={() => { }}
-                      className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-not-allowed"
+                      id="cost_price"
+                      type="number"
+                      className={inputClass}
+                      placeholder="0.00"
+                      value={formData.cost_price}
+                      onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                     />
-                    <span className="font-semibold">Inclusive in Store</span>
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className={labelClass} htmlFor="price">Sales Price (₹) *</label>
+                    <div className="space-y-1.5">
+                      <input
+                        id="price"
+                        type="number"
+                        className={inputClass}
+                        placeholder="0.00"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                      />
+                      {formData.price && taxRateVal > 0 && (
+                        <p className="text-[11px] text-zinc-500 font-medium px-0.5">
+                          Final Price: <span className="text-zinc-900 font-bold">₹{finalPrice.toFixed(2)}</span> <span className="text-zinc-400 font-normal">(GST Incl.)</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div >
+                    <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
+                    <select
+                      id="tax_rate"
+                      className={inputClass}
+                      value={formData.tax_rate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          tax_rate: val,
+                          is_tax_inclusive: true
+                        });
+                      }}
+                    >
+                      <option value="0">0%</option>
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                      <option value="28">28%</option>
+                      {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
+                        <option value={formData.tax_rate}>{formData.tax_rate}%</option>
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass} htmlFor="tax_inclusive">Tax Type</label>
+                    <div className="flex items-center gap-2 h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 select-none cursor-not-allowed">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        readOnly
+                        className="w-4 h-4 text-zinc-400 rounded border-zinc-300 pointer-events-none"
+                      />
+                      <span className="text-sm font-medium">Inclusive in Store</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Discount Sub-card (Spans 5/12) */}
+                <div className="lg:col-span-5 bg-zinc-50/70 border border-zinc-200/80 rounded-xl p-4 flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-zinc-700">Discount Configuration</label>
+                    <div className="flex flex-col items-center gap-2.5">
+                      <select
+                        id="discount_type"
+                        className={`${inputClass} w-36 bg-white shrink-0`}
+                        value={discountType}
+                        onChange={(e) => {
+                          const type = e.target.value;
+                          setDiscountType(type);
+                          setDiscountValue("");
+                          setFormData({ ...formData, sale_price: "" });
+                        }}
+                      >
+                        <option value="none">No Discount</option>
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed (₹)</option>
+                      </select>
+
+                      {discountType !== "none" && (
+                        <div className="relative flex-1">
+                          <input
+                            id="discount_value"
+                            type="number"
+                            className={`${inputClass} bg-white pr-8`}
+                            placeholder={discountType === "percentage" ? "10" : "50"}
+                            value={discountValue}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDiscountValue(val);
+                              const numVal = parseFloat(val);
+                              const basePrice = parseFloat(formData.price);
+                              if (!isNaN(numVal) && numVal > 0 && !isNaN(basePrice) && basePrice > 0) {
+                                let calculated = discountType === "percentage"
+                                  ? basePrice - (basePrice * numVal / 100)
+                                  : basePrice - numVal;
+                                calculated = Math.max(0, Math.round(calculated * 100) / 100);
+                                setFormData({ ...formData, sale_price: calculated > 0 ? calculated.toString() : "" });
+                              } else {
+                                setFormData({ ...formData, sale_price: "" });
+                              }
+                            }}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 pointer-events-none">
+                            {discountType === "percentage" ? "%" : "₹"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Dynamic Breakdown Summary */}
+                  {formData.sale_price && (
+                    <div className="pt-3 border-t border-zinc-200/60 grid grid-cols-2 gap-2 text-xs">
+                      <div className="text-zinc-500">
+                        Original: <span className="line-through font-medium text-zinc-600">₹{parseFloat(formData.price).toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded text-[10px]">
+                          {discountType === "percentage" ? `${discountValue}% OFF` : `₹${parseFloat(discountValue).toLocaleString("en-IN")} OFF`}
+                        </span>
+                      </div>
+                      <div className="col-span-2 flex justify-between items-baseline mt-1 bg-white p-2 rounded-lg border border-zinc-100">
+                        <span className="font-semibold text-zinc-700 text-sm">Sale Price:</span>
+                        <div className="text-right">
+                          <span className="font-bold text-emerald-600 text-base">₹{parseFloat(formData.sale_price).toLocaleString("en-IN")}</span>
+                          {taxRateVal > 0 && (
+                            <p className="text-[10px] text-zinc-400 font-normal">Final: ₹{finalSalePrice.toFixed(2)}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <hr className="border-zinc-100" />
+
+              {/* Grid Segment 2: Logistics / Inventory */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass} htmlFor="stock">Stock Quantity</label>
                   <input
                     id="stock"
                     type="number"
                     className={inputClass}
+                    placeholder="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                   />
@@ -669,6 +763,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <input
                     id="unit"
                     className={inputClass}
+                    placeholder="e.g. Pcs, Kgs"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   />
@@ -816,10 +911,21 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Visible on Store</span>
                 <button
+                  type="button"
                   onClick={() => setFormData({ ...formData, visibility: !formData.visibility })}
                   className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.visibility ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}
                 >
                   {formData.visibility ? 'Active' : 'Hidden'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between border-t pt-4">
+                <span className="text-sm font-medium">Featured Product</span>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_featured: !formData.is_featured })}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.is_featured ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  {formData.is_featured ? 'Featured' : 'Standard'}
                 </button>
               </div>
             </div>

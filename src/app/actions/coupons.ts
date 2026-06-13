@@ -40,6 +40,24 @@ export async function validateCouponAction(code: string, subtotal: number) {
       return { success: false, error: 'Coupon code is invalid or inactive.' }
     }
 
+    // Check if the user has already used this coupon code (excluding cancelled orders)
+    const { data: existingOrder, error: orderError } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('coupon_code', trimmedCode)
+      .neq('status', 'CANCELLED')
+      .limit(1)
+      .maybeSingle()
+
+    if (orderError) {
+      console.error('Error checking coupon usage:', orderError)
+    }
+
+    if (existingOrder) {
+      return { success: false, error: 'You have already used this coupon code.' }
+    }
+
     // Check start date
     if (coupon.start_date && new Date() < new Date(coupon.start_date)) {
       return { success: false, error: 'Coupon code is not active yet.' }

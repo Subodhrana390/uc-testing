@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { getDisplayOrderId } from "@/lib/order";
 import { Pagination } from "@/components/ui/pagination";
+import { getOrCreateInvoiceForOrder } from "@/app/actions/invoice-admin";
 
 // Recharts imports
 import {
@@ -432,6 +433,7 @@ export default function OrdersPage() {
   const [carrier, setCarrier] = useState("");
   const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType>("All");
@@ -815,6 +817,37 @@ export default function OrdersPage() {
     } else {
       await updatePaymentStatus(order.id, "Refunded");
       setSelectedOrder((prev: any) => ({ ...prev, payment_status: "Refunded" }));
+    }
+  };
+
+  const handleGenerateInvoice = async (orderId: string) => {
+    setGeneratingInvoiceId(orderId);
+    const toastId = toast.loading("Generating invoice...");
+    try {
+      const res = await getOrCreateInvoiceForOrder(orderId);
+      if (!res.success || !res.pdfUrl) {
+        throw new Error(res.error || "Failed to generate invoice");
+      }
+
+      // Download the PDF file from storage
+      const { data, error } = await supabase.storage.from("invoices").download(res.pdfUrl);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = res.pdfUrl.split('/').pop() || 'Invoice.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Invoice generated and downloaded successfully!", { id: toastId });
+    } catch (error: any) {
+      console.error("Error generating invoice:", error);
+      toast.error(error.message || "Failed to generate invoice", { id: toastId });
+    } finally {
+      setGeneratingInvoiceId(null);
     }
   };
 
@@ -1779,18 +1812,6 @@ export default function OrdersPage() {
                                       </>
                                     )}
 
-                                    {['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status?.toUpperCase()) && (
-                                      <>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="p-0 cursor-pointer">
-                                          <Link href={`/uc-admin-portal/orders/${order.id}/label`} target="_blank" className="flex items-center w-full px-2 py-1.5">
-                                            <Download className="w-4 h-4 mr-2 text-zinc-600" />
-                                            Generate Label
-                                          </Link>
-                                        </DropdownMenuItem>
-                                      </>
-                                    )}
-
                                     <DropdownMenuItem onClick={() => {
                                       setSelectedOrder(order);
                                       setTimeout(() => setIsDetailsOpen(true), 50);
@@ -1799,6 +1820,17 @@ export default function OrdersPage() {
                                       View Details
                                     </DropdownMenuItem>
 
+                                    <DropdownMenuItem 
+                                      onClick={() => handleGenerateInvoice(order.id)} 
+                                      disabled={generatingInvoiceId === order.id}
+                                    >
+                                      {generatingInvoiceId === order.id ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin text-zinc-500" />
+                                      ) : (
+                                        <Printer className="w-4 h-4 mr-2 text-indigo-600" />
+                                      )}
+                                      Generate Invoice
+                                    </DropdownMenuItem>
 
                                   </DropdownMenuGroup>
                                 </DropdownMenuContent>

@@ -3,6 +3,7 @@
 import { Search, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState, useRef, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -170,9 +171,15 @@ function SearchInput() {
     <div ref={containerRef} className="relative w-full text-left">
       <form onSubmit={handleFormSubmit} className="relative w-full">
         {loading ? (
-          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin" />
+          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin z-10" />
         ) : (
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <button
+            type="submit"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-full cursor-pointer z-10"
+            aria-label="Submit Search"
+          >
+            <Search className="h-4 w-4" />
+          </button>
         )}
         <input
           type="text"
@@ -198,19 +205,23 @@ function SearchInput() {
             const index = getItemIndex("did_you_mean", "dym");
             const isHighlighted = index === activeIndex;
             return (
-              <div 
+              <Link 
+                href={`/search?q=${encodeURIComponent(suggestions.did_you_mean || "")}`}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => triggerSelection({ type: "did_you_mean", name: suggestions.did_you_mean })}
+                onClick={() => {
+                  setQuery(suggestions.did_you_mean || "");
+                  setShowSuggestions(false);
+                }}
                 className={cn(
-                  "px-5 py-3.5 text-xs flex items-center justify-between cursor-pointer transition-colors border-b border-zinc-100 bg-zinc-50/50",
+                  "px-5 py-3.5 text-xs flex items-center justify-between cursor-pointer transition-colors border-b border-zinc-100 bg-zinc-50/50 block",
                   isHighlighted ? "bg-orange-50 border-l-2 border-primary pl-[18px]" : ""
                 )}
               >
                 <span className="text-zinc-600 font-semibold">
                   Spelling suggestion: Did you mean <strong className="text-primary font-black">{suggestions.did_you_mean}</strong>?
                 </span>
-                <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">Tab / Enter</span>
-              </div>
+                <span className="text-[9px] text-zinc-450 font-bold uppercase tracking-wider">Tab / Enter</span>
+              </Link>
             );
           })()}
 
@@ -223,18 +234,19 @@ function SearchInput() {
                   const index = getItemIndex("category", cat.id);
                   const isHighlighted = index === activeIndex;
                   return (
-                    <div
+                    <Link
                       key={cat.id}
+                      href={`/categories/${cat.slug}`}
                       onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => triggerSelection(cat)}
+                      onClick={() => setShowSuggestions(false)}
                       className={cn(
-                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all",
+                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
                         isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
                       )}
                     >
                       <span className="text-xs font-semibold">{cat.name}</span>
-                      <span className="text-[9px] font-bold text-zinc-450 uppercase tracking-widest">Category &rarr;</span>
-                    </div>
+                      <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Category &rarr;</span>
+                    </Link>
                   );
                 })}
               </div>
@@ -250,18 +262,19 @@ function SearchInput() {
                   const index = getItemIndex("brand", brand.id);
                   const isHighlighted = index === activeIndex;
                   return (
-                    <div
+                    <Link
                       key={brand.id}
+                      href={`/products?brand=${encodeURIComponent(brand.name)}`}
                       onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => triggerSelection(brand)}
+                      onClick={() => setShowSuggestions(false)}
                       className={cn(
-                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all",
+                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
                         isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
                       )}
                     >
                       <span className="text-xs font-semibold">{brand.name}</span>
-                      <span className="text-[9px] font-bold text-zinc-450 uppercase tracking-widest">Brand &rarr;</span>
-                    </div>
+                      <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Brand &rarr;</span>
+                    </Link>
                   );
                 })}
               </div>
@@ -277,12 +290,13 @@ function SearchInput() {
                   const index = getItemIndex("product", prod.id);
                   const isHighlighted = index === activeIndex;
                   return (
-                    <div
+                    <Link
                       key={prod.id}
+                      href={`/products/${prod.slug}`}
                       onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => triggerSelection(prod)}
+                      onClick={() => setShowSuggestions(false)}
                       className={cn(
-                        "flex items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition-all",
+                        "flex items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition-all flex",
                         isHighlighted ? "bg-zinc-50 pl-4 border-l-2 border-primary" : "hover:bg-zinc-50/50"
                       )}
                     >
@@ -310,7 +324,7 @@ function SearchInput() {
                           )}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

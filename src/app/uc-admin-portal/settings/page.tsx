@@ -374,11 +374,11 @@ export default function SettingsPage() {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4 text-left">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-500 flex items-center justify-center shadow-lg shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-700 border border-zinc-600 flex items-center justify-center shadow-lg shrink-0">
               <Settings className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight pl-0 before:hidden border-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight pl-0 before:hidden border-0">
                 Site Settings
               </h1>
               <p className="text-xs sm:text-sm font-medium text-slate-350 mt-1">

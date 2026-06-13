@@ -503,26 +503,26 @@ export default function ProductDetailsClient({
           <DeliveryEstimator />
 
           {/* Accepted Payment Methods */}
-          <div className="pt-6 border-t border-zinc-150 space-y-3">
+          <div className="pt-2 space-y-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Accepted Payment Methods</h3>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-zinc-800 tracking-tight select-none">
                 <CreditCard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Visa</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-zinc-800 tracking-tight select-none">
                 <CreditCard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Mastercard</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-zinc-800 tracking-tight select-none">
                 <Wallet className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>UPI / NetBanking</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs font-bold text-zinc-800 tracking-tight select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-zinc-800 tracking-tight select-none">
                 <Banknote className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 <span>Cash on Delivery</span>
               </div>

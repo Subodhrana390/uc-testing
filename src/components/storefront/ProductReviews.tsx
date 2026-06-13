@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Star } from "lucide-react";
+import { Star, ThumbsUp, ThumbsDown, Camera, Upload, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import { formatDate } from "@/lib/format";
 import toast from "react-hot-toast";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLoginRedirect } from "@/hooks/useLoginRedirect";
 
 const REVIEWS_PER_PAGE = 3;
@@ -19,6 +18,11 @@ const RATING_LABELS = {
   1: "Bad"
 };
 
+type Vote = {
+  user_id: string;
+  vote_type: "like" | "dislike";
+};
+
 type Review = {
   id: string;
   reviewer_name: string;
@@ -26,6 +30,8 @@ type Review = {
   title: string | null;
   review: string;
   created_at: string;
+  images?: string[];
+  product_review_votes?: Vote[];
 };
 
 export default function ProductReviews({ productId }: { productId: string }) {
@@ -40,9 +46,17 @@ export default function ProductReviews({ productId }: { productId: string }) {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [ratingStats, setRatingStats] = useState({ average: 0, counts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, total: 0 });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // Image Upload States
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Lightbox Preview State
+  const [selectedReviewImage, setSelectedReviewImage] = useState<string | null>(null);
 
   async function loadRatingStats() {
-    const { data } = await supabase.from('product_reviews').select('rating').eq('product_id', productId);
+    const { data } = await supabase.from('product_reviews').select('rating').eq('product_id', productId).eq('is_hidden', false);
     if (data) {
       const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
       let sum = 0;
@@ -65,8 +79,9 @@ export default function ProductReviews({ productId }: { productId: string }) {
 
     const { data, error, count } = await supabase
       .from("product_reviews")
-      .select("id, reviewer_name, rating, title, review, created_at", { count: "exact" })
+      .select("id, reviewer_name, rating, title, review, created_at, images, product_review_votes(user_id, vote_type)", { count: "exact" })
       .eq("product_id", productId)
+      .eq("is_hidden", false)
       .order("created_at", { ascending: false })
       .range(start, end);
 
@@ -84,6 +99,115 @@ export default function ProductReviews({ productId }: { productId: string }) {
     loadReviews(1);
     loadRatingStats();
   }, [productId]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setCurrentUserId(session.user.id);
+      } else {
+        setCurrentUserId(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const handleVote = async (reviewId: string, voteType: "like" | "dislike") => {
+    if (!currentUserId) {
+      toast("Please login to vote on reviews");
+      redirectToLogin();
+      return;
+    }
+
+    const reviewItem = reviews.find(r => r.id === reviewId);
+    if (!reviewItem) return;
+
+    const existingVote = reviewItem.product_review_votes?.find(v => v.user_id === currentUserId);
+
+    try {
+      if (existingVote) {
+        if (existingVote.vote_type === voteType) {
+          // Delete vote (unvote)
+          const { error } = await supabase
+            .from("product_review_votes")
+            .delete()
+            .eq("review_id", reviewId)
+            .eq("user_id", currentUserId);
+          if (error) throw error;
+        } else {
+          // Update vote (switch type)
+          const { error } = await supabase
+            .from("product_review_votes")
+            .update({ vote_type: voteType })
+            .eq("review_id", reviewId)
+            .eq("user_id", currentUserId);
+          if (error) throw error;
+        }
+      } else {
+        // Insert new vote
+        const { error } = await supabase
+          .from("product_review_votes")
+          .insert({
+            review_id: reviewId,
+            user_id: currentUserId,
+            vote_type: voteType
+          });
+        if (error) throw error;
+      }
+      loadReviews(currentPage);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit vote");
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (uploadedImages.length + files.length > 5) {
+      toast.error("You can upload up to 5 images only.");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const newImages = [...uploadedImages];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith("image/")) {
+          toast.error("Please upload image files only");
+          continue;
+        }
+        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+        const { data, error } = await supabase.storage
+          .from("review-images")
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("review-images")
+          .getPublicUrl(fileName);
+
+        newImages.push(publicUrl);
+      }
+      setUploadedImages(newImages);
+      toast.success("Photos uploaded successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeUploadedImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -127,6 +251,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
         rating,
         title: title || null,
         review,
+        images: uploadedImages,
       },
     ]);
 
@@ -140,6 +265,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
     setReview("");
     setTitle("");
     setRating(5);
+    setUploadedImages([]);
     toast.success("Review submitted");
     setCurrentPage(1);
     loadReviews(1);
@@ -255,6 +381,60 @@ export default function ProductReviews({ productId }: { productId: string }) {
                     </div>
                     {item.title && <h4 className="mt-4 font-bold text-zinc-900 text-lg">{item.title}</h4>}
                     <p className="mt-2.5 text-sm leading-relaxed text-zinc-600">{item.review}</p>
+                    
+                    {/* Review Images */}
+                    {item.images && item.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {item.images.map((img, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setSelectedReviewImage(img)}
+                            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-zinc-200 cursor-zoom-in bg-zinc-50 flex items-center justify-center p-1 hover:border-zinc-400 transition-all shadow-sm"
+                          >
+                            <img
+                              src={img}
+                              alt={`Review upload ${idx + 1}`}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Review Likes/Dislikes */}
+                    {(() => {
+                      const votes = item.product_review_votes || [];
+                      const likeCount = votes.filter(v => v.vote_type === "like").length;
+                      const dislikeCount = votes.filter(v => v.vote_type === "dislike").length;
+                      const userVote = votes.find(v => v.user_id === currentUserId);
+                      const userHasLiked = userVote?.vote_type === "like";
+                      const userHasDisliked = userVote?.vote_type === "dislike";
+
+                      return (
+                        <div className="flex items-center gap-4 mt-4 text-zinc-400">
+                          <button
+                            onClick={() => handleVote(item.id, "like")}
+                            className={cn(
+                              "flex items-center gap-1.5 text-xs font-semibold hover:text-zinc-900 transition-colors",
+                              userHasLiked ? "text-indigo-600 font-bold" : ""
+                            )}
+                          >
+                            <ThumbsUp className={cn("h-4 w-4", userHasLiked ? "fill-current" : "")} />
+                            <span>{likeCount}</span>
+                          </button>
+                          <button
+                            onClick={() => handleVote(item.id, "dislike")}
+                            className={cn(
+                              "flex items-center gap-1.5 text-xs font-semibold hover:text-zinc-900 transition-colors",
+                              userHasDisliked ? "text-zinc-700 font-bold" : ""
+                            )}
+                          >
+                            <ThumbsDown className={cn("h-4 w-4", userHasDisliked ? "fill-current" : "")} />
+                            <span>{dislikeCount}</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
@@ -335,6 +515,52 @@ export default function ProductReviews({ productId }: { productId: string }) {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-zinc-500" />
+                <span>Upload Photos (Optional)</span>
+              </label>
+
+              {uploadedImages.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {uploadedImages.map((url, index) => (
+                    <div key={index} className="relative w-16 h-16 border border-zinc-200 rounded-lg overflow-hidden bg-zinc-50 flex items-center justify-center p-1 group">
+                      <img src={url} alt={`Upload preview ${index + 1}`} className="max-h-full max-w-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => removeUploadedImage(index)}
+                        className="absolute -top-1 -right-1 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all scale-75 shadow-sm"
+                        title="Remove Image"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uploadedImages.length < 5 && (
+                <label className="flex items-center justify-center gap-2 w-full h-11 border border-dashed border-zinc-300 rounded-xl hover:border-zinc-950 hover:bg-zinc-50/50 transition-all cursor-pointer">
+                  {uploadingImage ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-zinc-400 group-hover:text-zinc-950" />
+                      <span className="text-xs font-semibold text-zinc-500">Upload Photos (Max 5)</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <label htmlFor="review-body" className="text-sm font-bold text-zinc-900">Your Experience</label>
               <textarea
                 id="review-body"
@@ -349,13 +575,38 @@ export default function ProductReviews({ productId }: { productId: string }) {
             <button
               className="w-full inline-flex items-center justify-center h-12 px-6 py-3 rounded-xl bg-zinc-950 text-white font-bold hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-md hover:shadow-lg active:scale-[0.98] mt-2"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || uploadingImage}
             >
               {submitting ? "Submitting Review..." : "Submit Review"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedReviewImage && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative max-w-4xl w-full max-h-[90vh] bg-white border border-zinc-150 rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-zinc-100 bg-white">
+              <span className="font-bold text-zinc-900 text-sm">Image Preview</span>
+              <button
+                type="button"
+                onClick={() => setSelectedReviewImage(null)}
+                className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 bg-zinc-50 flex items-center justify-center p-6 min-h-[50vh] relative">
+              <img
+                src={selectedReviewImage}
+                alt="Full review upload"
+                className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

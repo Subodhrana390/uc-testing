@@ -68,6 +68,8 @@ export default function AddProductPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+  const [discountType, setDiscountType] = useState("none");
+  const [discountValue, setDiscountValue] = useState("");
 
   const taxRateVal = parseFloat(formData.tax_rate) || 0;
   const priceVal = parseFloat(formData.price) || 0;
@@ -539,20 +541,79 @@ export default function AddProductPage() {
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className={labelClass} htmlFor="sale_price">Discounted Price (₹)</label>
-                  <input
-                    id="sale_price"
-                    type="number"
-                    className={inputClass}
-                    placeholder="0.00"
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                  />
-                  {formData.sale_price && taxRateVal > 0 && (
-                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
-                      Final Discounted: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (GST Included)
-                    </p>
+                <div className="md:col-span-2 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                  <label className="block text-sm font-semibold text-orange-800">Discount</label>
+                  <div className="flex items-center gap-3">
+                    <select
+                      id="discount_type"
+                      className={`${inputClass} w-36 shrink-0`}
+                      value={formData.sale_price ? (discountType || "none") : "none"}
+                      onChange={(e) => {
+                        const type = e.target.value;
+                        if (type === "none") {
+                          setDiscountType("none");
+                          setDiscountValue("");
+                          setFormData({ ...formData, sale_price: "" });
+                        } else {
+                          setDiscountType(type);
+                          setDiscountValue("");
+                          setFormData({ ...formData, sale_price: "" });
+                        }
+                      }}
+                    >
+                      <option value="none">No Discount</option>
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="fixed">Fixed (₹)</option>
+                    </select>
+                    {discountType !== "none" && (
+                      <div className="relative flex-1">
+                        <input
+                          id="discount_value"
+                          type="number"
+                          className={inputClass}
+                          placeholder={discountType === "percentage" ? "e.g. 10" : "e.g. 50"}
+                          value={discountValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDiscountValue(val);
+                            const numVal = parseFloat(val);
+                            const basePrice = parseFloat(formData.price);
+                            if (!isNaN(numVal) && numVal > 0 && !isNaN(basePrice) && basePrice > 0) {
+                              let calculated = 0;
+                              if (discountType === "percentage") {
+                                calculated = basePrice - (basePrice * numVal / 100);
+                              } else {
+                                calculated = basePrice - numVal;
+                              }
+                              calculated = Math.max(0, Math.round(calculated * 100) / 100);
+                              setFormData({ ...formData, sale_price: calculated > 0 ? calculated.toString() : "" });
+                            } else {
+                              setFormData({ ...formData, sale_price: "" });
+                            }
+                          }}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-orange-500 pointer-events-none">
+                          {discountType === "percentage" ? "%" : "₹"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {formData.sale_price && (
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-zinc-500 font-medium">Original: <span className="line-through">₹{parseFloat(formData.price).toLocaleString("en-IN")}</span></span>
+                      <span className="text-emerald-700 font-extrabold">Sale Price: ₹{parseFloat(formData.sale_price).toLocaleString("en-IN")}</span>
+                      {discountType === "percentage" && discountValue && (
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">{discountValue}% OFF</span>
+                      )}
+                      {discountType === "fixed" && discountValue && (
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">₹{parseFloat(discountValue).toLocaleString("en-IN")} OFF</span>
+                      )}
+                      {formData.sale_price && taxRateVal > 0 && (
+                        <span className="text-zinc-500 font-semibold">
+                          Final: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (incl. GST)
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div>
@@ -761,10 +822,21 @@ export default function AddProductPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Publish Status</span>
                 <button
+                  type="button"
                   onClick={() => setFormData({ ...formData, visibility: !formData.visibility })}
                   className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.visibility ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}
                 >
                   {formData.visibility ? 'Active' : 'Hidden'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between border-t pt-4">
+                <span className="text-sm font-medium">Featured Product</span>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_featured: !formData.is_featured })}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.is_featured ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  {formData.is_featured ? 'Featured' : 'Standard'}
                 </button>
               </div>
             </div>

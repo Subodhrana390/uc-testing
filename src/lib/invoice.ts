@@ -75,67 +75,118 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
 
   // Table
   const tableData = data.items.map((item, index) => {
-    const unitPrice = parseFloat(item.unit_price);
     const qty = item.quantity;
-    const amount = unitPrice * qty;
+    const unitPrice = parseFloat(item.unit_price);
+    const itemTotal = unitPrice * qty;
+    const rate = item.products?.tax_rate || 0;
+    const isTaxInclusive = item.products?.is_tax_inclusive || false;
+    
+    let baseTotal = itemTotal;
+    let taxAmount = 0;
+    let lineTotal = itemTotal;
+    
+    if (rate > 0) {
+      if (isTaxInclusive) {
+        baseTotal = itemTotal / (1 + rate / 100);
+        taxAmount = itemTotal - baseTotal;
+      } else {
+        taxAmount = itemTotal * (rate / 100);
+        lineTotal = itemTotal + taxAmount;
+      }
+    }
+    
+    const baseUnitPrice = baseTotal / qty;
+
     return [
       index + 1,
       item.products?.name || "Product",
-      unitPrice.toFixed(2),
+      item.products?.hsn_code || "-",
+      baseUnitPrice.toFixed(2),
       qty,
-      amount.toFixed(2)
+      rate > 0 ? `${rate}% (${taxAmount.toFixed(2)})` : "0%",
+      lineTotal.toFixed(2)
     ];
   });
 
   (doc as any).autoTable({
     startY: 100,
-    head: [['#', 'Description', 'Unit Price', 'Qty', 'Amount']],
+    head: [['#', 'Description', 'HSN', 'Price (Excl. GST)', 'Qty', 'GST', 'Amount']],
     body: tableData,
     theme: 'striped',
     headStyles: { fillColor: [249, 115, 22], textColor: 255 },
     columnStyles: {
       0: { cellWidth: 10 },
       1: { cellWidth: 'auto' },
-      2: { cellWidth: 30, halign: 'right' },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 30, halign: 'right' },
+      2: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 30, halign: 'right' },
+      4: { cellWidth: 15, halign: 'center' },
+      5: { cellWidth: 30, halign: 'right' },
+      6: { cellWidth: 30, halign: 'right' },
     },
     foot: (() => {
-      const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * parseFloat(item.unit_price)), 0);
-      const tax = data.taxAmount || 0;
+      let subtotalExcl = 0;
+      let calculatedTax = 0;
+
+      data.items.forEach((item) => {
+        const qty = item.quantity;
+        const unitPrice = parseFloat(item.unit_price);
+        const itemTotal = unitPrice * qty;
+        const rate = item.products?.tax_rate || 0;
+        const isTaxInclusive = item.products?.is_tax_inclusive || false;
+        
+        let baseTotal = itemTotal;
+        let taxAmount = 0;
+        
+        if (rate > 0) {
+          if (isTaxInclusive) {
+            baseTotal = itemTotal / (1 + rate / 100);
+            taxAmount = itemTotal - baseTotal;
+          } else {
+            taxAmount = itemTotal * (rate / 100);
+          }
+        }
+        subtotalExcl += baseTotal;
+        calculatedTax += taxAmount;
+      });
+
       const shipping = data.shippingAmount || 0;
       const discount = data.discountAmount || 0;
 
       const rows: any[] = [
         [
-          { content: 'Subtotal', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${subtotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+          { content: 'Subtotal (Excl. GST)', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${subtotalExcl.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
         ]
       ];
 
-      if (tax > 0) {
+      if (calculatedTax > 0) {
         rows.push([
-          { content: 'GST', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${tax.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+          { content: 'GST', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${calculatedTax.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+        ]);
+      } else if (data.taxAmount && data.taxAmount > 0) {
+        rows.push([
+          { content: 'GST', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${data.taxAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
         ]);
       }
 
       if (shipping > 0) {
         rows.push([
-          { content: 'Delivery Charge', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: 'Delivery Charge', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
           { content: `INR ${shipping.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
         ]);
       }
 
       if (discount > 0) {
         rows.push([
-          { content: 'Coupon Discount', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } },
+          { content: 'Coupon Discount', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } },
           { content: `-INR ${discount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } }
         ]);
       }
 
       rows.push([
-        { content: 'Total (Incl. Taxes & Delivery)', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: 'Total (Incl. Taxes & Delivery)', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } },
         { content: `INR ${data.totalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
       ]);
 

@@ -72,7 +72,7 @@ export default async function ProductDetailLayout({
   const { data: p } = await supabase
     .from("products")
     .select(
-      "*, categories(id, name, slug, parent:categories!parent_id(name, slug)), brands(name), product_reviews(rating)"
+      "*, categories(id, name, slug, parent:categories!parent_id(name, slug)), brands(name), product_reviews(rating, is_hidden)"
     )
     .eq("slug", slug)
     .single();
@@ -82,11 +82,12 @@ export default async function ProductDetailLayout({
     return <>{children}</>;
   }
 
-  const reviewCount = p.product_reviews?.length || 0;
+  const visibleReviews = (p.product_reviews || []).filter((r: any) => !r.is_hidden);
+  const reviewCount = visibleReviews.length;
   const averageRating =
     reviewCount > 0
       ? (
-          p.product_reviews!.reduce(
+          visibleReviews.reduce(
             (acc: number, r: any) => acc + r.rating,
             0
           ) / reviewCount

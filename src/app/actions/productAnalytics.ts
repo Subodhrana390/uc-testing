@@ -39,7 +39,7 @@ export async function getDynamicSections() {
   const supabase = await createClient();
   const excludeIds = new Set<string>();
   const sections: DynamicSection[] = [];
-  
+
   // 1. Fetch Flash Deals (Calculated based on actual discount)
   let flashDeals: ProductSummary[] = [];
   try {
@@ -71,7 +71,7 @@ export async function getDynamicSections() {
         })
         .sort((a, b) => (b.discountPercentage || 0) - (a.discountPercentage || 0))
         .slice(0, 12);
-        
+
       flashDeals.forEach(p => excludeIds.add(p.id));
     }
   } catch (e) {
@@ -85,7 +85,7 @@ export async function getDynamicSections() {
       .from("top_selling_products")
       .select(selectQuery)
       .limit(20);
-      
+
     if (data) {
       topSelling = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
       topSelling.forEach(p => excludeIds.add(p.id));
@@ -93,7 +93,7 @@ export async function getDynamicSections() {
   } catch (e) {
     console.error("Error fetching top selling:", e);
   }
-  
+
   // 3. Fetch New Arrivals (Latest active products)
   let newArrivals: ProductSummary[] = [];
   try {
@@ -103,7 +103,7 @@ export async function getDynamicSections() {
       .eq("status", "Active")
       .order("created_at", { ascending: false })
       .limit(30);
-      
+
     const { data } = await query;
     if (data) {
       newArrivals = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
@@ -113,7 +113,25 @@ export async function getDynamicSections() {
     console.error("Error fetching new arrivals:", e);
   }
 
-  // 4. Fetch Top Rated (Fallback to Trending / Random High rating)
+  // 4. Fetch Featured Products (using is_featured flag)
+  let featuredProducts: ProductSummary[] = [];
+  try {
+    const { data } = await supabase
+      .from("products")
+      .select(selectQuery)
+      .eq("status", "Active")
+      .eq("is_featured", true)
+      .limit(30);
+
+    if (data) {
+      featuredProducts = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
+      featuredProducts.forEach(p => excludeIds.add(p.id));
+    }
+  } catch (e) {
+    console.error("Error fetching featured products:", e);
+  }
+
+  // 5. Fetch Top Rated (Fallback to Trending / Random High rating)
   // Since we might not have a reliable aggregate view, we'll try fetching from filterable_products or fallback
   let trending: ProductSummary[] = [];
   try {
@@ -122,7 +140,7 @@ export async function getDynamicSections() {
       .select("id")
       .gte("average_rating", 4)
       .limit(30);
-      
+
     if (data && data.length > 0) {
       const trendingIds = data.map(d => d.id).filter(id => !excludeIds.has(id)).slice(0, 12);
       if (trendingIds.length > 0) {
@@ -130,7 +148,7 @@ export async function getDynamicSections() {
           .from("products")
           .select(selectQuery)
           .in("id", trendingIds);
-          
+
         if (trendingFull) {
           trending = trendingFull;
           trending.forEach(p => excludeIds.add(p.id));
@@ -140,7 +158,7 @@ export async function getDynamicSections() {
   } catch (e) {
     console.error("Error fetching trending:", e);
   }
-  
+
   // 5. In Stock / Recommended (Catch all high inventory)
   let recommended: ProductSummary[] = [];
   try {
@@ -151,10 +169,9 @@ export async function getDynamicSections() {
       .gt("stock_quantity", 50)
       .order("stock_quantity", { ascending: false })
       .limit(30);
-      
+
     if (data) {
       recommended = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
-      // No need to add to excludeIds since it's the last section, but good practice
       recommended.forEach(p => excludeIds.add(p.id));
     }
   } catch (e) {
@@ -167,21 +184,11 @@ export async function getDynamicSections() {
       id: "top-selling",
       title: "Top Selling Products",
       tag: "Trending Demands",
-      href: "/products?sort=popular", // or however sorting works
+      href: "/products?sort=popular",
       products: topSelling
     });
   }
-  
-  if (newArrivals.length > 0) {
-    sections.push({
-      id: "new-arrivals",
-      title: "New Arrivals",
-      tag: "Fresh",
-      href: "/products?sort=latest",
-      products: newArrivals
-    });
-  }
-  
+
   if (trending.length > 0) {
     sections.push({
       id: "trending",
@@ -191,7 +198,7 @@ export async function getDynamicSections() {
       products: trending
     });
   }
-  
+
   if (recommended.length > 0) {
     sections.push({
       id: "recommended",
@@ -204,6 +211,8 @@ export async function getDynamicSections() {
 
   return {
     flashDeals,
+    newArrivals,
+    featuredProducts,
     sections,
   };
 }

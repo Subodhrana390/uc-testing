@@ -81,25 +81,27 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
     <>
       <div className="sticky top-0 z-50 w-full">
         {/* Top Bar */}
-        <div className="bg-zinc-950 text-zinc-400 overflow-hidden">
-          <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider">
+        <div className="bg-zinc-950 text-white overflow-hidden">
+          <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto flex flex-wrap items-center justify-between gap-3 py-2 text-[11px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-6">
               <a
                 href={displayPhoneHref}
-                className="inline-flex items-center gap-2 hover:text-white transition-colors"
+                className="inline-flex items-center gap-2 hover:text-zinc-300 transition-colors"
               >
                 <Phone className="h-3 w-3 text-primary" />
                 {displayPhone}
               </a>
+
               <a
                 href={displayEmailHref}
-                className="hidden xs:inline-flex items-center gap-2 hover:text-white transition-colors"
+                className="hidden xs:inline-flex items-center gap-2 hover:text-zinc-300 transition-colors"
               >
                 <Mail className="h-3 w-3 text-primary" />
                 Sales Support
               </a>
             </div>
-            <div className="hidden md:inline-flex items-center gap-2 text-zinc-500">
+
+            <div className="hidden md:inline-flex items-center gap-2 text-white">
               <MapPin className="h-3 w-3 text-primary" />
               Zirakpur, Punjab
             </div>
@@ -199,7 +201,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-red-600 transition-colors border border-zinc-200 hover:border-red-155 bg-zinc-50/50 hover:bg-red-50/30 px-2.5 py-1.5 rounded-xl shadow-sm cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-red-600 transition-colors hover:bg-red-50/30 px-2.5 py-2 cursor-pointer"
                       title="Logout"
                     >
                       <LogOut className="h-3.5 w-3.5" />

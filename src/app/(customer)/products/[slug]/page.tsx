@@ -21,7 +21,8 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
   const { data: ratingData } = await supabase
     .from("product_reviews")
     .select("rating")
-    .eq("product_id", productData.id);
+    .eq("product_id", productData.id)
+    .eq("is_hidden", false);
 
   const reviewCount = ratingData?.length || 0;
   const averageRating = reviewCount > 0
