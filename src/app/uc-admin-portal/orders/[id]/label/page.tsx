@@ -254,20 +254,39 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
 
               {/* Total calculations */}
               <div className="w-full sm:w-64 space-y-2 text-xs font-semibold text-zinc-500">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="text-zinc-800">
-                    ₹{order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                {parseFloat(order.tax_amount || 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span>GST (Tax):</span>
-                    <span className="text-zinc-800">
-                      ₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                )}
+                {(() => {
+                  const grossSubtotal = order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                  const taxAmount = parseFloat(order.tax_amount || 0);
+                  const subtotalExcl = grossSubtotal - taxAmount;
+
+                  return (
+                    <>
+                      {taxAmount > 0 ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Subtotal (Excl. GST):</span>
+                            <span className="text-zinc-800">
+                              ₹{subtotalExcl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>GST (Tax):</span>
+                            <span className="text-zinc-800">
+                              ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span>Subtotal:</span>
+                          <span className="text-zinc-800">
+                            ₹{grossSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 <div className="flex justify-between">
                   <span>Shipping Fee:</span>
                   {parseFloat(order.shipping_amount || 0) > 0 ? (

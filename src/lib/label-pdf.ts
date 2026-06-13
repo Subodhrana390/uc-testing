@@ -321,7 +321,9 @@ export const generateShippingLabelAndInvoicePDF = async ({ order, invoice }: Gen
     ];
   });
 
-  const subtotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * parseFloat(item.unit_price || 0)), 0);
+  const grossSubtotal = items.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * parseFloat(item.unit_price || 0)), 0);
+  const taxAmount = parseFloat(order.tax_amount || 0);
+  const subtotalExcl = grossSubtotal - taxAmount;
 
   // Render Table using autoTable
   (doc as any).autoTable({
@@ -339,14 +341,21 @@ export const generateShippingLabelAndInvoicePDF = async ({ order, invoice }: Gen
       5: { cellWidth: 30, halign: 'right' },
     },
     foot: [
-      [
-        { content: 'Subtotal', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `INR ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
-      ],
-      ...(parseFloat(order.tax_amount || 0) > 0 ? [[
-        { content: 'GST (Tax)', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `INR ${parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
-      ]] : []),
+      ...(taxAmount > 0 ? [
+        [
+          { content: 'Subtotal (Excl. GST)', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: `INR ${subtotalExcl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ],
+        [
+          { content: 'GST (Tax)', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: `INR ${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]
+      ] : [
+        [
+          { content: 'Subtotal', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: `INR ${grossSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]
+      ]),
       [
         { content: 'Shipping Fee', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
         { 
@@ -363,8 +372,8 @@ export const generateShippingLabelAndInvoicePDF = async ({ order, invoice }: Gen
         { content: `-INR ${parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] } }
       ]] : []),
       [
-        { content: 'Grand Total', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10 } },
-        { content: `INR ${Number(order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, textColor: [37, 99, 235] } }
+        { content: 'Grand Total', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, fillColor: [37, 99, 235], textColor: [255, 255, 255] } },
+        { content: `INR ${Number(order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, fillColor: [37, 99, 235], textColor: [255, 255, 255] } }
       ]
     ],
     margin: { left: a4MarginX, right: a4MarginX }
