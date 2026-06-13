@@ -22,13 +22,8 @@ import {
 
 import { Input } from "@/components/ui/input";
 
-import {
-  getCartItems,
-  getCartTotal,
-  clearCart,
-  removeCartItem,
-  type CartItem,
-} from "@/lib/cart";
+import { type CartItem } from "@/store/useCartStore";
+import { useCartStore } from "@/store/useCartStore";
 
 import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
@@ -51,9 +46,20 @@ interface CartItemWithTax extends CartItem {
   stock_quantity?: number;
 }
 
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSiteSettings } from "@/hooks/api/useSiteSettings";
+
 export default function CheckoutPage() {
   const router = useRouter();
   const supabase = createClient();
+  const getCartTotal = useCartStore((state) => state.getCartTotal);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
+  
+  const { data: siteSettings } = useSiteSettings();
+  const emiEnabledSetting = siteSettings?.emi_enabled ?? true;
+  const couponsEnabledSetting = siteSettings?.coupons_enabled ?? true;
 
   const [items, setItems] = useState<CartItemWithTax[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,9 +91,6 @@ export default function CheckoutPage() {
     state: "",
     postalCode: "",
   });
-
-  const [emiEnabledSetting, setEmiEnabledSetting] = useState(true);
-  const [couponsEnabledSetting, setCouponsEnabledSetting] = useState(true);
 
   const [couponCodeInput, setCouponCodeInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -212,7 +215,9 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    const cartItems = getCartItems();
+    if (!isAuthInitialized) return;
+
+    const cartItems = useCartStore.getState().items;
 
     if (cartItems.length === 0) {
       router.push("/cart");
@@ -222,32 +227,12 @@ export default function CheckoutPage() {
     async function fetchData() {
       loadRazorpayScript();
 
-      const {
-        data: { user },
-      } = await (supabase.auth as any).getUser();
-
       if (!user) {
         toast.error("Please login to proceed");
-
         router.push("/login?returnTo=/checkout");
-
         return;
       }
 
-      // Fetch feature toggles from site settings
-      try {
-        const { data: settingsData } = await supabase
-          .from("site_settings")
-          .select("emi_enabled, coupons_enabled")
-          .maybeSingle();
-
-        if (settingsData) {
-          setEmiEnabledSetting(settingsData.emi_enabled ?? true);
-          setCouponsEnabledSetting(settingsData.coupons_enabled ?? true);
-        }
-      } catch (err) {
-        console.error("Error reading site settings:", err);
-      }
 
       const { data: products } = await supabase
         .from("products")
@@ -282,7 +267,7 @@ export default function CheckoutPage() {
         const { error } = await supabase.from('wishlist').upsert(wishlistInserts, { onConflict: 'user_id,product_id' });
         
         if (!error) {
-          outOfStockItems.forEach(item => removeCartItem(item.id));
+          outOfStockItems.forEach(item => useCartStore.getState().removeItem(item.id));
           toast.error(`${outOfStockItems.length} out-of-stock item(s) were automatically moved to your wishlist.`, { duration: 5000 });
         }
       }

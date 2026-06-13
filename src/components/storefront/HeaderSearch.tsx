@@ -4,6 +4,7 @@ import { Search, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState, useRef, Suspense, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface SuggestionResponse {
@@ -17,15 +18,8 @@ function SearchInput() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [suggestions, setSuggestions] = useState<SuggestionResponse>({
-    products: [],
-    categories: [],
-    brands: [],
-    did_you_mean: null
-  });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [loading, setLoading] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,38 +39,25 @@ function SearchInput() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch typo-tolerant auto suggestions on query debounce
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+
   useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    const trimmed = query.trim();
-    if (trimmed.length < 1) {
-      setSuggestions({ products: [], categories: [], brands: [], did_you_mean: null });
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(trimmed)}`);
-        const data = await res.json();
-        setSuggestions(data);
-      } catch (err) {
-        console.error("Failed to fetch suggestions:", err);
-      } finally {
-        setLoading(false);
-      }
-    }, 250); // Debounce: 250ms
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 250);
+    return () => clearTimeout(handler);
   }, [query]);
+
+  const { data: suggestions = { products: [], categories: [], brands: [], did_you_mean: null }, isLoading: loading } = useQuery({
+    queryKey: ["search-suggestions", debouncedQuery],
+    queryFn: async () => {
+      if (debouncedQuery.length < 1) return { products: [], categories: [], brands: [], did_you_mean: null };
+      const res = await fetch(`/api/products/search?q=${encodeURIComponent(debouncedQuery)}`);
+      return res.json() as Promise<SuggestionResponse>;
+    },
+    enabled: debouncedQuery.length >= 1,
+    staleTime: 60 * 1000, // 1 minute
+  });
 
   // Flatten suggestions into a unified array to handle standard keyboard selection
   const flatItems = useMemo(() => {

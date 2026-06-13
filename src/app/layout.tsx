@@ -8,6 +8,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import { organizationSchema, websiteSchema, localBusinessSchema } from "@/lib/jsonld";
 import { baseMetadata } from "@/lib/seo";
 import { getSiteSettings } from "@/app/actions/settings";
+import QueryProvider from "@/components/providers/QueryProvider";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
@@ -64,6 +65,8 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+import AuthListener from "@/components/providers/AuthListener";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,12 +78,15 @@ export default function RootLayout({
       className={`${roboto.variable} ${robotoMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col">
-        {/* Global structured data — injected on every page */}
-        <JsonLd data={[organizationSchema(), websiteSchema(), localBusinessSchema()]} />
-        <AnalyticsScripts />
-        <TrackingInitializer />
-        {children}
-        <Toaster position="top-center" />
+        <QueryProvider>
+          <AuthListener />
+          {/* Global structured data — injected on every page */}
+          <JsonLd data={[organizationSchema(), websiteSchema(), localBusinessSchema()]} />
+          <AnalyticsScripts />
+          <TrackingInitializer />
+          {children}
+          <Toaster position="top-center" />
+        </QueryProvider>
       </body>
     </html>
   );

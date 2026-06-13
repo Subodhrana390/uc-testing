@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Check, ShoppingCart, ChevronLeft, ChevronRight, Package } from "lucide-react";
+import { Check, ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { addCartItem } from "@/lib/cart";
+import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
 import ProductCard from "@/components/storefront/ProductCard";
 import { getFrequentlyBoughtTogether } from "@/app/actions/recommendationEngine";
+import { useQuery } from "@tanstack/react-query";
 
 interface Product {
   id: string;
@@ -36,10 +37,28 @@ export default function FrequentlyBoughtTogether({
 }: {
   currentProduct: any;
 }) {
-  const [bundleProducts, setBundleProducts] = useState<Product[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([currentProduct.id]));
-  const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { data: bundleProducts = [], isLoading } = useQuery({
+    queryKey: ["fbt", currentProduct.id, currentProduct.category_id],
+    queryFn: async () => {
+      const fetchedProducts = await getFrequentlyBoughtTogether({
+        id: currentProduct.id,
+        category_id: currentProduct.category_id,
+      });
+      return fetchedProducts as Product[];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([currentProduct.id]));
+
+  // Pre-select items when data loads
+  useEffect(() => {
+    if (bundleProducts.length > 0) {
+      setSelectedIds(new Set([currentProduct.id, ...bundleProducts.map((p) => p.id)]));
+    }
+  }, [bundleProducts, currentProduct.id]);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -55,29 +74,7 @@ export default function FrequentlyBoughtTogether({
     }
   };
 
-  useEffect(() => {
-    async function fetchFBT() {
-      try {
-        setLoading(true);
-        const fetchedProducts = await getFrequentlyBoughtTogether({
-          id: currentProduct.id,
-          category_id: currentProduct.category_id,
-        });
-
-        setBundleProducts(fetchedProducts as any);
-        // Pre-select all bundle products + current product
-        setSelectedIds(new Set([currentProduct.id, ...fetchedProducts.map((p: any) => p.id)]));
-      } catch (err) {
-        console.error("Error fetching frequently bought together products:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchFBT();
-  }, [currentProduct.id, currentProduct.category_id]);
-
-  if (loading || bundleProducts.length === 0) return null;
+  if (isLoading || bundleProducts.length === 0) return null;
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
@@ -106,17 +103,19 @@ export default function FrequentlyBoughtTogether({
   const discountMultiplier = isBundleEligible ? (100 - discountPercentage) / 100 : 1;
   const totalPrice = baseTotalPrice * discountMultiplier;
 
+  const addItem = useCartStore((state) => state.addItem);
+
   const handleAddBundleToCart = () => {
     selectedProducts.forEach((p) => {
       const originalPrice = p.sale_price || p.price;
       const finalPrice = originalPrice * discountMultiplier;
 
-      addCartItem({
+      addItem({
         id: p.id,
         slug: p.slug,
         name: p.name,
         price: finalPrice,
-        image_url: p.image_url || (p.images && p.images[0]) || null,
+        image_url: p.image_url || (p.images && p.images[0]) || "",
       }, 1);
     });
     

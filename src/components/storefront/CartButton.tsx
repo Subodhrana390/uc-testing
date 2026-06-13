@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { getCartCount } from "@/lib/cart";
+import { useCartStore } from "@/store/useCartStore";
+import { useEffect, useState } from "react";
 
 export default function CartButton() {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const sync = () => setCount(getCartCount());
-    sync();
-    window.addEventListener("cart-updated", sync);
-    return () => window.removeEventListener("cart-updated", sync);
-  }, []);
+  const getCartCount = useCartStore((state) => state.getCartCount);
+  
+  // Hydration fix for Zustand persist
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  
+  const count = isMounted ? getCartCount() : 0;
 
   return (
     <Link href="/cart" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors">

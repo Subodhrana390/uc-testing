@@ -32,6 +32,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { loadRazorpayScript } from "@/lib/razorpay";
 import { cancelOrder, returnOrder } from "@/app/actions/orders";
+import { useOrderDetails } from "@/hooks/api/useOrders";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   Dialog,
   DialogContent,
@@ -73,57 +75,48 @@ export default function OrderDetailsPage() {
   });
 
   const supabase = createClient();
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
+
+  const { data: fetchedOrder, isLoading, error } = useOrderDetails(orderId);
 
   useEffect(() => {
-    if (!orderId) return;
+    if (isAuthInitialized && !user) {
+      toast.error("Please log in to view order details.");
+      router.push("/auth/login");
+    }
+  }, [user, isAuthInitialized, router]);
 
-    async function fetchOrderDetails() {
+  useEffect(() => {
+    if (fetchedOrder) {
+      setOrder(fetchedOrder);
+    }
+  }, [fetchedOrder]);
+
+  useEffect(() => {
+    setLoading(isLoading);
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!user) return;
+    async function fetchUserReviews() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error("Please log in to view order details.");
-          router.push("/auth/login");
-          return;
-        }
-
-        // Fetch Order details
-        const { data: orderData, error: orderError } = await supabase
-          .from("orders")
-          .select(`
-            *,
-            order_items (
-              *,
-              products (*)
-            ),
-            order_status_history (
-              *
-            )
-          `)
-          .eq("id", orderId)
-          .single();
-
-        if (orderError) throw orderError;
-        setOrder(orderData);
-
-        // Fetch User's reviewed products
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("product_reviews")
           .select("product_id")
-          .eq("user_id", user.id);
+          .eq("user_id", user!.id);
 
         if (!reviewsError && reviewsData) {
           setReviewedProductIds(new Set(reviewsData.map(r => r.product_id)));
         }
-      } catch (err: any) {
-        console.error("Error loading order:", err);
-        toast.error(err.message || "Failed to load order details");
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        // ignore
       }
     }
-
-    fetchOrderDetails();
-  }, [orderId, supabase, router]);
+    if (isAuthInitialized) {
+      fetchUserReviews();
+    }
+  }, [user, supabase, isAuthInitialized]);
 
   const handlePayOnline = async () => {
     if (typeof window === "undefined" || !order) return;
@@ -322,7 +315,6 @@ export default function OrderDetailsPage() {
 
     setReviewSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Please login to write a review.");
         setIsReviewOpen(false);

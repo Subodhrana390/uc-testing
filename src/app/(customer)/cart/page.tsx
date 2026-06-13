@@ -15,29 +15,17 @@ import {
 
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
 
-import {
-  getCartItems,
-  getCartTotal,
-  removeCartItem,
-  updateCartItemQuantity,
-  type CartItem,
-} from "@/lib/cart";
+import { useCartStore } from "@/store/useCartStore";
 
 import { formatCurrency } from "@/lib/format";
 
 export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const { items, updateQuantity: updateCartItemQuantity, removeItem: removeCartItem, getCartTotal } = useCartStore();
 
-  useEffect(() => {
-    const sync = () => setItems(getCartItems());
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
 
-    sync();
-
-    window.addEventListener("cart-updated", sync);
-
-    return () =>
-      window.removeEventListener("cart-updated", sync);
-  }, []);
+  if (!isMounted) return null;
 
   return (
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)]">

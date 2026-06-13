@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ProductCard from "@/components/storefront/ProductCard";
 import { fetchProductsPage } from "@/app/actions/products";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 export default function InfiniteProductList({
   initialProducts,
@@ -13,10 +14,8 @@ export default function InfiniteProductList({
   searchParams: Record<string, string>;
   totalPages: number;
 }) {
-  const [products, setProducts] = useState(initialProducts);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -24,19 +23,41 @@ export default function InfiniteProductList({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Update initialProducts if search params change (Next.js server navigation)
-  useEffect(() => {
-    setProducts(initialProducts);
-    setPage(1);
-  }, [initialProducts]);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["products-infinite", searchParams],
+    queryFn: async ({ pageParam = 1 }) => {
+      const { products } = await fetchProductsPage(pageParam, searchParams);
+      return { products, page: pageParam };
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < totalPages) return lastPage.page + 1;
+      return undefined;
+    },
+    initialPageParam: 1,
+    initialData: {
+      pages: [{ products: initialProducts, page: 1 }],
+      pageParams: [1],
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const allProducts = useMemo(() => {
+    if (!isMobile) return initialProducts;
+    return data ? data.pages.flatMap((page) => page.products) : initialProducts;
+  }, [data, initialProducts, isMobile]);
 
   useEffect(() => {
-    if (!isMobile || page >= totalPages || loading) return;
+    if (!isMobile || !hasNextPage || isFetchingNextPage) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          loadMore();
+          fetchNextPage();
         }
       },
       { rootMargin: "200px" }
@@ -48,33 +69,16 @@ export default function InfiniteProductList({
     return () => {
       if (target) observer.unobserve(target);
     };
-  }, [isMobile, page, totalPages, loading]);
-
-  const loadMore = async () => {
-    if (loading || page >= totalPages) return;
-    setLoading(true);
-    try {
-      const nextPage = page + 1;
-      const { products: newProducts } = await fetchProductsPage(nextPage, searchParams);
-      if (newProducts.length > 0) {
-        setProducts((prev) => [...prev, ...newProducts]);
-        setPage(nextPage);
-      }
-    } catch (err) {
-      console.error("Failed to load more products:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isMobile, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-        {(isMobile ? products : initialProducts).map((product) => (
+        {allProducts.map((product) => (
           <ProductCard key={product.id} product={product as any} />
         ))}
       </div>
-      {isMobile && page < totalPages && (
+      {isMobile && hasNextPage && (
         <div id="products-infinite-scroll-trigger" className="w-full py-8 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>

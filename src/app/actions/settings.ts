@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/utils/supabase/admin-server'
 import { createClient } from '@/utils/supabase/server'
 import { revalidateTag, revalidatePath, unstable_cache } from 'next/cache'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export interface SiteSettings {
   id: number
@@ -50,6 +51,17 @@ async function checkAdmin(supabase: any) {
   if (authError || !user) {
     throw new Error('Unauthorized')
   }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') {
+    throw new Error('Unauthorized: Admin access required')
+  }
+
   return user
 }
 
@@ -99,8 +111,13 @@ export const getNavigationLinks = unstable_cache(
  */
 export async function updateSiteSettingsAction(data: Partial<SiteSettings>) {
   try {
-    const supabase = await createAdminClient()
-    await checkAdmin(supabase)
+    const supabaseAuth = await createClient()
+    await checkAdmin(supabaseAuth)
+
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Sanitize WhatsApp number (digits only)
     let sanitizedWhatsapp = data.whatsapp_number
@@ -114,7 +131,7 @@ export async function updateSiteSettingsAction(data: Partial<SiteSettings>) {
       id: 1 // enforce single row
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('site_settings')
       .update(updateData)
       .eq('id', 1)
@@ -135,10 +152,15 @@ export async function updateSiteSettingsAction(data: Partial<SiteSettings>) {
  */
 export async function createNavigationLinkAction(data: Omit<NavigationLink, 'id'>) {
   try {
-    const supabase = await createAdminClient()
-    await checkAdmin(supabase)
+    const supabaseAuth = await createClient()
+    await checkAdmin(supabaseAuth)
 
-    const { error } = await supabase
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error } = await supabaseAdmin
       .from('navigation_links')
       .insert([data])
 
@@ -158,10 +180,15 @@ export async function createNavigationLinkAction(data: Omit<NavigationLink, 'id'
  */
 export async function updateNavigationLinkAction(id: string, data: Partial<NavigationLink>) {
   try {
-    const supabase = await createAdminClient()
-    await checkAdmin(supabase)
+    const supabaseAuth = await createClient()
+    await checkAdmin(supabaseAuth)
 
-    const { error } = await supabase
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error } = await supabaseAdmin
       .from('navigation_links')
       .update(data)
       .eq('id', id)
@@ -182,10 +209,15 @@ export async function updateNavigationLinkAction(id: string, data: Partial<Navig
  */
 export async function deleteNavigationLinkAction(id: string) {
   try {
-    const supabase = await createAdminClient()
-    await checkAdmin(supabase)
+    const supabaseAuth = await createClient()
+    await checkAdmin(supabaseAuth)
 
-    const { error } = await supabase
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error } = await supabaseAdmin
       .from('navigation_links')
       .delete()
       .eq('id', id)
@@ -206,11 +238,16 @@ export async function deleteNavigationLinkAction(id: string) {
  */
 export async function reorderNavigationLinksAction(items: { id: string; order_index: number }[]) {
   try {
-    const supabase = await createAdminClient()
-    await checkAdmin(supabase)
+    const supabaseAuth = await createClient()
+    await checkAdmin(supabaseAuth)
+
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     const promises = items.map(item =>
-      supabase
+      supabaseAdmin
         .from('navigation_links')
         .update({ order_index: item.order_index })
         .eq('id', item.id)

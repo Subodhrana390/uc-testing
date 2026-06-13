@@ -30,6 +30,7 @@ import { createAdminClient as createClient } from "@/utils/supabase/admin-client
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { Pagination } from "@/components/ui/pagination";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Recharts imports
 import {
@@ -376,8 +377,7 @@ type StatusType = "All" | "Active" | "Draft";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -400,32 +400,25 @@ export default function ProductsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const [tableProducts, setTableProducts] = useState<any[]>([]);
-  const [tableLoading, setTableLoading] = useState(true);
-  const [totalItems, setTotalItems] = useState(0);
-
   const supabase = useMemo(() => createClient(), []);
 
-  const fetchProducts = useCallback(async () => {
-    try {
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ["admin-products-stats"],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("id, status, stock_quantity, created_at, categories(name)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      toast.error("Failed to load products catalog");
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase]);
+      return data || [];
+    },
+    staleTime: 60 * 1000,
+  });
 
-  const fetchTableProducts = useCallback(async () => {
-    setTableLoading(true);
-    try {
+  const { data: tableData = { items: [], count: 0 }, isLoading: tableLoading } = useQuery({
+    queryKey: ["admin-products-table", currentPage, pageSize, debouncedSearchQuery, filters, debouncedMinPrice, debouncedMaxPrice, startDate, endDate],
+    queryFn: async () => {
       let q = supabase
         .from("products")
         .select("*, categories(name)", { count: "exact" });
@@ -483,24 +476,17 @@ export default function ProductsPage() {
         .range(start, end);
 
       if (error) throw error;
-      setTableProducts(data || []);
-      setTotalItems(count || 0);
-    } catch (error) {
-      console.error("Error fetching table products:", error);
-      toast.error("Failed to load products table");
-    } finally {
-      setTableLoading(false);
-    }
-  }, [supabase, currentPage, pageSize, debouncedSearchQuery, filters, debouncedMinPrice, debouncedMaxPrice, startDate, endDate]);
+      return { items: data || [], count: count || 0 };
+    },
+    staleTime: 30 * 1000,
+  });
+
+  const tableProducts = tableData.items;
+  const totalItems = tableData.count;
 
   useEffect(() => {
     setIsMounted(true);
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    fetchTableProducts();
-  }, [fetchTableProducts]);
+  }, []);
 
   // Debounce search query
   useEffect(() => {
@@ -533,12 +519,15 @@ export default function ProductsPage() {
   const handleRefresh = useCallback(async () => {
     const toastId = toast.loading("Refreshing catalog data...");
     try {
-      await Promise.all([fetchProducts(), fetchTableProducts()]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-products-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-products-table"] })
+      ]);
       toast.success("Catalog and table refreshed successfully", { id: toastId });
     } catch (err) {
       toast.error("Failed to refresh catalog data", { id: toastId });
     }
-  }, [fetchProducts, fetchTableProducts]);
+  }, [queryClient]);
 
   const stats = useMemo(() => {
     const total = products.length;
@@ -552,7 +541,8 @@ export default function ProductsPage() {
   const categoryChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     products.forEach(p => {
-      const catName = p.categories?.name || "Uncategorized";
+      const pAny = p as any;
+      const catName = (Array.isArray(pAny.categories) ? pAny.categories[0]?.name : pAny.categories?.name) || "Uncategorized";
       counts[catName] = (counts[catName] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
@@ -589,7 +579,7 @@ export default function ProductsPage() {
   }, [products]);
 
   const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(products.map(p => p.categories?.name).filter(Boolean)));
+    return Array.from(new Set(products.map((p: any) => Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name).filter(Boolean)));
   }, [products]);
 
   const hasActiveFilters = useMemo(() => {
@@ -612,25 +602,29 @@ export default function ProductsPage() {
     setEndDate("");
   }, []);
 
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products-table"] });
+      toast.success("Product deleted successfully");
+      setProductToDelete(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete product");
+    },
+    onSettled: () => {
+      setDeleting(false);
+    }
+  });
+
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
     setDeleting(true);
-    try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productToDelete.id);
-
-      if (error) throw error;
-      fetchProducts();
-      fetchTableProducts();
-      toast.success("Product deleted successfully");
-      setProductToDelete(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete product");
-    } finally {
-      setDeleting(false);
-    }
+    deleteProductMutation.mutate(productToDelete.id);
   };
 
   const getStatusStyle = (status: string) => {

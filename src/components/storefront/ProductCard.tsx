@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, Heart, ShoppingCart, Check, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { addCartItem, removeCartItem, isInCart as checkInCart } from "@/lib/cart";
+import { useCartStore } from "@/store/useCartStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "react-hot-toast";
 import { useLoginRedirect } from "@/hooks/useLoginRedirect";
@@ -35,18 +36,20 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const [inCart, setInCart] = useState(false);
+  const { addItem, removeItem, isInCart } = useCartStore();
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
+
+  const [isMounted, setIsMounted] = useState(false);
   const [inWishlist, setInWishlist] = useState(false);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
   const { redirectToLogin } = useLoginRedirect();
 
   useEffect(() => {
-    // Initial sync
-    setInCart(checkInCart(product.id));
-
+    setIsMounted(true);
+    
     async function checkWishlist() {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data } = await supabase
@@ -57,14 +60,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         .single();
 
       if (data) setInWishlist(true);
+      else setInWishlist(false);
     }
 
-    checkWishlist();
+    if (isAuthInitialized) {
+      checkWishlist();
+    }
+  }, [product.id, supabase, user, isAuthInitialized]);
 
-    const handleCartSync = () => setInCart(checkInCart(product.id));
-    window.addEventListener("cart-updated", handleCartSync);
-    return () => window.removeEventListener("cart-updated", handleCartSync);
-  }, [product.id, supabase]);
+  const inCart = isMounted ? isInCart(product.id) : false;
 
   const price = Number(product.price);
   const salePrice = product.sale_price ? Number(product.sale_price) : 0;
@@ -86,17 +90,15 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
 
     if (inCart) {
-      removeCartItem(product.id);
-      toast.success("Removed from cart");
+      removeItem(product.id);
     } else {
-      addCartItem({
+      addItem({
         id: product.id,
         slug: product.slug,
         name: product.name,
         price: product.sale_price || product.price,
-        image_url: product.image_url
+        image_url: product.image_url || ""
       });
-      toast.success("Added to cart");
     }
   };
 
@@ -104,7 +106,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Please login to save to wishlist");
       redirectToLogin();

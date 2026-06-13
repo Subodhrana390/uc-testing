@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
+import { useUserProfile } from "@/hooks/api/useUserProfile";
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>({
     full_name: "",
@@ -22,43 +24,25 @@ export default function ProfilePage() {
   });
   const supabase = createClient();
 
+  const { data: userProfile, isLoading: loading } = useUserProfile();
+  const user = useAuthStore((state) => state.user);
+
   useEffect(() => {
-    async function getProfile() {
-      try {
-        const { data: { user } } = await (supabase.auth as any).getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
-
-          if (error && error.code !== "PGRST116") throw error;
-
-          if (data) {
-            setProfile(data);
-          } else {
-            setProfile({
-              full_name: user.user_metadata?.full_name || "",
-              email: user.email || "",
-              phone: "",
-              address: ""
-            });
-          }
-        }
-      } catch (error: any) {
-        toast.error(error.message || "Error fetching profile");
-      } finally {
-        setLoading(false);
-      }
+    if (userProfile) {
+      setProfile(userProfile);
+    } else if (user) {
+      setProfile({
+        full_name: user.user_metadata?.full_name || "",
+        email: user.email || "",
+        phone: "",
+        address: ""
+      });
     }
-    getProfile();
-  }, [supabase]);
+  }, [userProfile, user]);
 
   const handleUpdate = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase

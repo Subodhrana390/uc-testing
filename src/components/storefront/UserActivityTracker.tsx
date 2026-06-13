@@ -3,8 +3,12 @@
 import { useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function UserActivityTracker() {
   const supabase = useMemo(() => createClient(), []);
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
   const lastUpdatedRef = useRef<number>(0);
 
   useEffect(() => {
@@ -16,10 +20,6 @@ export default function UserActivityTracker() {
       if (now - lastUpdatedRef.current < 60000) return;
 
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
         if (user && active) {
           lastUpdatedRef.current = now;
           await supabase
@@ -51,7 +51,7 @@ export default function UserActivityTracker() {
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [supabase]);
+  }, [supabase, user, isAuthInitialized]);
 
   return null;
 }

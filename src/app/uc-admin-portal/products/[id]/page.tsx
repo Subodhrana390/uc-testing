@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
   ssr: false,
@@ -28,11 +29,10 @@ const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor")
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const productId = params.id;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const supabase = useMemo(() => createClient(), []);
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [categories, setCategories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("description");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -75,7 +75,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     seo_description: "",
   });
 
-  const [brands, setBrands] = useState<any[]>([]);
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -83,6 +82,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+
+  const { data: initialData, isLoading: loading } = useQuery({
+    queryKey: ["admin-product-edit", productId],
+    queryFn: async () => {
+      const [
+        { data: product },
+        { data: catsRes },
+        { data: brandsRes },
+        { data: attrValuesRes }
+      ] = await Promise.all([
+        supabase.from("products").select("*").eq("id", productId).single(),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("brands").select("*").order("name"),
+        supabase.from("product_attributes").select("*").eq("product_id", productId)
+      ]);
+
+      return { product, categories: catsRes || [], brands: brandsRes || [], attributes: attrValuesRes || [] };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const categories = initialData?.categories || [];
+  const brands = initialData?.brands || [];
 
   // Map main category name keywords → brand category text values
   const getBrandCategoryKeywords = (mainCatName: string): string[] => {
@@ -106,139 +128,194 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     );
   })();
 
+  // Update local state when initial data loads
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [
-          { data: product },
-          { data: catsRes },
-          { data: brandsRes },
-          { data: attrValuesRes }
-        ] = await Promise.all([
-          supabase.from("products").select("*").eq("id", productId).single(),
-          supabase.from("categories").select("*").order("name"),
-          supabase.from("brands").select("*").order("name"),
-          supabase.from("product_attributes").select("*").eq("product_id", productId)
-        ]);
+    if (initialData?.product) {
+      const { product, categories: catsRes, attributes } = initialData;
+      
+      const productCatId = product.category_id || "";
+      const productCat = catsRes?.find((c: any) => c.id === productCatId);
+      if (productCat?.parent_id) {
+        setSelectedMainCategoryId(productCat.parent_id);
+      } else if (productCatId) {
+        setSelectedMainCategoryId(productCatId);
+      }
 
-        if (product) {
-          // Determine if the product's category is a sub-category
-          const productCatId = product.category_id || "";
-          const productCat = catsRes?.find((c: any) => c.id === productCatId);
-          if (productCat?.parent_id) {
-            // It's a sub-category — set main to parent
-            setSelectedMainCategoryId(productCat.parent_id);
-          } else if (productCatId) {
-            // It's a main category
-            setSelectedMainCategoryId(productCatId);
-          }
+      setFormData({
+        name: product.name,
+        price: product.price.toString(),
+        cost_price: (product.cost_price || 0).toString(),
+        sale_price: (product.sale_price || "").toString(),
+        sku: product.sku || "",
+        barcode: product.barcode || "",
+        hsn_code: product.hsn_code || "",
+        brand_id: product.brand_id || "",
+        category_id: product.category_id || "",
+        stock_quantity: (product.stock_quantity || 0).toString(),
+        unit: product.unit || "pcs",
+        short_description: product.short_description || "",
+        long_description: product.long_description || "",
+        specification: product.specification || "",
+        manufacturing_info: product.manufacturing_info || "",
+        warranty_info: product.warranty_info || "",
+        images: product.images || [],
+        tax_rate: (product.tax_rate || 0).toString(),
+        is_featured: product.is_featured || false,
+        is_recommended: product.is_recommended || false,
+        is_best_seller: product.is_best_seller || false,
+        is_trending: product.is_trending || false,
+        is_new_arrival: product.is_new_arrival || false,
+        is_on_sale: product.is_on_sale || false,
+        is_hot_deal: product.is_hot_deal || false,
+        is_top_rated: product.is_top_rated || false,
+        is_industrial_grade: product.is_industrial_grade || false,
+        is_ready_stock: product.is_ready_stock || false,
+        is_high_demand: product.is_high_demand || false,
+        is_tax_inclusive: product.is_tax_inclusive || false,
+        datasheet_url: product.datasheet_url || "",
+        visibility: product.visibility !== false,
+        seo_title: product.seo_title || "",
+        seo_keywords: product.seo_keywords || "",
+        seo_description: product.seo_description || "",
+      });
 
-          setFormData({
-            name: product.name,
-            price: product.price.toString(),
-            cost_price: (product.cost_price || 0).toString(),
-            sale_price: (product.sale_price || "").toString(),
-            sku: product.sku || "",
-            barcode: product.barcode || "",
-            hsn_code: product.hsn_code || "",
-            brand_id: product.brand_id || "",
-            category_id: product.category_id || "",
-            stock_quantity: (product.stock_quantity || 0).toString(),
-            unit: product.unit || "pcs",
-            short_description: product.short_description || "",
-            long_description: product.long_description || "",
-            specification: product.specification || "",
-            manufacturing_info: product.manufacturing_info || "",
-            warranty_info: product.warranty_info || "",
-            images: product.images || [],
-            tax_rate: (product.tax_rate || 0).toString(),
-            is_featured: product.is_featured || false,
-            is_recommended: product.is_recommended || false,
-            is_best_seller: product.is_best_seller || false,
-            is_trending: product.is_trending || false,
-            is_new_arrival: product.is_new_arrival || false,
-            is_on_sale: product.is_on_sale || false,
-            is_hot_deal: product.is_hot_deal || false,
-            is_top_rated: product.is_top_rated || false,
-            is_industrial_grade: product.is_industrial_grade || false,
-            is_ready_stock: product.is_ready_stock || false,
-            is_high_demand: product.is_high_demand || false,
-            is_tax_inclusive: (product.tax_rate || 0) > 0,
-            datasheet_url: product.datasheet_url || "",
-            visibility: product.visibility !== false,
-            seo_title: product.seo_title || "",
-            seo_keywords: product.seo_keywords || "",
-            seo_description: product.seo_description || "",
-          });
-        }
-
-        if (catsRes) setCategories(catsRes);
-        if (brandsRes) setBrands(brandsRes);
-
-        if (attrValuesRes) {
-          const values: Record<string, any> = {};
-          attrValuesRes.forEach(av => {
-            values[av.attribute_id] = av.value;
-          });
-          setAttributeValues(values);
-        }
-
-        if (product) {
-          try {
-            const { getSimilarProducts, getRelatedProducts, getFrequentlyBoughtTogether } = await import("@/app/actions/recommendationEngine");
-            const [similar, related, fbt] = await Promise.all([
-              getSimilarProducts(product, 3),
-              getRelatedProducts(product, 3),
-              getFrequentlyBoughtTogether(product, 3)
-            ]);
-            
-            const autoRelations = [
-              ...similar.map(p => ({ ...p, relation_type: "similar" })),
-              ...related.map(p => ({ ...p, relation_type: "related" })),
-              ...fbt.map(p => ({ ...p, relation_type: "frequently_bought" }))
-            ];
-            
-            setRelatedProducts(autoRelations);
-          } catch (err) {
-            console.error("Failed to load automated recommendations", err);
-          }
-        }
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load product data.");
-      } finally {
-        setLoading(false);
+      if (attributes && attributes.length > 0) {
+        const values: Record<string, any> = {};
+        attributes.forEach((attr: any) => {
+          values[attr.attribute_id] = attr.attribute_value;
+        });
+        setAttributeValues(values);
       }
     }
-    fetchData();
-  }, [supabase, productId]);
+  }, [initialData]);
+
+  const { data: automatedRelations } = useQuery({
+    queryKey: ["admin-product-automated-relations", initialData?.product],
+    queryFn: async () => {
+      if (!initialData?.product) return [];
+      const { getSimilarProducts, getRelatedProducts, getFrequentlyBoughtTogether } = await import("@/app/actions/recommendationEngine");
+      const [similar, related, fbt] = await Promise.all([
+        getSimilarProducts(initialData.product, 3),
+        getRelatedProducts(initialData.product, 3),
+        getFrequentlyBoughtTogether(initialData.product, 3)
+      ]);
+      
+      return [
+        ...similar.map(p => ({ ...p, relation_type: "similar" })),
+        ...related.map(p => ({ ...p, relation_type: "related" })),
+        ...fbt.map(p => ({ ...p, relation_type: "frequently_bought" }))
+      ];
+    },
+    enabled: !!initialData?.product,
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
-    async function fetchAttributes() {
-      if (!formData.category_id) {
-        setDynamicAttributes([]);
-        return;
-      }
+    if (automatedRelations) {
+      setRelatedProducts(automatedRelations);
+    }
+  }, [automatedRelations]);
 
+  const { data: catAttributesData } = useQuery({
+    queryKey: ["admin-product-category-attributes", formData.category_id],
+    queryFn: async () => {
+      if (!formData.category_id) return [];
       const { data, error } = await supabase
-        .from("attributes")
-        .select(`
-          *,
-          group:attribute_groups!inner(*)
-        `)
-        .eq("attribute_groups.category_id", formData.category_id)
-        .order("display_order");
+        .from("category_attributes")
+        .select("attributes(*)")
+        .eq("category_id", formData.category_id);
+      if (error) throw error;
+      return data.map(d => d.attributes).filter(Boolean);
+    },
+    enabled: !!formData.category_id,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (error) {
-        console.error("Error fetching attributes:", error);
-        return;
-      }
-
-      setDynamicAttributes(data || []);
+  useEffect(() => {
+    if (catAttributesData) {
+      setDynamicAttributes(catAttributesData);
     }
-    fetchAttributes();
-  }, [formData.category_id, supabase]);
+  }, [catAttributesData]);
+
+  const updateProductMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name: formData.name.trim(),
+          price: parseFloat(formData.price),
+          cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
+          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+          sku: formData.sku.trim(),
+          barcode: formData.barcode.trim(),
+          hsn_code: formData.hsn_code.trim(),
+          brand_id: formData.brand_id || null,
+          category_id: formData.category_id || null,
+          stock_quantity: parseInt(formData.stock_quantity),
+          unit: formData.unit,
+          short_description: formData.short_description.trim(),
+          long_description: formData.long_description.trim(),
+          specification: formData.specification.trim(),
+          manufacturing_info: formData.manufacturing_info.trim(),
+          warranty_info: formData.warranty_info.trim(),
+          images: formData.images,
+          tax_rate: parseFloat(formData.tax_rate),
+          is_tax_inclusive: formData.is_tax_inclusive,
+          datasheet_url: formData.datasheet_url,
+          visibility: formData.visibility,
+          seo_title: formData.seo_title,
+          seo_keywords: formData.seo_keywords,
+          seo_description: formData.seo_description,
+        })
+        .eq("id", productId);
+
+      if (error) throw error;
+
+      await supabase.from("product_attributes").delete().eq("product_id", productId);
+      const attrInserts = Object.entries(attributeValues)
+        .filter(([_, val]) => val !== "" && val !== null)
+        .map(([attrId, val]) => ({
+          product_id: productId,
+          attribute_id: attrId,
+          attribute_value: val
+        }));
+      if (attrInserts.length > 0) {
+        await supabase.from("product_attributes").insert(attrInserts);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-product-edit", productId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products-table"] });
+      toast.success("Product updated successfully!");
+      router.push("/uc-admin-portal/products");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update product");
+    },
+    onSettled: () => {
+      setSaving(false);
+    }
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("products").delete().eq("id", productId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products-table"] });
+      toast.success("Product deleted successfully");
+      router.push("/uc-admin-portal/products");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete product");
+    },
+    onSettled: () => {
+      setDeleting(false);
+    }
+  });
 
   const searchProducts = async (term: string) => {
     setSearchTerm(term);
@@ -266,112 +343,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setFormData((prev) => ({ ...prev, [field]: content }));
   };
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^\w ]+/g, "")
-      .replace(/ +/g, "-");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.price || !formData.category_id) {
-      toast.error("Please fill in all required fields (Name, Price, Category).");
+    if (!formData.name.trim() || !formData.price || !formData.category_id) {
+      toast.error("Please fill in all required fields (Name, Price, Category)");
       return;
     }
-
-    const price = parseFloat(formData.price);
-    const salePrice = formData.sale_price ? parseFloat(formData.sale_price) : null;
-
-    if (salePrice !== null && salePrice >= price) {
-      toast.error("Sale price must be less than the regular price.");
-      return;
-    }
-
     setSaving(true);
-    try {
-      const slug = generateSlug(formData.name);
-      const { error: productError } = await supabase.from("products").update(
-        {
-          name: formData.name,
-          slug,
-          sku: formData.sku,
-          barcode: formData.barcode,
-          hsn_code: formData.hsn_code || null,
-          brand_id: formData.brand_id || null,
-          price: parseFloat(formData.price),
-          cost_price: parseFloat(formData.cost_price || "0"),
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
-          category_id: formData.category_id,
-          stock_quantity: parseInt(formData.stock_quantity),
-          unit: formData.unit,
-          short_description: formData.short_description,
-          long_description: formData.long_description,
-          specification: formData.specification,
-          manufacturing_info: formData.manufacturing_info,
-          warranty_info: formData.warranty_info,
-          image_url: formData.images[0] || null,
-          images: formData.images,
-          datasheet_url: formData.datasheet_url || null,
-          status: formData.visibility ? "Active" : "Draft",
-          tax_rate: parseFloat(formData.tax_rate || "0"),
-          is_tax_inclusive: formData.is_tax_inclusive,
-          visibility: formData.visibility,
-          is_featured: formData.is_featured,
-          is_recommended: formData.is_recommended,
-          is_best_seller: formData.is_best_seller,
-          is_trending: formData.is_trending,
-          is_new_arrival: formData.is_new_arrival,
-          is_on_sale: formData.is_on_sale,
-          is_hot_deal: formData.is_hot_deal,
-          is_top_rated: formData.is_top_rated,
-          is_industrial_grade: formData.is_industrial_grade,
-          is_ready_stock: formData.is_ready_stock,
-          is_high_demand: formData.is_high_demand,
-          seo_title: formData.seo_title || null,
-          seo_keywords: formData.seo_keywords || null,
-          seo_description: formData.seo_description || null,
-        }
-      ).eq("id", productId);
-
-      if (productError) throw productError;
-
-      // Update attributes: delete and re-insert
-      await supabase.from("product_attributes").delete().eq("product_id", productId);
-      const attrInserts = Object.entries(attributeValues).map(([attrId, val]) => ({
-        product_id: productId,
-        attribute_id: attrId,
-        value: val
-      }));
-      if (attrInserts.length > 0) {
-        await supabase.from("product_attributes").insert(attrInserts);
-      }
-
-      // Removed explicit relations update to related_products table
-
-      toast.success("Product updated successfully!");
-      router.push("/uc-admin-portal/products");
-    } catch (error: any) {
-      console.error("Error updating product:", error);
-      toast.error(error.message || "Failed to update product.");
-    } finally {
-      setSaving(false);
-    }
+    updateProductMutation.mutate();
   };
 
-  const handleConfirmDelete = async () => {
+  const handleDelete = async () => {
     setDeleting(true);
-    try {
-      const { error } = await supabase.from("products").delete().eq("id", productId);
-      if (error) throw error;
-      toast.success("Product deleted");
-      router.push("/uc-admin-portal/products");
-    } catch (error: any) {
-      toast.error(error.message || "Delete failed");
-    } finally {
-      setDeleting(false);
-      setIsDeleteDialogOpen(false);
-    }
+    deleteProductMutation.mutate();
   };
 
   const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100";
@@ -962,7 +946,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               Cancel
             </Button>
             <Button
-              onClick={handleConfirmDelete}
+              onClick={handleDelete}
               disabled={deleting}
               className="bg-red-600 hover:bg-red-700 text-white rounded-xl gap-2 font-medium"
             >

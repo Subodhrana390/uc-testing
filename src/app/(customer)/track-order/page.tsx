@@ -12,6 +12,7 @@ import {
   BadgeCheck, Clock3, XCircle, RefreshCcw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/store/useAuthStore";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
@@ -97,6 +98,8 @@ function TrackOrderContent() {
 
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
 
   /* invoice download */
   const handleDownloadInvoice = async (o: any) => {
@@ -118,7 +121,6 @@ function TrackOrderContent() {
     if (!reviewText.trim()) { toast.error("Please enter your review."); return; }
     setReviewSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Please login."); setIsReviewOpen(false); return; }
       const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
       const reviewerName = profile?.full_name || user.user_metadata?.full_name || user.email || "Customer";
@@ -175,7 +177,6 @@ function TrackOrderContent() {
 
   useEffect(() => {
     async function fetchUserReviews() {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase
           .from("product_reviews")
@@ -186,8 +187,10 @@ function TrackOrderContent() {
         }
       }
     }
-    fetchUserReviews();
-  }, [supabase]);
+    if (isAuthInitialized) {
+      fetchUserReviews();
+    }
+  }, [supabase, user, isAuthInitialized]);
 
   /* ── timeline steps ── */
   const sl = (order?.status || "").toLowerCase();

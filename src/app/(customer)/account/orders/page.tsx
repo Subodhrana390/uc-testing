@@ -26,15 +26,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useOrders } from "@/hooks/api/useOrders";
+
 export default function OrderHistoryPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"current" | "archived">("current");
   const [searchQuery, setSearchQuery] = useState("");
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // Return Modal State
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
@@ -230,37 +230,15 @@ export default function OrderHistoryPage() {
 
 
 
+  const { data: fetchedOrders, isLoading: loading, refetch: refreshOrders } = useOrders();
+  
   useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from("orders")
-          .select(`
-            *,
-            order_items (
-              *,
-              products (*)
-            ),
-            order_status_history (
-              *
-            )
-          `)
-          .eq("customer_email", user.email)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setOrders(data || []);
-      } catch (error: any) {
-        toast.error(error.message || "Error fetching orders");
-      } finally {
-        setLoading(false);
-      }
+    if (fetchedOrders) {
+      setOrders(fetchedOrders);
     }
-    fetchOrders();
-  }, [supabase, refreshKey]);
+  }, [fetchedOrders]);
+
+
 
   const STATUS_LABEL: Record<string, string> = {
     pending: "Pending",
@@ -333,7 +311,7 @@ export default function OrderHistoryPage() {
 
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => { setLoading(true); setRefreshKey(prev => prev + 1); }}
+            onClick={() => refreshOrders()}
             variant="outline"
             className="h-9 gap-1.5 border-zinc-200 text-zinc-600 hover:bg-zinc-50"
           >

@@ -1,19 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import {
-  ShoppingCart,
-  CheckCircle2,
-} from "lucide-react";
-
-import {
-  addCartItem,
-  isInCart,
-  removeCartItem,
-} from "@/lib/cart";
-
-import toast from "react-hot-toast";
+import { ShoppingCart, CheckCircle2 } from "lucide-react";
+import { useCartStore } from "@/store/useCartStore";
 
 type Props = {
   product: {
@@ -25,7 +14,6 @@ type Props = {
     image_url?: string | null;
     stock_quantity?: number;
   };
-
   quantity?: number;
   className?: string;
   label?: string;
@@ -39,27 +27,12 @@ export default function AddToCartButton({
   label = "Add to Cart",
   allowRemove = true,
 }: Props) {
-  const [isAdded, setIsAdded] =
-    useState(false);
+  const { addItem, removeItem, isInCart } = useCartStore();
 
-  useEffect(() => {
-    const sync = () =>
-      setIsAdded(isInCart(product.id));
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
 
-    sync();
-
-    window.addEventListener(
-      "cart-updated",
-      sync
-    );
-
-    return () =>
-      window.removeEventListener(
-        "cart-updated",
-        sync
-      );
-  }, [product.id]);
-
+  const isAdded = isMounted ? isInCart(product.id) : false;
   const isOutOfStock = product.stock_quantity === 0;
 
   return (
@@ -67,39 +40,22 @@ export default function AddToCartButton({
       type="button"
       disabled={isOutOfStock}
       onClick={() => {
-        console.log(
-          "Add to Cart clicked",
-          product.id,
-          quantity
-        );
-
         if (isAdded && allowRemove) {
-          removeCartItem(product.id);
-
-          toast.success(
-            `${product.name} removed from cart`
-          );
-
+          removeItem(product.id);
           return;
         }
 
-        const price =
-          Number(product.sale_price || product.price) || 0;
+        const price = Number(product.sale_price || product.price) || 0;
 
-        addCartItem(
+        addItem(
           {
             id: product.id,
             slug: product.slug,
             name: product.name,
             price,
-            image_url:
-              product.image_url,
+            image_url: product.image_url || "",
           },
           quantity
-        );
-
-        toast.success(
-          `${product.name} added to cart`
         );
       }}
       className={`

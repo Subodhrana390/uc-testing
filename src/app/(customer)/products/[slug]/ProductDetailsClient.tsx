@@ -12,10 +12,10 @@ import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
 import DeliveryEstimator from "@/components/storefront/DeliveryEstimator";
 import ProductReviews from "@/components/storefront/ProductReviews";
 import { addRecentlyViewed } from "@/lib/recentlyViewed";
-import { addCartItem, isInCart, updateCartItemQuantity } from "@/lib/cart";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import ShareModal from "@/components/storefront/ShareModal";
+import { useCartStore } from "@/store/useCartStore";
 
 export default function ProductDetailsClient({
   product,
@@ -25,6 +25,7 @@ export default function ProductDetailsClient({
   attributes: any[]
 }) {
   const router = useRouter();
+  const { addItem, updateQuantity, isInCart } = useCartStore();
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
@@ -41,13 +42,13 @@ export default function ProductDetailsClient({
 
   const handleBuyNow = () => {
     const price = Number(product.sale_price || product.price) || 0;
-    addCartItem(
+    addItem(
       {
         id: product.id,
         slug: product.slug,
         name: product.name,
         price,
-        image_url: product.image_url,
+        image_url: product.image_url || "",
       },
       quantity
     );
@@ -170,7 +171,7 @@ export default function ProductDetailsClient({
 
   useEffect(() => {
     if (product && isInCart(product.id)) {
-      updateCartItemQuantity(product.id, quantity);
+      updateQuantity(product.id, quantity);
     }
   }, [quantity, product]);
 

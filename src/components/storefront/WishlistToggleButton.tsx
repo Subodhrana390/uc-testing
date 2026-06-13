@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/utils/supabase/client";
-import toast from "react-hot-toast";
 import { useLoginRedirect } from "@/hooks/useLoginRedirect";
+import { useWishlistStatus, useToggleWishlist } from "@/hooks/api/useWishlist";
 
 type Props = {
   productId: string;
@@ -15,81 +13,31 @@ type Props = {
 };
 
 export default function WishlistToggleButton({ productId, className, label = "Save", onAdded }: Props) {
-  const supabase = useMemo(() => createClient(), []);
   const { redirectToLogin } = useLoginRedirect();
-  const [entryId, setEntryId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: entryId, isLoading } = useWishlistStatus(productId);
+  const { mutate: toggleWishlist, isPending } = useToggleWishlist();
 
-  useEffect(() => {
-    async function loadState() {
-      const {
-        data: { user },
-      } = await (supabase.auth as any).getUser();
-
-      if (!user) {
-        setLoading(false);
-        return;
+  const handleToggle = () => {
+    // We can't synchronously check auth here easily without flashing, but the mutation handles the auth error gracefully.
+    // Actually, to redirect properly, we can rely on the mutation error, but catching it here is better.
+    // For now, the mutation throws an error which toast catches. But we also want to redirect.
+    toggleWishlist({ productId, entryId: entryId || null }, {
+      onError: (err) => {
+        if (err.message.includes("login")) {
+          redirectToLogin();
+        }
+      },
+      onSuccess: (data) => {
+        if (data.action === "added" && onAdded) {
+          onAdded();
+        }
       }
-
-      const { data } = await supabase
-        .from("wishlist")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("product_id", productId)
-        .maybeSingle();
-
-      setEntryId(data?.id || null);
-      setLoading(false);
-    }
-
-    loadState();
-  }, [productId, supabase]);
-
-  async function handleToggle() {
-    const {
-      data: { user },
-    } = await (supabase.auth as any).getUser();
-
-    if (!user) {
-      toast("Please login to save wishlist items");
-      redirectToLogin();
-      return;
-    }
-
-    if (entryId) {
-      const { error } = await supabase.from("wishlist").delete().eq("id", entryId);
-      if (error) {
-        toast.error(error.message || "Unable to update wishlist");
-        return;
-      }
-      setEntryId(null);
-      window.dispatchEvent(new CustomEvent("wishlist-updated"));
-      toast.success("Removed from wishlist");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("wishlist")
-      .insert([{ user_id: user.id, product_id: productId }])
-      .select("id")
-      .single();
-
-    if (error) {
-      toast.error(error.message || "Unable to update wishlist");
-      return;
-    }
-
-    setEntryId(data.id);
-    window.dispatchEvent(new CustomEvent("wishlist-updated"));
-    toast.success("Saved to wishlist");
-    if (onAdded) {
-      onAdded();
-    }
-  }
+    });
+  };
 
   return (
     <button
-      disabled={loading}
+      disabled={isLoading || isPending}
       onClick={handleToggle}
       className={cn(
         "inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:pointer-events-none disabled:opacity-50 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-900 h-11 px-6",

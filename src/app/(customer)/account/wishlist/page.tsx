@@ -7,7 +7,8 @@ import { Heart, ShoppingCart, Trash2, ArrowRight, Star, AlertCircle, Package, Bo
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/format";
-import { addCartItem } from "@/lib/cart";
+import { useCartStore } from "@/store/useCartStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,21 +22,23 @@ export default function WishlistPage() {
 
   const supabase = createClient();
 
+  const user = useAuthStore((state) => state.user);
+  const isAuthInitialized = useAuthStore((state) => state.isInitialized);
+
   useEffect(() => {
-    fetchWishlist();
-  }, []);
+    if (isAuthInitialized) {
+      if (user) {
+        fetchWishlist();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [user, isAuthInitialized]);
 
   async function fetchWishlist() {
+    if (!user) return;
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+      setLoading(true);
       const { data, error } = await supabase
         .from("wishlist")
         .select(`*, products (*)`)
@@ -71,16 +74,18 @@ export default function WishlistPage() {
     }
   };
 
+  const addItem = useCartStore((state) => state.addItem);
+
   const handleAddToCart = async (item: any) => {
     if (!item.products) return;
     setAddingToCart(item.id);
     try {
-      addCartItem({
+      addItem({
         id: item.products.id,
         slug: item.products.slug,
         name: item.products.name,
         price: Number(item.products.price),
-        image_url: item.products.image_url,
+        image_url: item.products.image_url || "",
       });
       toast.success("Added to cart");
       await removeFromWishlist(item.id);
