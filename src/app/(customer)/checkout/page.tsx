@@ -237,7 +237,7 @@ export default function CheckoutPage() {
 
       const { data: products } = await supabase
         .from("products")
-        .select("id, tax_rate, is_tax_inclusive, stock_quantity")
+        .select("id, price, sale_price, tax_rate, is_tax_inclusive, stock_quantity")
         .in(
           "id",
           cartItems.map((i) => i.id)
@@ -247,9 +247,11 @@ export default function CheckoutPage() {
         const prod = products?.find(
           (p: any) => p.id === item.id
         );
+        const currentPrice = prod ? (Number(prod.sale_price || prod.price) || 0) : item.price;
 
         return {
           ...item,
+          price: currentPrice,
           tax_rate: prod?.tax_rate || 0,
           is_tax_inclusive: prod?.is_tax_inclusive || false,
           stock_quantity: prod?.stock_quantity || 0,
@@ -320,7 +322,6 @@ export default function CheckoutPage() {
 
         setForm((prev) => ({
           ...prev,
-          fullName: defaultAddr.full_name || prev.fullName,
           address: `${defaultAddr.address_line1}${defaultAddr.address_line2
             ? ", " +
             defaultAddr.address_line2
@@ -344,7 +345,6 @@ export default function CheckoutPage() {
 
     setForm((prev) => ({
       ...prev,
-      fullName: addr.full_name || prev.fullName,
       address: `${addr.address_line1}${addr.address_line2
         ? ", " + addr.address_line2
         : ""
@@ -501,6 +501,11 @@ export default function CheckoutPage() {
     let createdOrderId: string | null = null;
 
     try {
+      const selectedAddr = addresses.find(a => a.id === selectedAddressId);
+      const shippingAddressString = selectedAddr
+        ? `${selectedAddr.address_line1}${selectedAddr.address_line2 ? ", " + selectedAddr.address_line2 : ""}`
+        : form.address;
+
       const { createOrder } = await import("@/app/actions/orders");
 
       if (paymentMethod === "ONLINE" || paymentMethod === "EMI") {
@@ -520,8 +525,11 @@ export default function CheckoutPage() {
         // 1. Create order in Supabase as Unpaid
         const res = await createOrder({
           ...form,
+          address: shippingAddressString,
           items,
           total: grandTotal,
+          taxAmount: taxTotal,
+          shippingAmount: deliveryCharge,
           paymentMethod: "ONLINE",
           deliveryEstimate: deliveryEstimate?.date,
           paymentStatus: "Unpaid",
@@ -669,8 +677,11 @@ export default function CheckoutPage() {
         // COD logic
         const res = await createOrder({
           ...form,
+          address: shippingAddressString,
           items,
           total: grandTotal,
+          taxAmount: taxTotal,
+          shippingAmount: deliveryCharge,
           paymentMethod: "COD",
           deliveryEstimate: deliveryEstimate?.date,
           couponCode: appliedCoupon?.code || undefined
@@ -942,6 +953,11 @@ export default function CheckoutPage() {
                           <p className="text-xs text-zinc-400 font-medium mt-0.5">
                             {addr.country}
                           </p>
+                          {addr.phone && (
+                            <p className="text-xs text-zinc-500 font-semibold mt-2 border-t border-zinc-100 pt-1.5">
+                              Mobile: {addr.phone}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1169,15 +1185,39 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="grid gap-6">
+                    {(() => {
+                      const selectedAddr = addresses.find(a => a.id === selectedAddressId);
+                      return (
+                        <div className="p-5 border border-zinc-200 rounded-2xl">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Shipping To</h3>
+                            <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
+                          </div>
+                          <p className="font-bold text-sm text-zinc-950">
+                            {selectedAddr ? selectedAddr.full_name : form.fullName}
+                          </p>
+                          <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
+                          <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
+                          <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
+                          
+                          <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Recipient Phone</span>
+                              <span className="font-medium text-zinc-700">
+                                {selectedAddr ? selectedAddr.phone || "—" : form.phone}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div className="p-5 border border-zinc-200 rounded-2xl">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Shipping To</h3>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Contact Details</h3>
                         <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
                       </div>
                       <p className="font-bold text-sm text-zinc-950">{form.fullName}</p>
-                      <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
-                      <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
-                      <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
                       
                       <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -1282,10 +1322,6 @@ export default function CheckoutPage() {
                     <span className="font-bold text-zinc-950">{formatCurrency(deliveryCharge)}</span>
                   </div>
 
-                  <div className="flex justify-between text-sm font-medium text-zinc-600">
-                    <span>Estimated Tax {items.some(i => i.is_tax_inclusive) && <span className="text-xs text-zinc-400 font-normal">(Included)</span>}</span>
-                    <span className="font-bold text-zinc-950">{formatCurrency(taxTotal)}</span>
-                  </div>
 
                   {deliveryEstimate && (
                     <div className="flex justify-between text-sm font-black text-emerald-700 bg-emerald-50/80 p-3.5 rounded-xl border border-emerald-100/60 mt-4">

@@ -2054,6 +2054,37 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
+                {/* Pricing Summary Breakdown */}
+                {(() => {
+                  const subtotal = selectedOrder.items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                  return (
+                    <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5">
+                      <div className="flex justify-between text-xs font-bold text-zinc-500">
+                        <span>SUBTOTAL</span>
+                        <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      {parseFloat(selectedOrder.tax_amount || 0) > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-zinc-500">
+                          <span>GST</span>
+                          <span>₹{parseFloat(selectedOrder.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {parseFloat(selectedOrder.shipping_amount || 0) > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-zinc-500">
+                          <span>DELIVERY CHARGE</span>
+                          <span>₹{parseFloat(selectedOrder.shipping_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {parseFloat(selectedOrder.discount_amount || 0) > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-rose-600">
+                          <span>COUPON DISCOUNT</span>
+                          <span>-₹{parseFloat(selectedOrder.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {(selectedOrder.tracking_id || selectedOrder.delivery_estimate) && (
                   <div className="grid grid-cols-2 gap-4">
                     {selectedOrder.delivery_estimate && (

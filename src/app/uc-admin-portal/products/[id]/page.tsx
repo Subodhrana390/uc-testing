@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
-import { ArrowLeft, Save, Loader2, Search, Plus, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import MultiImageUpload from "@/components/admin/MultiImageUpload";
@@ -77,11 +77,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  const [relationType, setRelationType] = useState("related");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
+
+  const taxRateVal = parseFloat(formData.tax_rate) || 0;
+  const priceVal = parseFloat(formData.price) || 0;
+  const salePriceVal = parseFloat(formData.sale_price) || 0;
+
+  const finalPrice = priceVal + (priceVal * taxRateVal) / 100;
+  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * taxRateVal) / 100) : 0;
 
   const { data: initialData, isLoading: loading } = useQuery({
     queryKey: ["admin-product-edit", productId],
@@ -141,11 +144,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         setSelectedMainCategoryId(productCatId);
       }
 
+      const rate = product.tax_rate || 0;
+      const isInclusive = product.is_tax_inclusive || false;
+      const roundPrice = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100;
+      const basePrice = isInclusive ? roundPrice(product.price / (1 + rate / 100)) : product.price;
+      const baseSalePrice = product.sale_price
+        ? (isInclusive ? roundPrice(product.sale_price / (1 + rate / 100)) : product.sale_price)
+        : "";
+
       setFormData({
         name: product.name,
-        price: product.price.toString(),
+        price: basePrice.toString(),
         cost_price: (product.cost_price || 0).toString(),
-        sale_price: (product.sale_price || "").toString(),
+        sale_price: baseSalePrice.toString(),
         sku: product.sku || "",
         barcode: product.barcode || "",
         hsn_code: product.hsn_code || "",
@@ -189,32 +200,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   }, [initialData]);
 
-  const { data: automatedRelations } = useQuery({
-    queryKey: ["admin-product-automated-relations", initialData?.product],
-    queryFn: async () => {
-      if (!initialData?.product) return [];
-      const { getSimilarProducts, getRelatedProducts, getFrequentlyBoughtTogether } = await import("@/app/actions/recommendationEngine");
-      const [similar, related, fbt] = await Promise.all([
-        getSimilarProducts(initialData.product, 3),
-        getRelatedProducts(initialData.product, 3),
-        getFrequentlyBoughtTogether(initialData.product, 3)
-      ]);
-      
-      return [
-        ...similar.map(p => ({ ...p, relation_type: "similar" })),
-        ...related.map(p => ({ ...p, relation_type: "related" })),
-        ...fbt.map(p => ({ ...p, relation_type: "frequently_bought" }))
-      ];
-    },
-    enabled: !!initialData?.product,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  useEffect(() => {
-    if (automatedRelations) {
-      setRelatedProducts(automatedRelations);
-    }
-  }, [automatedRelations]);
 
   const { data: catAttributesData } = useQuery({
     queryKey: ["admin-product-category-attributes", formData.category_id],
@@ -239,13 +224,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const updateProductMutation = useMutation({
     mutationFn: async () => {
+      const taxRate = parseFloat(formData.tax_rate) || 0;
+      const priceExclusive = parseFloat(formData.price) || 0;
+      const salePriceExclusive = formData.sale_price ? parseFloat(formData.sale_price) : null;
+
+      const priceInclusive = priceExclusive * (1 + taxRate / 100);
+      const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + taxRate / 100) : null;
+
       const { error } = await supabase
         .from("products")
         .update({
           name: formData.name.trim(),
-          price: parseFloat(formData.price),
+          price: priceInclusive,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+          sale_price: salePriceInclusive,
           sku: formData.sku.trim(),
           barcode: formData.barcode.trim(),
           hsn_code: formData.hsn_code.trim(),
@@ -259,8 +251,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           manufacturing_info: formData.manufacturing_info.trim(),
           warranty_info: formData.warranty_info.trim(),
           images: formData.images,
-          tax_rate: parseFloat(formData.tax_rate),
-          is_tax_inclusive: formData.is_tax_inclusive,
+          tax_rate: taxRate,
+          is_tax_inclusive: true,
           datasheet_url: formData.datasheet_url,
           visibility: formData.visibility,
           seo_title: formData.seo_title,
@@ -317,27 +309,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   });
 
-  const searchProducts = async (term: string) => {
-    setSearchTerm(term);
-    if (term.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const { data } = await supabase
-      .from("products")
-      .select("id, name, sku, price")
-      .neq("id", productId)
-      .ilike("name", `%${term}%`)
-      .limit(5);
-    setSearchResults(data || []);
-  };
-
-  const addRelatedProduct = (product: any) => {
-    if (relatedProducts.find(p => p.id === product.id && p.relation_type === relationType)) return;
-    setRelatedProducts([...relatedProducts, { ...product, relation_type: relationType }]);
-    setSearchTerm("");
-    setSearchResults([]);
-  };
 
   const handleEditorChange = (field: string, content: string) => {
     setFormData((prev) => ({ ...prev, [field]: content }));
@@ -611,7 +582,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                   />
                 </div>
-                <div>
+                 <div>
                   <label className={labelClass} htmlFor="price">Sales Price (₹) *</label>
                   <input
                     id="price"
@@ -621,6 +592,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
+                  {formData.price && taxRateVal > 0 && (
+                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
+                      Final Price: <span className="text-zinc-900 font-extrabold">₹{finalPrice.toFixed(2)}</span> (GST Included)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="sale_price">Discounted Price (₹)</label>
@@ -631,6 +607,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     value={formData.sale_price}
                     onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
                   />
+                  {formData.sale_price && taxRateVal > 0 && (
+                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
+                      Final Discounted: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (GST Included)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
@@ -640,11 +621,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     value={formData.tax_rate}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const rate = parseFloat(val) || 0;
                       setFormData({
                         ...formData,
                         tax_rate: val,
-                        is_tax_inclusive: rate > 0
+                        is_tax_inclusive: true
                       });
                     }}
                   >
@@ -663,12 +643,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <label id="tax_inclusive" className="flex items-center justify-center gap-2 cursor-not-allowed h-10 text-sm text-gray-400 bg-gray-100 border border-gray-200 px-3 rounded-md transition-colors w-full">
                     <input
                       type="checkbox"
-                      checked={formData.is_tax_inclusive}
+                      checked={true}
                       disabled
                       onChange={() => { }}
                       className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-not-allowed"
                     />
-                    <span className="font-semibold">GST Inclusive</span>
+                    <span className="font-semibold">Inclusive in Store</span>
                   </label>
                 </div>
               </div>
@@ -830,7 +810,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Visibility & Flags</h2>
+              <h2 className="text-lg font-semibold">Visibility</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -842,55 +822,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   {formData.visibility ? 'Active' : 'Hidden'}
                 </button>
               </div>
-
-              <div className="pt-4 border-t">
-                <p className="text-xs text-zinc-500 italic">
-                  Product flags (Featured, Best Seller, etc.) are now managed automatically by the analytics engine.
-                </p>
-              </div>
             </div>
           </section>
 
-          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50 flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Automated Recommendations</h2>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Read Only Preview</span>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-xs text-zinc-500 font-medium">
-                Product relationships are now generated dynamically using our recommendation engine based on categories, attributes, and purchase patterns. Manual linking is no longer required.
-              </p>
-
-              <div className="space-y-4 pt-2 border-t">
-                {['related', 'similar', 'frequently_bought'].map((type) => {
-                  const typedProducts = relatedProducts.filter(p => p.relation_type === type);
-                  if (typedProducts.length === 0) return null;
-
-                  return (
-                    <div key={type} className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                        <div className="h-1 w-1 rounded-full bg-primary" />
-                        {type.replace('_', ' ')}
-                      </h4>
-                      <div className="space-y-1.5">
-                        {typedProducts.map((rp) => (
-                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-gray-50 shadow-sm text-xs">
-                            <div className="truncate pr-2">
-                              <p className="font-bold text-zinc-900 truncate text-[13px]">{rp.name}</p>
-                              <p className="text-[10px] text-zinc-400 font-mono truncate">{rp.sku || "N/A"} • ₹{rp.price}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {relatedProducts.length === 0 && (
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic py-2">Generating recommendations...</p>
-                )}
-              </div>
-            </div>
-          </section>
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">

@@ -209,7 +209,7 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" /> Shipping Address
                 </p>
-                <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl text-xs text-zinc-700 leading-relaxed font-medium">
+                <div className="bg-zinc-50 border border-zinc-150 p-4 rounded-2xl text-xs text-zinc-700 leading-relaxed font-medium whitespace-pre-wrap">
                   {order.shipping_address || "No shipping address details found."}
                 </div>
               </div>

@@ -15,6 +15,8 @@ export async function createOrder(orderData: {
   postalCode: string
   items: any[]
   total: number
+  taxAmount?: number
+  shippingAmount?: number
   paymentMethod: string
   deliveryEstimate?: string
   paymentStatus?: string
@@ -92,7 +94,9 @@ export async function createOrder(orderData: {
         p_emi_monthly_installment: orderData.emiMonthlyInstallment || null,
         p_emi_interest_rate: orderData.emiInterestRate || null,
         p_emi_total_payable: orderData.emiTotalPayable || null,
-        p_emi_details: orderData.emiDetails || null
+        p_emi_details: orderData.emiDetails || null,
+        p_tax_amount: orderData.taxAmount || 0,
+        p_shipping_amount: orderData.shippingAmount || 0
       }
     )
 
@@ -105,6 +109,19 @@ export async function createOrder(orderData: {
     if (!result.success) {
       console.error('Order creation business logic error:', result.error)
       return { success: false, error: result.error || 'Failed to place order' }
+    }
+
+    // Update tax and shipping amounts
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        tax_amount: orderData.taxAmount || 0,
+        shipping_amount: orderData.shippingAmount || 0
+      })
+      .eq('id', result.order_id);
+
+    if (updateError) {
+      console.error('Failed to update tax and shipping amount:', updateError);
     }
 
     // Send confirmation email for COD immediately, since they are placed right away

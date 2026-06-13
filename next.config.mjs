@@ -16,11 +16,6 @@ const nextConfig = {
       'lucide-react',
       'recharts',
       'framer-motion',
-      '@tiptap/react',
-      '@tiptap/starter-kit',
-      '@tiptap/extension-underline',
-      '@tiptap/extension-link',
-      '@tiptap/extension-image',
     ],
   },
   async headers() {

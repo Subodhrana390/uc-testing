@@ -452,10 +452,10 @@ export default function BrandsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-150 pb-2">
           <TabsList className="bg-zinc-100/80 p-1 rounded-xl h-11 flex w-fit">
-            <TabsTrigger value="analytics" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm gap-1.5 flex items-center">
+            <TabsTrigger value="analytics" className="rounded-lg px-4 text-xs font-medium data-[active]:bg-white data-[active]:text-zinc-800 data-[active]:shadow-sm gap-1.5 flex items-center">
               <Activity className="w-3.5 h-3.5 text-zinc-500" /> Analytics
             </TabsTrigger>
-            <TabsTrigger value="table" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm">
+            <TabsTrigger value="table" className="rounded-lg px-4 text-xs font-medium data-[active]:bg-white data-[active]:text-zinc-800 data-[active]:shadow-sm">
               Brands Table
             </TabsTrigger>
           </TabsList>

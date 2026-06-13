@@ -289,7 +289,10 @@ export default function OrderDetailsPage() {
         customerPhone: order.phone,
         address: order.shipping_address || "N/A",
         items: order.order_items || [],
-        totalAmount: parseFloat(order.total_amount)
+        totalAmount: parseFloat(order.total_amount),
+        taxAmount: parseFloat(order.tax_amount || 0),
+        shippingAmount: parseFloat(order.shipping_amount || 0),
+        discountAmount: parseFloat(order.discount_amount || 0),
       };
       const doc = await generateInvoicePDF(invoiceData);
       doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
@@ -533,9 +536,15 @@ export default function OrderDetailsPage() {
                 <MapPin className="w-3.5 h-3.5 text-zinc-400" /> Shipping Address
               </h4>
               <div className="bg-zinc-50/50 p-4 rounded-xl border border-zinc-100/80 min-h-[120px]">
-                <p className="font-semibold text-zinc-800 text-sm">{order.customer_name}</p>
-                <p className="text-zinc-500 text-xs leading-relaxed mt-1">{order.shipping_address}</p>
-                {order.phone && <p className="text-zinc-500 text-xs mt-2">📞 {order.phone}</p>}
+                {order.shipping_address?.includes("\n") ? (
+                  <p className="text-zinc-850 text-xs leading-relaxed whitespace-pre-wrap">{order.shipping_address}</p>
+                ) : (
+                  <>
+                    <p className="font-semibold text-zinc-800 text-sm">{order.customer_name}</p>
+                    <p className="text-zinc-500 text-xs leading-relaxed mt-1 whitespace-pre-wrap">{order.shipping_address}</p>
+                    {order.phone && <p className="text-zinc-500 text-xs mt-2">📞 {order.phone}</p>}
+                  </>
+                )}
               </div>
             </div>
 
@@ -685,6 +694,41 @@ export default function OrderDetailsPage() {
                 );
               })}
             </div>
+
+            {/* Detailed Price Breakdown */}
+            {(() => {
+              const subtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+              return (
+                <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5 max-w-sm ml-auto mt-6">
+                  <div className="flex justify-between text-xs font-bold text-zinc-500">
+                    <span>SUBTOTAL</span>
+                    <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {parseFloat(order.tax_amount || 0) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-zinc-500">
+                      <span>GST</span>
+                      <span>₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {parseFloat(order.shipping_amount || 0) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-zinc-500">
+                      <span>DELIVERY CHARGE</span>
+                      <span>₹{parseFloat(order.shipping_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {parseFloat(order.discount_amount || 0) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-rose-600">
+                      <span>COUPON DISCOUNT</span>
+                      <span>-₹{parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-black text-zinc-900 border-t border-zinc-200 pt-2.5">
+                    <span>TOTAL AMOUNT</span>
+                    <span>₹{parseFloat(order.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>

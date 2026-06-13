@@ -30,6 +30,7 @@ export default function AddressBookPage() {
   const [currentAddress, setCurrentAddress] = useState<any>({
     type: "Home",
     full_name: "",
+    phone: "",
     address_line1: "",
     address_line2: "",
     city: "",
@@ -46,6 +47,31 @@ export default function AddressBookPage() {
   useEffect(() => {
     fetchAddresses();
   }, []);
+
+  useEffect(() => {
+    const postalCode = currentAddress.postal_code;
+    if (postalCode && postalCode.length === 6 && /^\d+$/.test(postalCode)) {
+      const fetchPincodeDetails = async () => {
+        try {
+          const res = await fetch(`https://api.postalpincode.in/pincode/${postalCode}`);
+          if (!res.ok) throw new Error("Pincode API failed");
+          const data = await res.json();
+          if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+            const info = data[0].PostOffice[0];
+            setCurrentAddress((prev: any) => ({
+              ...prev,
+              city: info.District || prev.city,
+              state: info.State || prev.state
+            }));
+            toast.success(`Location auto-filled: ${info.District}, ${info.State}`);
+          }
+        } catch (err) {
+          console.error("Error fetching pincode details:", err);
+        }
+      };
+      fetchPincodeDetails();
+    }
+  }, [currentAddress.postal_code]);
 
   async function fetchAddresses() {
     try {
@@ -88,6 +114,7 @@ export default function AddressBookPage() {
       setCurrentAddress({
         type: "Home",
         full_name: "",
+        phone: "",
         address_line1: "",
         address_line2: "",
         city: "",
@@ -153,6 +180,7 @@ export default function AddressBookPage() {
 
   const formFields = [
     { label: 'Full Name', key: 'full_name', span: 2 },
+    { label: 'Mobile Number', key: 'phone', span: 2 },
     { label: 'Address Line 1', key: 'address_line1', span: 2 },
     { label: 'Address Line 2 (Optional)', key: 'address_line2', span: 2 },
     { label: 'City', key: 'city', span: 1 },
@@ -184,6 +212,7 @@ export default function AddressBookPage() {
               setCurrentAddress({
                 type: "Home",
                 full_name: "",
+                phone: "",
                 address_line1: "",
                 address_line2: "",
                 city: "",
@@ -305,6 +334,7 @@ export default function AddressBookPage() {
                 {addr.address_line2 && <p className="pl-[18px]">{addr.address_line2}</p>}
                 <p className="pl-[18px]">{addr.city}, {addr.state} — {addr.postal_code}</p>
                 <p className="pl-[18px] text-zinc-400">{addr.country}</p>
+                {addr.phone && <p className="pl-[18px] text-zinc-500 font-medium mt-1">Mobile: {addr.phone}</p>}
               </div>
 
               <Separator />

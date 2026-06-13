@@ -390,43 +390,43 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs Layout */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         {/* Navigation Sidebar Tabs List */}
         <div className="lg:col-span-1">
           <TabsList className="bg-white border border-zinc-150 p-2 rounded-2xl flex flex-col gap-1.5 h-auto w-full shadow-sm text-left">
             <TabsTrigger
               value="identity"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <Award className="w-4 h-4" /> Site Identity
             </TabsTrigger>
             <TabsTrigger
               value="whatsapp"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <MessageSquare className="w-4 h-4" /> WhatsApp Config
             </TabsTrigger>
             <TabsTrigger
               value="social"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <Share2 className="w-4 h-4" /> Social Links
             </TabsTrigger>
             <TabsTrigger
               value="seo"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <Globe className="w-4 h-4" /> SEO Defaults
             </TabsTrigger>
             <TabsTrigger
               value="menus"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <PlusCircle className="w-4 h-4" /> Header Menu Links
             </TabsTrigger>
             <TabsTrigger
               value="features"
-              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[state=active]:bg-zinc-900 data-[state=active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
+              className="w-full justify-start rounded-xl px-4 py-3 text-xs font-semibold data-[active]:bg-slate-900 data-[active]:text-white hover:bg-zinc-50 transition-all gap-2 flex items-center text-left"
             >
               <Settings className="w-4 h-4" /> Store Features
             </TabsTrigger>
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                       id="whatsapp_enabled"
                       checked={whatsappForm.whatsapp_enabled}
                       onCheckedChange={(checked) => setWhatsappForm({ ...whatsappForm, whatsapp_enabled: checked })}
-                      className="data-[state=checked]:bg-[#25D366] bg-black"
+                      className="data-[checked]:bg-[#25D366] data-[unchecked]:bg-zinc-200"
                     />
                   </div>
 
@@ -806,7 +806,7 @@ export default function SettingsPage() {
                             <Switch
                               checked={link.is_active}
                               onCheckedChange={(checked) => handleToggleLinkActive(link, checked)}
-                              className="data-[state=checked]:bg-zinc-900 bg-zinc-200"
+                              className="data-[checked]:bg-zinc-900 data-[unchecked]:bg-zinc-200"
                             />
                           </td>
 
@@ -877,7 +877,7 @@ export default function SettingsPage() {
                       id="emi_enabled"
                       checked={featuresForm.emi_enabled}
                       onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, emi_enabled: checked })}
-                      className="data-[state=checked]:bg-zinc-900 bg-zinc-200"
+                      className="data-[checked]:bg-zinc-900 data-[unchecked]:bg-zinc-200"
                     />
                   </div>
 
@@ -890,7 +890,7 @@ export default function SettingsPage() {
                       id="coupons_enabled"
                       checked={featuresForm.coupons_enabled}
                       onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, coupons_enabled: checked })}
-                      className="data-[state=checked]:bg-zinc-900 bg-zinc-200"
+                      className="data-[checked]:bg-zinc-900 data-[unchecked]:bg-zinc-200"
                     />
                   </div>
 

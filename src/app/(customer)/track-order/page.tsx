@@ -110,6 +110,9 @@ function TrackOrderContent() {
         customerName: o.customer_name, customerEmail: o.customer_email,
         customerPhone: o.phone, address: o.shipping_address || "N/A",
         items: o.order_items || [], totalAmount: parseFloat(o.total_amount),
+        taxAmount: parseFloat(o.tax_amount || 0),
+        shippingAmount: parseFloat(o.shipping_amount || 0),
+        discountAmount: parseFloat(o.discount_amount || 0),
       });
       doc.save(`Invoice_${getDisplayOrderId(o.id, o.created_at)}.pdf`);
       toast.success("Invoice downloaded!");
@@ -389,7 +392,7 @@ function TrackOrderContent() {
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
                               Shipping To
                             </p>
-                            <p className="text-xs font-semibold text-zinc-700">
+                            <p className="text-xs font-semibold text-zinc-700 whitespace-pre-wrap">
                               {order.shipping_address}
                             </p>
                           </div>

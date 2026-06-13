@@ -118,18 +118,43 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     // Totals
     const finalTableY = (doc as any).lastAutoTable.finalY;
 
+    let currentY = finalTableY + 10;
     doc.setFont("helvetica", "normal");
-    doc.text(`Subtotal:`, 140, finalTableY + 10);
-    doc.text(`${invoice.currency} ${parseFloat(invoice.subtotal).toFixed(2)}`, 190, finalTableY + 10, { align: "right" });
+    doc.setFontSize(10);
+    
+    // Subtotal
+    doc.text(`Subtotal:`, 140, currentY);
+    doc.text(`${invoice.currency} ${parseFloat(invoice.subtotal).toFixed(2)}`, 190, currentY, { align: "right" });
+    currentY += 6;
 
-    if (parseFloat(invoice.shipping_amount) > 0) {
-      doc.text(`Shipping:`, 140, finalTableY + 15);
-      doc.text(`${invoice.currency} ${parseFloat(invoice.shipping_amount).toFixed(2)}`, 190, finalTableY + 15, { align: "right" });
+    // GST (Tax)
+    if (parseFloat(invoice.tax_amount) > 0) {
+      doc.text(`GST:`, 140, currentY);
+      doc.text(`${invoice.currency} ${parseFloat(invoice.tax_amount).toFixed(2)}`, 190, currentY, { align: "right" });
+      currentY += 6;
     }
 
+    // Shipping
+    if (parseFloat(invoice.shipping_amount) > 0) {
+      doc.text(`Shipping:`, 140, currentY);
+      doc.text(`${invoice.currency} ${parseFloat(invoice.shipping_amount).toFixed(2)}`, 190, currentY, { align: "right" });
+      currentY += 6;
+    }
+
+    // Discount
+    if (parseFloat(invoice.discount_amount) > 0) {
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Discount:`, 140, currentY);
+      doc.text(`-${invoice.currency} ${parseFloat(invoice.discount_amount).toFixed(2)}`, 190, currentY, { align: "right" });
+      doc.setTextColor(0);
+      currentY += 6;
+    }
+
+    // Grand Total
+    currentY += 2;
     doc.setFont("helvetica", "bold");
-    doc.text(`Grand Total:`, 140, finalTableY + 25);
-    doc.text(`${invoice.currency} ${parseFloat(invoice.total_amount).toFixed(2)}`, 190, finalTableY + 25, { align: "right" });
+    doc.text(`Grand Total:`, 140, currentY);
+    doc.text(`${invoice.currency} ${parseFloat(invoice.total_amount).toFixed(2)}`, 190, currentY, { align: "right" });
 
     // Footer
     const finalY = finalTableY + 40;

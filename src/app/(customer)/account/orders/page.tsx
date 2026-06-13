@@ -217,7 +217,10 @@ export default function OrderHistoryPage() {
         customerPhone: order.phone,
         address: order.shipping_address || "N/A",
         items: order.order_items || [],
-        totalAmount: parseFloat(order.total_amount)
+        totalAmount: parseFloat(order.total_amount),
+        taxAmount: parseFloat(order.tax_amount || 0),
+        shippingAmount: parseFloat(order.shipping_amount || 0),
+        discountAmount: parseFloat(order.discount_amount || 0),
       };
       const doc = await generateInvoicePDF(invoiceData);
       doc.save(`Invoice_${getDisplayOrderId(order.id, order.created_at)}.pdf`);
@@ -320,10 +323,10 @@ export default function OrderHistoryPage() {
           </Button>
           <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "current" | "archived")}>
             <TabsList className="bg-zinc-100 rounded-lg h-9">
-              <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+              <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-indigo-600 data-[active]:shadow-sm">
                 Active Orders
               </TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+              <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-indigo-600 data-[active]:shadow-sm">
                 Completed
               </TabsTrigger>
             </TabsList>

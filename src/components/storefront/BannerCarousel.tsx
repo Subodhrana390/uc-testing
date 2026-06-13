@@ -123,9 +123,9 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
 
             {/* Banner Layout Content */}
             <div className="relative z-10 h-full flex flex-col justify-center px-12 py-6 sm:p-12 max-w-2xl">
-              <span className="inline-flex self-start rounded-md bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 border border-amber-500/20 mb-3">
+              {/* <span className="inline-flex self-start rounded-md bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 border border-amber-500/20 mb-3">
                 UC Enterprises Exclusive
-              </span>
+              </span> */}
 
               <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
                 {banner.title}

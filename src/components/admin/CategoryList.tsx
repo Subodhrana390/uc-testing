@@ -671,7 +671,7 @@ export default function CategoryList({ type }: CategoryListProps) {
                 id="cat-status"
                 checked={formData.is_active}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                className="data-[state=checked]:bg-teal-600"
+                className="data-[checked]:bg-teal-600"
               />
             </div>
           </form>

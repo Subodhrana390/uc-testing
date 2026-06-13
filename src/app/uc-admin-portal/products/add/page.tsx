@@ -69,6 +69,13 @@ export default function AddProductPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
 
+  const taxRateVal = parseFloat(formData.tax_rate) || 0;
+  const priceVal = parseFloat(formData.price) || 0;
+  const salePriceVal = parseFloat(formData.sale_price) || 0;
+
+  const finalPrice = priceVal + (priceVal * taxRateVal) / 100;
+  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * taxRateVal) / 100) : 0;
+
   // Map main category name keywords → brand category text values
   const getBrandCategoryKeywords = (mainCatName: string): string[] => {
     const n = mainCatName.toLowerCase();
@@ -168,13 +175,17 @@ export default function AddProductPage() {
       return;
     }
 
-    const price = parseFloat(formData.price);
-    const salePrice = formData.sale_price ? parseFloat(formData.sale_price) : null;
+    const priceExclusive = parseFloat(formData.price);
+    const salePriceExclusive = formData.sale_price ? parseFloat(formData.sale_price) : null;
 
-    if (salePrice !== null && salePrice >= price) {
+    if (salePriceExclusive !== null && salePriceExclusive >= priceExclusive) {
       toast.error("Sale price must be less than the regular price.");
       return;
     }
+
+    const taxRate = parseFloat(formData.tax_rate || "0");
+    const priceInclusive = priceExclusive * (1 + taxRate / 100);
+    const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + taxRate / 100) : null;
 
     setLoading(true);
     try {
@@ -187,9 +198,9 @@ export default function AddProductPage() {
           barcode: formData.barcode,
           hsn_code: formData.hsn_code || null,
           brand_id: formData.brand_id || null,
-          price: parseFloat(formData.price),
+          price: priceInclusive,
           cost_price: parseFloat(formData.cost_price || "0"),
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+          sale_price: salePriceInclusive,
           category_id: formData.category_id,
           stock_quantity: parseInt(formData.stock_quantity),
           unit: formData.unit,
@@ -202,8 +213,8 @@ export default function AddProductPage() {
           images: formData.images,
           datasheet_url: formData.datasheet_url || null,
           status: formData.visibility ? "Active" : "Draft",
-          tax_rate: parseFloat(formData.tax_rate || "0"),
-          is_tax_inclusive: formData.is_tax_inclusive,
+          tax_rate: taxRate,
+          is_tax_inclusive: true,
           visibility: formData.visibility,
           is_featured: formData.is_featured,
           is_recommended: formData.is_recommended,
@@ -522,6 +533,11 @@ export default function AddProductPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
+                  {formData.price && taxRateVal > 0 && (
+                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
+                      Final Price: <span className="text-zinc-900 font-extrabold">₹{finalPrice.toFixed(2)}</span> (GST Included)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="sale_price">Discounted Price (₹)</label>
@@ -533,6 +549,11 @@ export default function AddProductPage() {
                     value={formData.sale_price}
                     onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
                   />
+                  {formData.sale_price && taxRateVal > 0 && (
+                    <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
+                      Final Discounted: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (GST Included)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
@@ -542,11 +563,10 @@ export default function AddProductPage() {
                     value={formData.tax_rate}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const rate = parseFloat(val) || 0;
                       setFormData({
                         ...formData,
                         tax_rate: val,
-                        is_tax_inclusive: rate > 0
+                        is_tax_inclusive: true
                       });
                     }}
                   >
@@ -565,12 +585,12 @@ export default function AddProductPage() {
                   <label id="tax_inclusive" className="flex items-center justify-center gap-2 cursor-not-allowed h-10 text-sm text-gray-400 bg-gray-100 border border-gray-200 px-3 rounded-md transition-colors w-full">
                     <input
                       type="checkbox"
-                      checked={formData.is_tax_inclusive}
+                      checked={true}
                       disabled
                       onChange={() => {}}
                       className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-not-allowed"
                     />
-                    <span className="font-semibold">GST Inclusive</span>
+                    <span className="font-semibold">Inclusive in Store</span>
                   </label>
                 </div>
               </div>
@@ -735,7 +755,7 @@ export default function AddProductPage() {
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Visibility & Status</h2>
+              <h2 className="text-lg font-semibold">Visibility</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -746,33 +766,6 @@ export default function AddProductPage() {
                 >
                   {formData.visibility ? 'Active' : 'Hidden'}
                 </button>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Product Flags</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: 'is_featured', label: 'Featured' },
-                    { key: 'is_recommended', label: 'Recommended' },
-                    { key: 'is_best_seller', label: 'Best Seller' },
-                    { key: 'is_trending', label: 'Trending' },
-                    { key: 'is_new_arrival', label: 'New Arrival' },
-                    { key: 'is_on_sale', label: 'On Sale' },
-                    { key: 'is_hot_deal', label: 'Hot Deal' },
-                    { key: 'is_top_rated', label: 'Top Rated' },
-                    { key: 'is_industrial_grade', label: 'Industrial' },
-                    { key: 'is_ready_stock', label: 'In Stock' },
-                    { key: 'is_high_demand', label: 'High Demand' },
-                  ].map((flag) => (
-                    <button
-                      key={flag.key}
-                      onClick={() => setFormData({ ...formData, [flag.key]: !formData[flag.key as keyof typeof formData] })}
-                      className={`flex items-center justify-center px-2 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${formData[flag.key as keyof typeof formData] ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                    >
-                      {flag.label}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </section>

@@ -111,7 +111,7 @@ export const getNavigationLinks = unstable_cache(
  */
 export async function updateSiteSettingsAction(data: Partial<SiteSettings>) {
   try {
-    const supabaseAuth = await createClient()
+    const supabaseAuth = await createAdminClient()
     await checkAdmin(supabaseAuth)
 
     const supabaseAdmin = createSupabaseClient(
@@ -152,7 +152,7 @@ export async function updateSiteSettingsAction(data: Partial<SiteSettings>) {
  */
 export async function createNavigationLinkAction(data: Omit<NavigationLink, 'id'>) {
   try {
-    const supabaseAuth = await createClient()
+    const supabaseAuth = await createAdminClient()
     await checkAdmin(supabaseAuth)
 
     const supabaseAdmin = createSupabaseClient(
@@ -180,7 +180,7 @@ export async function createNavigationLinkAction(data: Omit<NavigationLink, 'id'
  */
 export async function updateNavigationLinkAction(id: string, data: Partial<NavigationLink>) {
   try {
-    const supabaseAuth = await createClient()
+    const supabaseAuth = await createAdminClient()
     await checkAdmin(supabaseAuth)
 
     const supabaseAdmin = createSupabaseClient(
@@ -209,7 +209,7 @@ export async function updateNavigationLinkAction(id: string, data: Partial<Navig
  */
 export async function deleteNavigationLinkAction(id: string) {
   try {
-    const supabaseAuth = await createClient()
+    const supabaseAuth = await createAdminClient()
     await checkAdmin(supabaseAuth)
 
     const supabaseAdmin = createSupabaseClient(
@@ -238,7 +238,7 @@ export async function deleteNavigationLinkAction(id: string) {
  */
 export async function reorderNavigationLinksAction(items: { id: string; order_index: number }[]) {
   try {
-    const supabaseAuth = await createClient()
+    const supabaseAuth = await createAdminClient()
     await checkAdmin(supabaseAuth)
 
     const supabaseAdmin = createSupabaseClient(

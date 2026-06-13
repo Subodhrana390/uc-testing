@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
 // @ts-ignore
-import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
+import { BubbleMenu as TiptapBubbleMenu } from "@tiptap/react/menus";
+const BubbleMenu = TiptapBubbleMenu as any;
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";

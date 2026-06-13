@@ -480,13 +480,13 @@ export default function InventoryPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-2">
           <TabsList className="bg-zinc-100/80 p-1 rounded-xl h-11 flex w-fit">
-            <TabsTrigger value="ledger" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm">
+            <TabsTrigger value="ledger" className="rounded-lg px-4 text-xs font-medium data-[active]:bg-white data-[active]:text-zinc-800 data-[active]:shadow-sm">
               Live Stock Ledger
             </TabsTrigger>
-            <TabsTrigger value="distribution" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm gap-1.5 flex items-center">
+            <TabsTrigger value="distribution" className="rounded-lg px-4 text-xs font-medium data-[active]:bg-white data-[active]:text-zinc-800 data-[active]:shadow-sm gap-1.5 flex items-center">
               <PieIcon className="w-3.5 h-3.5 text-zinc-500" /> Stock Distribution
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg px-4 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-zinc-800 data-[state=active]:shadow-sm gap-1.5 flex items-center">
+            <TabsTrigger value="history" className="rounded-lg px-4 text-xs font-medium data-[active]:bg-white data-[active]:text-zinc-800 data-[active]:shadow-sm gap-1.5 flex items-center">
               <Activity className="w-3.5 h-3.5 text-zinc-500" /> Stock Movement History
             </TabsTrigger>
           </TabsList>

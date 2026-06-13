@@ -184,12 +184,6 @@ export default function CartPage() {
                   <span className="font-bold text-zinc-950">Calculated at checkout</span>
                 </div>
 
-                <div className="flex justify-between text-xs font-medium text-zinc-600 pb-6 border-b border-zinc-100">
-                  <span>Estimated Tax</span>
-                  <span className="font-bold text-zinc-950 text-right max-w-[200px] leading-tight">
-                    Calculated at checkout<br />
-                  </span>
-                </div>
 
                 <div className="flex items-center justify-between text-base pt-2">
                   <span className="font-black text-zinc-950">Total</span>

@@ -15,6 +15,6 @@ export function useSiteSettings() {
       if (error) throw error;
       return data || null;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour caching
+    staleTime: 1 * 60 * 1000, // 1 minute caching
   });
 }

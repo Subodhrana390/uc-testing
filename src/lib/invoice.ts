@@ -10,6 +10,9 @@ export interface InvoiceData {
   address: string;
   items: any[];
   totalAmount: number;
+  taxAmount?: number;
+  shippingAmount?: number;
+  discountAmount?: number;
 }
 
 export const generateInvoicePDF = async (data: InvoiceData) => {
@@ -97,10 +100,47 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
       3: { cellWidth: 20, halign: 'center' },
       4: { cellWidth: 30, halign: 'right' },
     },
-    foot: [[
-      { content: 'Total (Incl. Delivery)', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
-      { content: `INR ${data.totalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
-    ]]
+    foot: (() => {
+      const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * parseFloat(item.unit_price)), 0);
+      const tax = data.taxAmount || 0;
+      const shipping = data.shippingAmount || 0;
+      const discount = data.discountAmount || 0;
+
+      const rows: any[] = [
+        [
+          { content: 'Subtotal', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${subtotal.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+        ]
+      ];
+
+      if (tax > 0) {
+        rows.push([
+          { content: 'GST', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${tax.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+        ]);
+      }
+
+      if (shipping > 0) {
+        rows.push([
+          { content: 'Delivery Charge', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal' } },
+          { content: `INR ${shipping.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
+        ]);
+      }
+
+      if (discount > 0) {
+        rows.push([
+          { content: 'Coupon Discount', colSpan: 4, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } },
+          { content: `-INR ${discount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } }
+        ]);
+      }
+
+      rows.push([
+        { content: 'Total (Incl. Taxes & Delivery)', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `INR ${data.totalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+      ]);
+
+      return rows;
+    })()
   });
 
   // Footer notes
