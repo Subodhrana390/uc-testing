@@ -697,19 +697,65 @@ export default function OrderDetailsPage() {
 
             {/* Detailed Price Breakdown */}
             {(() => {
-              const subtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+              // Calculate tax breakdown and base subtotal
+              const taxBreakdown: Record<string, number> = {};
+              let baseSubtotal = 0;
+
+              order.order_items?.forEach((item: any) => {
+                const itemTotal = item.quantity * parseFloat(item.unit_price);
+                const rate = item.products?.tax_rate || 0;
+                
+                if (rate > 0) {
+                  let taxAmount = 0;
+                  let basePrice = itemTotal;
+                  
+                  if (item.products?.is_tax_inclusive) {
+                    basePrice = itemTotal / (1 + rate / 100);
+                    taxAmount = itemTotal - basePrice;
+                  } else {
+                    taxAmount = itemTotal * (rate / 100);
+                  }
+                  
+                  baseSubtotal += basePrice;
+                  
+                  if (!taxBreakdown[rate]) taxBreakdown[rate] = 0;
+                  taxBreakdown[rate] += taxAmount;
+                } else {
+                  baseSubtotal += itemTotal;
+                }
+              });
+              
+              const hasBreakdown = Object.keys(taxBreakdown).length > 0;
+
+              // Fallback if there are no itemized taxes but an aggregate tax amount exists
+              const aggregateTax = parseFloat(order.tax_amount || 0);
+              if (!hasBreakdown && aggregateTax > 0) {
+                 const grossSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                 // We don't know if grossSubtotal includes tax, but if we don't have breakdown, we assume it does based on the requirement
+                 baseSubtotal = grossSubtotal - aggregateTax;
+              } else if (!hasBreakdown && aggregateTax === 0) {
+                 baseSubtotal = order.order_items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+              }
+
               return (
                 <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5 max-w-sm ml-auto mt-6">
                   <div className="flex justify-between text-xs font-bold text-zinc-500">
-                    <span>SUBTOTAL</span>
-                    <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>SUBTOTAL (EXCL. GST)</span>
+                    <span>₹{baseSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                  {parseFloat(order.tax_amount || 0) > 0 && (
+                  {hasBreakdown ? (
+                    Object.entries(taxBreakdown).map(([rate, amount]) => (
+                      <div key={rate} className="flex justify-between text-xs font-bold text-zinc-500">
+                        <span>GST ({rate}%)</span>
+                        <span>₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    ))
+                  ) : parseFloat(order.tax_amount || 0) > 0 ? (
                     <div className="flex justify-between text-xs font-bold text-zinc-500">
                       <span>GST</span>
                       <span>₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                  )}
+                  ) : null}
                   {parseFloat(order.shipping_amount || 0) > 0 && (
                     <div className="flex justify-between text-xs font-bold text-zinc-500">
                       <span>DELIVERY CHARGE</span>

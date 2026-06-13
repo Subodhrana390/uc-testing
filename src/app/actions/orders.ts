@@ -43,7 +43,7 @@ export async function createOrder(orderData: {
     const cookieStore = cookies()
     const firstTouchStr = cookieStore.get('first_touch_attribution')?.value
     const latestTouchStr = cookieStore.get('latest_touch_attribution')?.value
-    
+
     let first_touch = {}
     let latest_touch = {}
     try {
@@ -62,7 +62,7 @@ export async function createOrder(orderData: {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gte('created_at', thirtySecondsAgo)
-    
+
     if (count && count > 0) {
       console.warn(`Checkout throttled for user ${user.id}`)
       return { success: false, error: 'Please wait a moment before placing another order to prevent duplicates.' }
@@ -111,19 +111,6 @@ export async function createOrder(orderData: {
       return { success: false, error: result.error || 'Failed to place order' }
     }
 
-    // Update tax and shipping amounts
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({
-        tax_amount: orderData.taxAmount || 0,
-        shipping_amount: orderData.shippingAmount || 0
-      })
-      .eq('id', result.order_id);
-
-    if (updateError) {
-      console.error('Failed to update tax and shipping amount:', updateError);
-    }
-
     // Send confirmation email for COD immediately, since they are placed right away
     if (orderData.paymentMethod === 'COD') {
       try {
@@ -134,7 +121,7 @@ export async function createOrder(orderData: {
           customerName: orderData.fullName,
           customerEmail: orderData.email,
           shippingAddress: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
-          totalAmount: result.total_amount, // Use server calculated amount
+          totalAmount: result.total_amount,
           items: orderData.items
         })
       } catch (emailErr) {
