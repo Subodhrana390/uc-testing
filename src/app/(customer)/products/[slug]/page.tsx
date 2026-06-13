@@ -68,45 +68,14 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
 }
 
 async function SimilarProducts({ categoryId, currentProductId }: { categoryId: string | null; currentProductId: string }) {
-  const supabase = await createClient();
-  let matchedProducts: any[] = [];
+  const { getSimilarProducts } = await import("@/app/actions/recommendationEngine");
+  
+  const matchedProducts = await getSimilarProducts({
+    id: currentProductId,
+    category_id: categoryId,
+  });
 
-  if (categoryId) {
-    const { data } = await supabase
-      .from("products")
-      .select("*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
-      .eq("category_id", categoryId)
-      .neq("id", currentProductId)
-      .eq("status", "Active")
-      .limit(4);
-    if (data) {
-      matchedProducts = data;
-    }
-  }
-
-  if (matchedProducts.length < 4) {
-    const { data: fallbackData } = await supabase
-      .from("products")
-      .select("*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
-      .neq("id", currentProductId)
-      .eq("status", "Active")
-      .limit(10);
-
-    if (fallbackData) {
-      const matchedIds = new Set(matchedProducts.map(p => p.id));
-      const combined = [...matchedProducts];
-      for (const item of fallbackData) {
-        if (combined.length >= 4) break;
-        if (!matchedIds.has(item.id)) {
-          combined.push(item);
-          matchedIds.add(item.id);
-        }
-      }
-      matchedProducts = combined;
-    }
-  }
-
-  if (matchedProducts.length === 0) return null;
+  if (!matchedProducts || matchedProducts.length === 0) return null;
 
   return (
     <div className="mt-4 py-8">

@@ -113,14 +113,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           { data: product },
           { data: catsRes },
           { data: brandsRes },
-          { data: attrValuesRes },
-          { data: relationsRes }
+          { data: attrValuesRes }
         ] = await Promise.all([
           supabase.from("products").select("*").eq("id", productId).single(),
           supabase.from("categories").select("*").order("name"),
           supabase.from("brands").select("*").order("name"),
-          supabase.from("product_attributes").select("*").eq("product_id", productId),
-          supabase.from("related_products").select("*, related:products!related_id(id, name, sku, price)").eq("product_id", productId)
+          supabase.from("product_attributes").select("*").eq("product_id", productId)
         ]);
 
         if (product) {
@@ -185,11 +183,25 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           setAttributeValues(values);
         }
 
-        if (relationsRes) {
-          setRelatedProducts(relationsRes.map(r => ({
-            ...(r.related as any),
-            relation_type: r.relation_type
-          })));
+        if (product) {
+          try {
+            const { getSimilarProducts, getRelatedProducts, getFrequentlyBoughtTogether } = await import("@/app/actions/recommendationEngine");
+            const [similar, related, fbt] = await Promise.all([
+              getSimilarProducts(product, 3),
+              getRelatedProducts(product, 3),
+              getFrequentlyBoughtTogether(product, 3)
+            ]);
+            
+            const autoRelations = [
+              ...similar.map(p => ({ ...p, relation_type: "similar" })),
+              ...related.map(p => ({ ...p, relation_type: "related" })),
+              ...fbt.map(p => ({ ...p, relation_type: "frequently_bought" }))
+            ];
+            
+            setRelatedProducts(autoRelations);
+          } catch (err) {
+            console.error("Failed to load automated recommendations", err);
+          }
         }
 
       } catch (error) {
@@ -335,16 +347,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         await supabase.from("product_attributes").insert(attrInserts);
       }
 
-      // Update relations: delete and re-insert
-      await supabase.from("related_products").delete().eq("product_id", productId);
-      const relationInserts = relatedProducts.map(rp => ({
-        product_id: productId,
-        related_id: rp.id,
-        relation_type: rp.relation_type
-      }));
-      if (relationInserts.length > 0) {
-        await supabase.from("related_products").insert(relationInserts);
-      }
+      // Removed explicit relations update to related_products table
 
       toast.success("Product updated successfully!");
       router.push("/uc-admin-portal/products");
@@ -856,86 +859,26 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-4 border-t">
-                {[
-                  { key: 'is_featured', label: 'Featured' },
-                  { key: 'is_recommended', label: 'Recommended' },
-                  { key: 'is_best_seller', label: 'Best Seller' },
-                  { key: 'is_trending', label: 'Trending' },
-                  { key: 'is_new_arrival', label: 'New Arrival' },
-                  { key: 'is_on_sale', label: 'On Sale' },
-                  { key: 'is_hot_deal', label: 'Hot Deal' },
-                  { key: 'is_top_rated', label: 'Top Rated' },
-                  { key: 'is_industrial_grade', label: 'Industrial' },
-                  { key: 'is_ready_stock', label: 'In Stock' },
-                  { key: 'is_high_demand', label: 'High Demand' },
-                ].map((flag) => (
-                  <button
-                    key={flag.key}
-                    onClick={() => setFormData({ ...formData, [flag.key]: !formData[flag.key as keyof typeof formData] })}
-                    className={`flex items-center justify-center px-2 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${formData[flag.key as keyof typeof formData] ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                  >
-                    {flag.label}
-                  </button>
-                ))}
+              <div className="pt-4 border-t">
+                <p className="text-xs text-zinc-500 italic">
+                  Product flags (Featured, Best Seller, etc.) are now managed automatically by the analytics engine.
+                </p>
               </div>
             </div>
           </section>
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Related Products</h2>
+            <div className="p-6 border-b bg-gray-50/50 flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Automated Recommendations</h2>
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Read Only Preview</span>
             </div>
             <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Relation Type</label>
-                <select
-                  className={inputClass}
-                  value={relationType}
-                  onChange={(e) => setRelationType(e.target.value)}
-                >
-                  <option value="related">Related Products</option>
-                  <option value="similar">Similar Products</option>
-                  <option value="frequently_bought">Frequently Bought Together</option>
-                  <option value="cross_sell">Cross Sell Products</option>
-                  <option value="alternative">Alternative Products</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Search Product to Add</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    className={`${inputClass} pl-10`}
-                    placeholder="Type product name..."
-                    value={searchTerm}
-                    onChange={(e) => searchProducts(e.target.value)}
-                  />
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
-                      {searchResults.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => addRelatedProduct(p)}
-                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center justify-between border-b last:border-0 transition-colors"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{p.sku || "NO-SKU"}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 rounded-full">Add</span>
-                            <Plus className="w-4 h-4 text-primary" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <p className="text-xs text-zinc-500 font-medium">
+                Product relationships are now generated dynamically using our recommendation engine based on categories, attributes, and purchase patterns. Manual linking is no longer required.
+              </p>
 
               <div className="space-y-4 pt-2 border-t">
-                {['related', 'similar', 'frequently_bought', 'cross_sell', 'alternative'].map((type) => {
+                {['related', 'similar', 'frequently_bought'].map((type) => {
                   const typedProducts = relatedProducts.filter(p => p.relation_type === type);
                   if (typedProducts.length === 0) return null;
 
@@ -947,17 +890,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       </h4>
                       <div className="space-y-1.5">
                         {typedProducts.map((rp) => (
-                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group text-xs">
+                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-gray-50 shadow-sm text-xs">
                             <div className="truncate pr-2">
                               <p className="font-bold text-zinc-900 truncate text-[13px]">{rp.name}</p>
                               <p className="text-[10px] text-zinc-400 font-mono truncate">{rp.sku || "N/A"} • ₹{rp.price}</p>
                             </div>
-                            <button
-                              onClick={() => setRelatedProducts(relatedProducts.filter(p => !(p.id === rp.id && p.relation_type === type)))}
-                              className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         ))}
                       </div>
@@ -965,7 +902,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   );
                 })}
                 {relatedProducts.length === 0 && (
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic text-center py-2">No connections established yet.</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic py-2">Generating recommendations...</p>
                 )}
               </div>
             </div>

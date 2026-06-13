@@ -3,10 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Check, ShoppingCart, ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { createClient } from "@/utils/supabase/client";
 import { addCartItem } from "@/lib/cart";
 import toast from "react-hot-toast";
 import ProductCard from "@/components/storefront/ProductCard";
+import { getFrequentlyBoughtTogether } from "@/app/actions/recommendationEngine";
 
 interface Product {
   id: string;
@@ -39,7 +39,6 @@ export default function FrequentlyBoughtTogether({
   const [bundleProducts, setBundleProducts] = useState<Product[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([currentProduct.id]));
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -60,59 +59,14 @@ export default function FrequentlyBoughtTogether({
     async function fetchFBT() {
       try {
         setLoading(true);
-        // 1. Fetch explicitly linked frequently_bought products
-        const { data: relations, error } = await supabase
-          .from("related_products")
-          .select("related:products!related_id(*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating))")
-          .eq("product_id", currentProduct.id)
-          .eq("relation_type", "frequently_bought")
-          .eq("related.status", "Active");
+        const fetchedProducts = await getFrequentlyBoughtTogether({
+          id: currentProduct.id,
+          category_id: currentProduct.category_id,
+        });
 
-        let fetchedProducts: Product[] = [];
-        if (relations && !error) {
-          fetchedProducts = relations
-            .map((r: any) => r.related)
-            .filter(Boolean);
-        }
-
-        // 2. Fallback: If no relations found, fetch 2 products from the same category or general active products
-        if (fetchedProducts.length === 0) {
-          let fallbackQuery = supabase
-            .from("products")
-            .select("*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
-            .neq("id", currentProduct.id)
-            .eq("status", "Active");
-
-          if (currentProduct.category_id) {
-            fallbackQuery = fallbackQuery.eq("category_id", currentProduct.category_id);
-          }
-
-          const { data: fallbacks } = await fallbackQuery.limit(2);
-          
-          if (fallbacks && fallbacks.length > 0) {
-            fetchedProducts = fallbacks;
-          }
-
-          // If still less than 2, fetch general active products
-          if (fetchedProducts.length < 2) {
-            const excludeIds = [currentProduct.id, ...fetchedProducts.map(p => p.id)];
-            const { data: generalFallbacks } = await supabase
-              .from("products")
-              .select("*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
-              .neq("id", currentProduct.id)
-              .not("id", "in", `(${excludeIds.join(",")})`)
-              .eq("status", "Active")
-              .limit(2 - fetchedProducts.length);
-
-            if (generalFallbacks) {
-              fetchedProducts = [...fetchedProducts, ...generalFallbacks];
-            }
-          }
-        }
-
-        setBundleProducts(fetchedProducts);
+        setBundleProducts(fetchedProducts as any);
         // Pre-select all bundle products + current product
-        setSelectedIds(new Set([currentProduct.id, ...fetchedProducts.map((p) => p.id)]));
+        setSelectedIds(new Set([currentProduct.id, ...fetchedProducts.map((p: any) => p.id)]));
       } catch (err) {
         console.error("Error fetching frequently bought together products:", err);
       } finally {
@@ -121,7 +75,7 @@ export default function FrequentlyBoughtTogether({
     }
 
     fetchFBT();
-  }, [currentProduct.id, currentProduct.category_id, supabase]);
+  }, [currentProduct.id, currentProduct.category_id]);
 
   if (loading || bundleProducts.length === 0) return null;
 

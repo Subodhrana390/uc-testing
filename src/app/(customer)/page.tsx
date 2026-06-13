@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { homepageMetadata, SITE_URL } from "@/lib/seo";
 import { formatCurrency } from "@/lib/format";
 import dynamic from "next/dynamic";
+import { getDynamicSections } from "@/app/actions/productAnalytics";
 
 const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/RecentlyViewedProducts"));
 const RecommendedProducts = dynamic(() => import("@/components/storefront/RecommendedProducts"));
@@ -27,80 +29,43 @@ export default async function HomePage() {
   const supabase = await createClient();
 
   const [
-    { data: activeProductsData },
+    { flashDeals, sections },
     { data: categories },
     { data: banners },
-    { data: deals },
-    { data: topSelling }
+    { data: deals }
   ] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, slug, price, sale_price, image_url, status, stock_quantity, is_featured, is_best_seller, is_new_arrival, is_trending, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)")
-      .eq("status", "Active")
-      .or("is_featured.eq.true,is_best_seller.eq.true,is_new_arrival.eq.true,is_trending.eq.true,sale_price.not.is.null"),
+    getDynamicSections(),
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", true).order("name", { ascending: true }),
     supabase.from("banners").select("*").eq("status", true).order("position", { ascending: true }),
-    supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true }),
-    supabase.from("top_selling_products").select("id, name, slug, price, sale_price, image_url, status, stock_quantity, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)").limit(12),
+    supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true })
   ]);
 
-  const allActiveProducts = activeProductsData || [];
-
-  // Mathematical calculation for deals:
-  // Calculate discount percentage and absolute savings, then sort by highest discount percentage.
-  const calculatedDeals = allActiveProducts
-    .filter(p => {
-      const pPrice = Number(p.price) || 0;
-      const pSalePrice = Number(p.sale_price) || 0;
-      return pPrice > 0 && pSalePrice > 0 && pSalePrice < pPrice;
-    })
-    .map(p => {
-      const pPrice = Number(p.price) || 0;
-      const pSalePrice = Number(p.sale_price) || 0;
-      const discountPercentage = Math.round(((pPrice - pSalePrice) / pPrice) * 100);
-      const savings = pPrice - pSalePrice;
-      return {
-        ...p,
-        discountPercentage,
-        savings,
-        priceNum: pPrice,
-        salePriceNum: pSalePrice,
-      };
-    })
-    .sort((a, b) => b.discountPercentage - a.discountPercentage);
-
-  const safeFeatured = allActiveProducts.filter(p => p.is_featured).slice(0, 12);
-  const safeBestSellers = allActiveProducts.filter(p => p.is_best_seller).slice(0, 12);
-  const safeNewArrivals = allActiveProducts.filter(p => p.is_new_arrival).slice(0, 12);
-  const safeTrending = allActiveProducts.filter(p => p.is_trending).slice(0, 12);
   const safeCategories = categories || [];
   const safeBanners = banners || [];
 
-  // Use dynamically computed and mathematically sorted deals for the Flash Deals carousel
-  const safeFlashDeals = calculatedDeals.slice(0, 12);
+  const safeFlashDeals = flashDeals || [];
   const safeDeals = (deals as any[]) || [];
-  const safeTopSelling = topSelling || [];
 
   // Construct dynamic banners based on mathematically calculated best deals, falling back to static database banners
-  const deal1 = calculatedDeals[0] ? {
-    title: `Save ${calculatedDeals[0].discountPercentage}% on ${calculatedDeals[0].name}`,
-    description: `Limited time deal! Purchase today for only ${formatCurrency(calculatedDeals[0].salePriceNum)} (Save ${formatCurrency(calculatedDeals[0].savings)} instantly).`,
-    link_url: `/products/${calculatedDeals[0].slug}`,
-    image_url: calculatedDeals[0].image_url,
+  const deal1 = safeFlashDeals[0] ? {
+    title: `Save ${safeFlashDeals[0].discountPercentage}% on ${safeFlashDeals[0].name}`,
+    description: `Limited time deal! Purchase today for only ${formatCurrency(safeFlashDeals[0].salePriceNum!)} (Save ${formatCurrency(safeFlashDeals[0].savings!)} instantly).`,
+    link_url: `/products/${safeFlashDeals[0].slug}`,
+    image_url: safeFlashDeals[0].image_url,
   } : safeDeals[0];
 
-  const deal2 = calculatedDeals[1] ? {
-    title: `Hot Offer: ${calculatedDeals[1].discountPercentage}% OFF ${calculatedDeals[1].name}`,
-    description: `Premium industrial grade quality. Buy now for only ${formatCurrency(calculatedDeals[1].salePriceNum)} (Regular price: ${formatCurrency(calculatedDeals[1].priceNum)}).`,
-    link_url: `/products/${calculatedDeals[1].slug}`,
-    image_url: calculatedDeals[1].image_url,
+  const deal2 = safeFlashDeals[1] ? {
+    title: `Hot Offer: ${safeFlashDeals[1].discountPercentage}% OFF ${safeFlashDeals[1].name}`,
+    description: `Premium industrial grade quality. Buy now for only ${formatCurrency(safeFlashDeals[1].salePriceNum!)} (Regular price: ${formatCurrency(safeFlashDeals[1].priceNum!)}).`,
+    link_url: `/products/${safeFlashDeals[1].slug}`,
+    image_url: safeFlashDeals[1].image_url,
   } : safeDeals[1];
 
-  const deal3 = calculatedDeals[2] ? {
-    title: `Top Value: ${calculatedDeals[2].discountPercentage}% Off ${calculatedDeals[2].name}`,
-    description: `Procure this best-selling equipment now and save ${formatCurrency(calculatedDeals[2].savings)}! Price: ${formatCurrency(calculatedDeals[2].salePriceNum)}.`,
-    link_url: `/products/${calculatedDeals[2].slug}`,
-    image_url: calculatedDeals[2].image_url,
+  const deal3 = safeFlashDeals[2] ? {
+    title: `Top Value: ${safeFlashDeals[2].discountPercentage}% Off ${safeFlashDeals[2].name}`,
+    description: `Procure this best-selling equipment now and save ${formatCurrency(safeFlashDeals[2].savings!)}! Price: ${formatCurrency(safeFlashDeals[2].salePriceNum!)}.`,
+    link_url: `/products/${safeFlashDeals[2].slug}`,
+    image_url: safeFlashDeals[2].image_url,
   } : safeDeals[2];
 
   return (
@@ -114,8 +79,8 @@ export default async function HomePage() {
           type: "WebPage",
         }),
         faqSchema(faqItems.slice(0, 5)),
-        ...(safeFeatured.length > 0 ? [itemListSchema(safeFeatured, "Featured Industrial Picks", `${SITE_URL}/products?filter=featured`)] : []),
-        ...(safeBestSellers.length > 0 ? [itemListSchema(safeBestSellers, "Best Selling Products", `${SITE_URL}/products?filter=best-seller`)] : []),
+        ...(sections[0] ? [itemListSchema(sections[0].products, sections[0].title, `${SITE_URL}${sections[0].href}`)] : []),
+        ...(sections[1] ? [itemListSchema(sections[1].products, sections[1].title, `${SITE_URL}${sections[1].href}`)] : []),
       ]} />
 
       {/* Decorative Floating Brand blurs */}
@@ -244,96 +209,10 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Featured Products Segment */}
-      {
-        safeFeatured.length > 0 && (
+      {/* Dynamic Rendered Sections */}
+      {sections.map((section, idx) => (
+        <React.Fragment key={section.id}>
           <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-            <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
-              <div className="relative pl-4 border-l-4 border-primary">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Handpicked</p>
-                <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Featured Industrial Picks</h2>
-              </div>
-              <Link
-                href="/products?filter=featured"
-                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
-              >
-                Browse featured <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <ProductCarousel products={safeFeatured} />
-          </section>
-        )
-      }
-
-      {/* Deal 3: After Featured */}
-      {deal3 && (
-        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-          <div className="hover:scale-[1.005] transition-transform duration-500">
-            <DealBanner
-              title={deal3.title}
-              subtitle={deal3.description}
-              linkText="New Arrivals"
-              linkUrl={deal3.link_url}
-              imageUrl={deal3.image_url}
-              gradient="from-zinc-950 via-zinc-900 to-zinc-950"
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Best Sellers Segment */}
-      {
-        safeBestSellers.length > 0 && (
-          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-            <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
-              <div className="relative pl-4 border-l-4 border-primary">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Popular</p>
-                <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Our Best Sellers</h2>
-              </div>
-              <Link
-                href="/products?filter=best-seller"
-                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
-              >
-                Browse sellers <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <ProductCarousel products={safeBestSellers} />
-          </section>
-        )
-      }
-
-      {/* Testimonials */}
-      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
-        <Testimonials />
-      </section>
-
-      {/* Top Selling Products Segment */}
-      {
-        safeTopSelling.length > 0 && (
-          <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-            <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
-              <div className="relative pl-4 border-l-4 border-primary">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Trending Demands</p>
-                <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Top Selling Products</h2>
-              </div>
-              <Link
-                href="/products"
-                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
-              >
-                View all products <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <ProductCarousel products={safeTopSelling} />
-          </section>
-        )
-      }
-
-      {
-        [
-          { products: safeNewArrivals, tag: "Fresh", title: "New Arrivals", href: "/products?filter=new-arrival" },
-          { products: safeTrending, tag: "Market Trend", title: "Trending Now", href: "/products?filter=trending" },
-        ].map((section, idx) => section.products.length > 0 && (
-          <section key={idx} className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
             <div className="mb-8 flex items-end justify-between border-b border-zinc-100 pb-5">
               <div className="relative pl-4 border-l-4 border-primary">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{section.tag}</p>
@@ -348,8 +227,31 @@ export default async function HomePage() {
             </div>
             <ProductCarousel products={section.products} />
           </section>
-        ))
-      }
+
+          {/* Inject Deal 3 after the first section */}
+          {idx === 0 && deal3 && (
+            <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
+              <div className="hover:scale-[1.005] transition-transform duration-500">
+                <DealBanner
+                  title={deal3.title}
+                  subtitle={deal3.description}
+                  linkText="New Arrivals"
+                  linkUrl={deal3.link_url}
+                  imageUrl={deal3.image_url}
+                  gradient="from-zinc-950 via-zinc-900 to-zinc-950"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Inject Testimonials after the second section */}
+          {idx === 1 && (
+            <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
+              <Testimonials />
+            </section>
+          )}
+        </React.Fragment>
+      ))}
 
       {/* Personalised sections — only visible to returning visitors */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
