@@ -6,12 +6,17 @@ export const sendInvoiceEmail = async (
   email: string,
   customerName: string,
   orderId: string,
-  pdfBase64: string
+  pdfBase64: string,
+  orderDate?: string
 ) => {
   const apiKey = env.BREVO_API_KEY;
   if (!apiKey) {
     throw new Error("BREVO_API_KEY is not defined in environment variables");
   }
+
+  const displayOrderId = orderDate
+    ? getDisplayOrderId(orderId, orderDate)
+    : orderId.slice(0, 8).toUpperCase();
 
   const payload = {
     sender: {
@@ -24,13 +29,13 @@ export const sendInvoiceEmail = async (
         name: customerName
       }
     ],
-    subject: `Invoice for Order #${orderId.slice(0, 8).toUpperCase()} - UC Enterprises`,
+    subject: `Invoice for Order #${displayOrderId} - UC Enterprises`,
     htmlContent: `
       <html>
         <head></head>
         <body>
           <p>Dear ${customerName},</p>
-          <p>Thank you for shopping with UC Enterprises! Your order <strong>#${orderId.slice(0, 8).toUpperCase()}</strong> has been delivered successfully.</p>
+          <p>Thank you for shopping with UC Enterprises! Your order <strong>#${displayOrderId}</strong> has been delivered successfully.</p>
           <p>Please find attached the tax invoice for your purchase.</p>
           <p>If you have any questions, feel free to contact our support team.</p>
           <br/>
@@ -42,7 +47,7 @@ export const sendInvoiceEmail = async (
     attachment: [
       {
         content: pdfBase64,
-        name: `Invoice_${orderId.slice(0, 8).toUpperCase()}.pdf`
+        name: `Invoice_${displayOrderId}.pdf`
       }
     ]
   };

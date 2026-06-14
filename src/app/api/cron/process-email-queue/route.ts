@@ -106,7 +106,8 @@ export async function GET(req: Request) {
             order.customer_email,
             order.customer_name,
             order.id,
-            pdfBase64
+            pdfBase64,
+            order.created_at
           );
         }
 
