@@ -247,6 +247,6 @@ export async function requestPasswordReset(formData: FormData, origin: string) {
     return { success: true }
   } catch (emailErr: any) {
     console.error("Error sending custom reset password email:", emailErr)
-    return { error: "Failed to send recovery email. Please try again later." }
+    return { error: `Failed to send recovery email: ${emailErr.message || emailErr}` }
   }
 }
