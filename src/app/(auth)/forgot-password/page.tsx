@@ -20,10 +20,9 @@ function ForgotPasswordContainer() {
     setLoading(true);
     const formData = new FormData(event.currentTarget);
     
-    const origin = window.location.origin;
-    const result = await requestPasswordReset(formData, origin);
+    const result = await requestPasswordReset(formData, window.location.origin);
 
-    if (result.error) {
+    if (result?.error) {
       toast.error(result.error);
     } else {
       toast.success("Recovery link sent! Check your inbox.");
