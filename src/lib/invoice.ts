@@ -15,11 +15,38 @@ export interface InvoiceData {
   discountAmount?: number;
 }
 
+const getLogoBase64 = async () => {
+  if (typeof window === "undefined") {
+    const fs = await import("fs");
+    const path = await import("path");
+    const filePath = path.join(process.cwd(), "public", "logo.png");
+    const buffer = fs.readFileSync(filePath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } else {
+    const response = await fetch("/logo.png");
+    const blob = await response.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+};
+
 export const generateInvoicePDF = async (data: InvoiceData) => {
   const { jsPDF } = await import("jspdf");
   await import("jspdf-autotable");
   
   const doc = new jsPDF();
+  
+  let logoBase64 = "";
+  try {
+    logoBase64 = await getLogoBase64();
+  } catch (err) {
+    console.error("Failed to load logo for invoice:", err);
+  }
+
   const businessInfo = {
     name: "UC ENTERPRISES",
     address: "Hadhbast no-44, Ambala Delhi National Highway, Bisanpur, Zirakpur, Punjab, 140603, India.",
@@ -33,12 +60,20 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.setFontSize(22);
   doc.setTextColor(249, 115, 22); // Primary orange color
   doc.text(businessInfo.name, 14, 20);
+
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, "PNG", 171, 12, 25, 25);
+    } catch (err) {
+      console.error("Failed to add logo to PDF:", err);
+    }
+  }
   
   doc.setFontSize(10);
   doc.setTextColor(100);
   
-  // Wrap business address text dynamically
-  const businessAddressLines = doc.splitTextToSize(businessInfo.address, 180);
+  // Wrap business address text dynamically (width 150 to avoid logo overlap)
+  const businessAddressLines = doc.splitTextToSize(businessInfo.address, 150);
   doc.text(businessAddressLines, 14, 28);
   
   const nextY = 28 + (businessAddressLines.length * 5);
