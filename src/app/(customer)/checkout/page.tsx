@@ -338,7 +338,7 @@ export default function CheckoutPage() {
     }
 
     fetchData();
-  }, [router, supabase]);
+  }, [router, supabase, isAuthInitialized, user]);
 
   const handleSelectAddress = (addr: any) => {
     setSelectedAddressId(addr.id);

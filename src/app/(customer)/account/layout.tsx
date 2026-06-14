@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   User,
   MapPin,
   Heart,
-  Package,
-  RotateCcw,
-  Mail,
+  Package, Mail,
   LogOut,
   ChevronRight,
-  Loader2,
   Settings,
   Menu,
   X,
@@ -37,6 +34,7 @@ const sidebarLinks = [
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -54,6 +52,8 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             .single();
 
           setProfile(data || { full_name: user.user_metadata?.full_name || "Valued Member" });
+        } else {
+          router.push("/login?returnTo=/account/profile");
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
