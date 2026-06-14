@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import Header from "@/components/storefront/Header";
 import Footer from "@/components/storefront/Footer";
 import { createClient } from "@/utils/supabase/client";
+import { requestPasswordReset } from "@/app/actions/auth";
 
 function ForgotPasswordContainer() {
   const [loading, setLoading] = useState(false);
@@ -18,15 +19,12 @@ function ForgotPasswordContainer() {
     event.preventDefault();
     setLoading(true);
     const formData = new FormData(event.currentTarget);
-    const email = formData.get("email") as string;
-    const supabase = createClient();
+    
+    const origin = window.location.origin;
+    const result = await requestPasswordReset(formData, origin);
 
-    const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-password`,
-    });
-
-    if (error) {
-      toast.error(error.message);
+    if (result.error) {
+      toast.error(result.error);
     } else {
       toast.success("Recovery link sent! Check your inbox.");
     }

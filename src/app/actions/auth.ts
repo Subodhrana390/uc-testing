@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin-server'
 import { cookies } from 'next/headers'
+import { createServiceRoleClient } from '@/utils/supabase/service-role'
+import { sendResetPasswordEmail } from '@/lib/email'
 
 export async function login(formData: FormData) {
   const redirectTo = (formData.get('redirectTo') as string) || '/account/profile'
@@ -202,4 +204,49 @@ export async function adminUpdatePassword(formData: FormData) {
   }
 
   return { success: true }
+}
+
+export async function requestPasswordReset(formData: FormData, origin: string) {
+  const email = formData.get('email') as string
+  if (!email) {
+    return { error: "Email is required." }
+  }
+
+  const supabase = createServiceRoleClient()
+
+  // Try to find profile details to personalize email greeting
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('email', email)
+    .single()
+
+  const customerName = profile?.full_name || "Customer"
+
+  // Generate recovery link
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: 'recovery',
+    email: email,
+    options: {
+      redirectTo: `${origin}/api/auth/callback?next=/reset-password`
+    }
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const resetLink = data?.properties?.action_link
+  if (!resetLink) {
+    return { error: "Failed to generate recovery link." }
+  }
+
+  // Send Custom Email
+  try {
+    await sendResetPasswordEmail(email, customerName, resetLink)
+    return { success: true }
+  } catch (emailErr: any) {
+    console.error("Error sending custom reset password email:", emailErr)
+    return { error: "Failed to send recovery email. Please try again later." }
+  }
 }

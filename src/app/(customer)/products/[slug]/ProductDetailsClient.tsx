@@ -26,6 +26,12 @@ export default function ProductDetailsClient({
 }) {
   const router = useRouter();
   const { addItem, updateQuantity, isInCart } = useCartStore();
+
+  const originalPrice = Number(product.price);
+  const salePriceVal = product.sale_price ? Number(product.sale_price) : 0;
+  const discount = (salePriceVal > 0 && originalPrice > 0 && originalPrice > salePriceVal)
+    ? Math.round(((originalPrice - salePriceVal) / originalPrice) * 100)
+    : null;
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
@@ -387,6 +393,11 @@ export default function ProductDetailsClient({
 
         <div className="space-y-8">
           <div className="flex flex-wrap gap-2">
+            {discount && (
+              <span className="bg-red-50 text-primary text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-red-100">
+                {discount}% OFF
+              </span>
+            )}
             {product.is_ready_stock && <span className="bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald-100">Ready to Ship</span>}
             {product.is_industrial_grade && <span className="bg-zinc-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">Industrial Grade</span>}
             {product.is_best_seller && <span className="bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-amber-100">Best Seller</span>}
@@ -428,6 +439,11 @@ export default function ProductDetailsClient({
               {product.sale_price && (
                 <span className="text-lg sm:text-xl font-medium text-zinc-400 line-through">
                   {formatCurrency(product.price)}
+                </span>
+              )}
+              {discount && (
+                <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-md shadow-sm">
+                  {discount}% OFF
                 </span>
               )}
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
