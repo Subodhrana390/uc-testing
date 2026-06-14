@@ -5,8 +5,8 @@ export async function GET(req: Request) {
   try {
     const supabase = createServiceRoleClient();
 
-    // 1. Claim up to 10 pending jobs
-    const { data: jobs, error: claimError } = await supabase.rpc('claim_order_jobs', { batch_size: 10 });
+    // 1. Claim up to 10 pending jobs from pgmq
+    const { data: jobs, error: claimError } = await supabase.rpc('claim_jobs', { queue_name: 'order_processing_queue', visibility_timeout: 30, batch_size: 10 });
     
     if (claimError) {
       console.error("Failed to claim order jobs:", claimError);
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
     for (const job of jobs) {
       try {
-        const { event, signature } = job.payload;
+        const { event, signature } = job.message || {};
         if (!event) throw new Error("Missing event in job payload");
 
         const eventName = event.event;
@@ -136,10 +136,13 @@ export async function GET(req: Request) {
 
         // Send email if confirmed
         if (targetPaymentStatus === "Paid" && (statusUpper === "PENDING" || statusUpper === "PENDING_PAYMENT")) {
-          // Instead of sending synchronously, just push to email_queue
-          await supabase.from('email_queue').insert({
-            type: 'ORDER_CONFIRMATION',
-            payload: { orderId: updatedOrder.id }
+          // Instead of sending synchronously, just push to email_queue using pgmq
+          await supabase.rpc('enqueue_job', {
+            queue_name: 'email_queue',
+            job_message: {
+              type: 'ORDER_CONFIRMATION',
+              payload: { orderId: updatedOrder.id }
+            }
           });
         }
 
@@ -174,21 +177,14 @@ export async function GET(req: Request) {
           }
         }
 
-        // Mark as COMPLETED
-        await supabase.from('order_processing_queue').update({
-          status: 'COMPLETED',
-          updated_at: new Date().toISOString()
-        }).eq('id', job.id);
+        // Mark as COMPLETED (archive in pgmq)
+        await supabase.rpc('archive_job', { queue_name: 'order_processing_queue', job_msg_id: job.msg_id });
 
         processedCount++;
       } catch (err: any) {
-        console.error(`Order Job ${job.id} failed:`, err);
-        // Mark as FAILED
-        await supabase.from('order_processing_queue').update({
-          status: 'FAILED',
-          error: err.message || "Unknown error",
-          updated_at: new Date().toISOString()
-        }).eq('id', job.id);
+        console.error(`Order Job ${job.msg_id} failed:`, err);
+        // Note: pgmq will let the visibility timeout expire, meaning it can be retried.
+        // We do not archive it so it retries, or we could archive it to a dead letter queue.
       }
     }
 

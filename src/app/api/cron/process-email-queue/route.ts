@@ -8,8 +8,8 @@ export async function GET(req: Request) {
   try {
     const supabase = createServiceRoleClient();
 
-    // 1. Claim up to 10 pending jobs
-    const { data: jobs, error: claimError } = await supabase.rpc('claim_email_jobs', { batch_size: 10 });
+    // 1. Claim up to 10 pending jobs from pgmq
+    const { data: jobs, error: claimError } = await supabase.rpc('claim_jobs', { queue_name: 'email_queue', visibility_timeout: 30, batch_size: 10 });
     
     if (claimError) {
       console.error("Failed to claim email jobs:", claimError);
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     for (const job of jobs) {
       try {
-        const { orderId } = job.payload;
+        const { orderId } = job.message.payload || {};
         if (!orderId) throw new Error("Missing orderId in job payload");
 
         // Fetch Order
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
           .select("*, products(name, image_url)")
           .eq("order_id", orderId);
 
-        if (job.type === 'ORDER_CONFIRMATION') {
+        if (job.message.type === 'ORDER_CONFIRMATION') {
           await sendOrderConfirmationEmail({
             orderId: order.id,
             orderDate: order.created_at,
@@ -55,8 +55,8 @@ export async function GET(req: Request) {
             carrier: order.carrier
           });
         } 
-        else if (job.type === 'STATUS_UPDATE') {
-          const { status, remarks } = job.payload;
+        else if (job.message.type === 'STATUS_UPDATE') {
+          const { status, remarks } = job.message.payload || {};
           await sendStatusUpdateEmail({
               orderId: order.id,
               orderDate: order.created_at,
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
             remarks
           );
         }
-        else if (job.type === 'INVOICE') {
+        else if (job.message.type === 'INVOICE') {
           // Check if invoice exists and has PDF, otherwise generate it
           const { data: invoice } = await supabase
             .from("invoices")
@@ -110,21 +110,14 @@ export async function GET(req: Request) {
           );
         }
 
-        // Mark as COMPLETED
-        await supabase.from('email_queue').update({
-          status: 'COMPLETED',
-          updated_at: new Date().toISOString()
-        }).eq('id', job.id);
+        // Mark as COMPLETED (archive in pgmq)
+        await supabase.rpc('archive_job', { queue_name: 'email_queue', job_msg_id: job.msg_id });
 
         processedCount++;
       } catch (err: any) {
-        console.error(`Job ${job.id} failed:`, err);
-        // Mark as FAILED
-        await supabase.from('email_queue').update({
-          status: 'FAILED',
-          error: err.message || "Unknown error",
-          updated_at: new Date().toISOString()
-        }).eq('id', job.id);
+        console.error(`Job ${job.msg_id} failed:`, err);
+        // Note: pgmq will let the visibility timeout expire, meaning it can be retried.
+        // We do not archive it so it retries, or we could archive it to a dead letter queue.
       }
     }
 

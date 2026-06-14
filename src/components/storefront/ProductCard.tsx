@@ -29,6 +29,10 @@ interface ProductCardProps {
         slug: string;
       } | null;
     } | null;
+    category_name?: string;
+    category_slug?: string;
+    parent_category_name?: string;
+    parent_category_slug?: string;
     product_reviews?: {
       rating: number;
     }[];
@@ -81,8 +85,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
-  const categoryName = product.categories?.name || "Industrial";
-  const parentName = product.categories?.parent?.name;
+  const categoryName = product.categories?.name || product.category_name || "Industrial";
+  const parentName = product.categories?.parent?.name || product.parent_category_name;
   const displayCategory = parentName ? `${parentName} › ${categoryName}` : categoryName;
 
   const toggleCart = (e: React.MouseEvent) => {

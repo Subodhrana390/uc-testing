@@ -31,14 +31,13 @@ export async function POST(req: Request) {
 
     const supabase = createServiceRoleClient();
 
-    const { error: insertError } = await supabase
-      .from('order_processing_queue')
-      .insert({
-        payload: {
-          event: event,
-          signature: signature
-        }
-      });
+    const { error: insertError } = await supabase.rpc('enqueue_job', {
+      queue_name: 'order_processing_queue',
+      job_message: {
+        event: event,
+        signature: signature
+      }
+    });
 
     if (insertError) {
       console.error("Webhook Queue Insert Error:", insertError.message);

@@ -69,9 +69,12 @@ export async function resendInvoiceEmail(orderId: string) {
   try {
     const supabase = createServiceRoleClient();
     
-    const { error } = await supabase.from('email_queue').insert({
-      type: 'INVOICE',
-      payload: { orderId }
+    const { error } = await supabase.rpc('enqueue_job', {
+      queue_name: 'email_queue',
+      job_message: {
+        type: 'INVOICE',
+        payload: { orderId }
+      }
     });
 
     if (error) throw error;

@@ -303,9 +303,12 @@ export async function POST(req: Request) {
         }
 
         if (existingOrder.status.toUpperCase() === "PENDING") {
-          await serviceRoleSupabase.from('email_queue').insert({
-            type: 'ORDER_CONFIRMATION',
-            payload: { orderId: orderId }
+          await serviceRoleSupabase.rpc('enqueue_job', {
+            queue_name: 'email_queue',
+            job_message: {
+              type: 'ORDER_CONFIRMATION',
+              payload: { orderId: orderId }
+            }
           });
         }
       }
@@ -363,21 +366,27 @@ export async function POST(req: Request) {
 
     // 4. Trigger Email Notification for Status Change
     if (finalStatus !== undefined && order) {
-      await serviceRoleSupabase.from('email_queue').insert({
-        type: 'STATUS_UPDATE',
-        payload: {
-          orderId: order.id,
-          status: finalStatus.toUpperCase(),
-          remarks: remarks || null
+      await serviceRoleSupabase.rpc('enqueue_job', {
+        queue_name: 'email_queue',
+        job_message: {
+          type: 'STATUS_UPDATE',
+          payload: {
+            orderId: order.id,
+            status: finalStatus.toUpperCase(),
+            remarks: remarks || null
+          }
         }
       });
     }
 
     // 5. If status is "Delivered", generate and send invoice
     if (finalStatus === "DELIVERED" || finalStatus === "Delivered") {
-      await serviceRoleSupabase.from('email_queue').insert({
-        type: 'INVOICE',
-        payload: { orderId: order.id }
+      await serviceRoleSupabase.rpc('enqueue_job', {
+        queue_name: 'email_queue',
+        job_message: {
+          type: 'INVOICE',
+          payload: { orderId: order.id }
+        }
       });
     }
 

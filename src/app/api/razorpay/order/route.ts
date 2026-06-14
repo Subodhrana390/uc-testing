@@ -26,9 +26,20 @@ export async function POST(req: Request) {
       amount: Math.round(amount * 100), // Razorpay expects amount in paise
       currency,
       receipt: idempotencyKey ? `rcpt_${idempotencyKey.slice(0, 10)}` : `receipt_${crypto.randomUUID().slice(0, 8)}`,
+      notes: {
+        orderId: idempotencyKey
+      }
     };
 
     const order = await razorpay.orders.create(options);
+
+    // Save the Razorpay Order ID to the database early so webhooks don't 404
+    if (idempotencyKey) {
+      await supabase
+        .from("orders")
+        .update({ razorpay_order_id: order.id })
+        .eq("id", idempotencyKey);
+    }
 
     return NextResponse.json(order);
   } catch (error: any) {
