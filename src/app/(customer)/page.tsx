@@ -262,14 +262,13 @@ export default async function HomePage() {
             </section>
           )}
 
-          {/* Inject Testimonials after the second section */}
-          {idx === 1 && (
-            <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
-              <Testimonials />
-            </section>
-          )}
         </React.Fragment>
       ))}
+
+      {/* Testimonials Section */}
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
+        <Testimonials />
+      </section>
 
       {/* Personalised sections — only visible to returning visitors */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto">

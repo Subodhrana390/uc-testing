@@ -140,6 +140,42 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Our Story & Leadership Section */}
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-7xl py-20 border-t border-zinc-200/80">
+        <div className="grid md:grid-cols-12 gap-12 items-center">
+          
+          {/* Left Column: Background */}
+          <div className="md:col-span-7 space-y-6 text-left">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-200 text-zinc-800 border border-zinc-300 text-[10px] font-black uppercase tracking-widest">
+              Our Background
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-zinc-950 uppercase tracking-tight leading-tight">
+              How We Built UC Enterprises
+            </h2>
+            <p className="text-zinc-600 leading-relaxed text-sm font-medium">
+              Founded in 2018 in Ropar, Punjab, UC Enterprises began with a singular mission: to streamline the supply chain of high-grade laboratory chemicals, precision glassware, and robust safety equipment. 
+            </p>
+            <p className="text-zinc-600 leading-relaxed text-sm font-medium">
+              Over the years, we have grown from a regional distributor to a trusted pan-India partner. We coordinate directly with global laboratory and industrial manufacturers to serve manufacturing plants, educational institutions, diagnostic laboratories, and healthcare facilities with business-friendly wholesale pricing.
+            </p>
+          </div>
+
+          {/* Right Column: Owner Profile Card */}
+          <div className="md:col-span-5">
+            <div className="bg-zinc-950 text-white rounded-[2rem] p-8 md:p-10 text-left relative overflow-hidden group hover:scale-[1.01] transition-transform duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 block">Leadership</span>
+              <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-1">Subodh Rana</h3>
+              <p className="text-xs text-zinc-400 font-semibold mb-6">Founder & Owner</p>
+              <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                "Under our leadership, UC Enterprises has prioritized customer trust and direct manufacturer relationships above all. We are driven by the vision of empowering Indian scientific research, education, and manufacturing sectors with seamless access to authentic, high-quality tools and reagents."
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* Trusted Brands Panel */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-7xl py-20 border-t border-zinc-200/80 bg-zinc-50/50">
         <div className="max-w-3xl text-left mb-12 space-y-2">
