@@ -22,5 +22,19 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/process-email-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/process-order-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/reconciliation",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
