@@ -117,14 +117,15 @@ export async function GET(req: Request) {
       } catch (err: any) {
         console.error(`Job ${job.msg_id} failed:`, err);
         // Note: pgmq will let the visibility timeout expire, meaning it can be retried.
-        // We do not archive it so it retries, or we could archive it to a dead letter queue.
+        // For debugging, we will return the first error we encounter to the browser!
+        return NextResponse.json({ error: `Job ${job.msg_id} failed: ${err.message}` }, { status: 500 });
       }
     }
 
     return NextResponse.json({ success: true, processed: processedCount });
   } catch (err: any) {
     console.error("Error processing email queue:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error: " + err.message }, { status: 500 });
   }
 }
 
