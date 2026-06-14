@@ -1749,7 +1749,18 @@ export default function OrdersPage() {
                           )}
                           {visibleColumns.status && (
                             <TableCell>
-                              {getStatusBadge(order.status)}
+                              <div className="flex flex-col items-start gap-1.5">
+                                <div>{getStatusBadge(order.status)}</div>
+                                {['RETURNED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'REFUND_PENDING', 'REFUNDED'].includes(order.status?.toUpperCase() || '') &&
+                                 order.payment_method?.toUpperCase() === 'COD' &&
+                                 order.refund_bank_details && (
+                                  <div className="text-[10px] text-orange-700 bg-orange-50 border border-orange-100 rounded-md px-2 py-1 font-semibold max-w-[150px]">
+                                    <span className="font-bold block uppercase tracking-wider text-[8px] text-orange-850 mb-0.5">Refund Account</span>
+                                    <div className="font-mono font-bold text-zinc-900 leading-tight select-all">{order.refund_bank_details.accountNumber}</div>
+                                    <div className="text-zinc-500 font-semibold leading-tight text-[9px] mt-0.5 truncate">{order.refund_bank_details.bankName}</div>
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                           )}
                           {visibleColumns.actions && (
