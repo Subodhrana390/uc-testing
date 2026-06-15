@@ -207,16 +207,14 @@ export default async function CategoryPage({
         <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8 items-start">
 
           <MobileFilterWrapper>
-            <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
-              <ProductSidebarFilters
-                categories={categoriesList}
-                brands={brandsList}
-                attributes={attributesList}
-                currentCategorySlug={category.slug}
-                activeParentCategory={activeParentCategory}
-                activeSiblingCategories={activeSiblingCategories}
-              />
-            </aside>
+            <ProductSidebarFilters
+              categories={categoriesList}
+              brands={brandsList}
+              attributes={attributesList}
+              currentCategorySlug={category.slug}
+              activeParentCategory={activeParentCategory}
+              activeSiblingCategories={activeSiblingCategories}
+            />
           </MobileFilterWrapper>
 
           <div className="lg:col-span-3 space-y-10">

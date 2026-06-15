@@ -42,6 +42,17 @@ export default function ProductSidebarFilters({
     setMaxPriceInput(urlMaxPrice || "");
   }, [urlMinPrice, urlMaxPrice]);
 
+  // Handle reset triggered from mobile filter drawer's "Clear All" button
+  useEffect(() => {
+    const handleReset = () => {
+      setMinPriceInput("");
+      setMaxPriceInput("");
+      router.push(window.location.pathname, { scroll: false });
+    };
+    window.addEventListener("reset-mobile-filters", handleReset);
+    return () => window.removeEventListener("reset-mobile-filters", handleReset);
+  }, [router]);
+
   const updateFilters = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value === null || value === "all" || value === "false" || value === "") {

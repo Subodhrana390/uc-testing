@@ -142,13 +142,11 @@ export default async function SearchPage({
 
           {/* Refined Filters Sidebar */}
           <MobileFilterWrapper>
-            <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
-              <ProductSidebarFilters 
-                categories={categoriesList} 
-                brands={brandsList} 
-                attributes={attributesList} 
-              />
-            </aside>
+            <ProductSidebarFilters 
+              categories={categoriesList} 
+              brands={brandsList} 
+              attributes={attributesList} 
+            />
           </MobileFilterWrapper>
 
           {/* Dynamic Interactive Products Module */}
