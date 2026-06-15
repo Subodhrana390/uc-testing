@@ -495,7 +495,7 @@ export default function DealsAdminPage() {
               {paginatedDeals.map((deal) => {
                 const status = getDealStatus(deal);
                 return (
-                  <tr key={deal.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                  <tr key={deal.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-colors duration-150 group">
                     <td className="px-6 py-4 pl-8">
                       <div className="w-16 h-11 bg-zinc-100 rounded-xl border border-zinc-200/60 overflow-hidden transition-all flex items-center justify-center shrink-0">
                         {deal.image_url ? (

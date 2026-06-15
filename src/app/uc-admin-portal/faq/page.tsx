@@ -85,6 +85,7 @@ export default function FAQAdminPage() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [category, setCategory] = useState("General");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [sortOrder, setSortOrder] = useState<number>(0);
   const [isPublished, setIsPublished] = useState(true);
   
@@ -194,7 +195,9 @@ export default function FAQAdminPage() {
     setFaqToEdit(null);
     setQuestion("");
     setAnswer("");
-    setCategory(stats.allCategories[0] || "General");
+    const defaultCat = stats.allCategories[0] || "General";
+    setCategory(defaultCat);
+    setIsCustomCategory(false);
     setSortOrder((faqs[faqs.length - 1]?.sort_order || 0) + 10);
     setIsPublished(true);
     setIsFormOpen(true);
@@ -204,7 +207,16 @@ export default function FAQAdminPage() {
     setFaqToEdit(faq);
     setQuestion(faq.question);
     setAnswer(faq.answer);
-    setCategory(faq.category);
+    
+    const presets = ["Ordering", "Shipping", "Quotes", "Products", "Support", "General"];
+    if (presets.includes(faq.category)) {
+      setCategory(faq.category);
+      setIsCustomCategory(false);
+    } else {
+      setCategory(faq.category);
+      setIsCustomCategory(true);
+    }
+    
     setSortOrder(faq.sort_order);
     setIsPublished(faq.is_published);
     setIsFormOpen(true);
@@ -613,8 +625,19 @@ export default function FAQAdminPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-800 uppercase tracking-wider block">Category</label>
                 <div className="space-y-2">
-                  <Select value={category} onValueChange={(val) => setCategory(val || "General")}>
-                    <SelectTrigger className="border-zinc-200 rounded-xl text-sm w-full bg-white h-10">
+                  <Select
+                    value={isCustomCategory ? "custom" : category}
+                    onValueChange={(val) => {
+                      if (val === "custom") {
+                        setIsCustomCategory(true);
+                        setCategory("");
+                      } else {
+                        setIsCustomCategory(false);
+                        setCategory(val || "General");
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="border-zinc-200 rounded-xl text-sm w-full bg-white h-10 text-[#18181b]">
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border border-zinc-200 rounded-xl z-[60]">
@@ -624,14 +647,18 @@ export default function FAQAdminPage() {
                       <SelectItem value="Products">Products</SelectItem>
                       <SelectItem value="Support">Support</SelectItem>
                       <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="custom" className="text-cyan-600 font-semibold">Or Create Custom Category...</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input
-                    placeholder="Or type custom category name..."
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="bg-white border-zinc-200 text-xs focus-visible:ring-cyan-500 rounded-xl"
-                  />
+                  {isCustomCategory && (
+                    <Input
+                      placeholder="Enter custom category name..."
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="bg-white border-zinc-200 text-xs focus-visible:ring-cyan-500 rounded-xl"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 

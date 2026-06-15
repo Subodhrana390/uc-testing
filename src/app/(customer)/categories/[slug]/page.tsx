@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -7,15 +8,17 @@ import { fetchProductsFiltered } from "@/app/actions/products";
 import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters";
 import MobileFilterWrapper from "@/components/storefront/MobileFilterWrapper";
 import MobileFilterToggle from "@/components/storefront/MobileFilterToggle";
+import MobileFloatingActionBar from "@/components/storefront/MobileFloatingActionBar";
+import SortDropdown from "@/components/storefront/SortDropdown";
 import InfiniteProductList from "@/components/storefront/InfiniteProductList";
 import Pagination from "@/components/storefront/Pagination";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema, itemListSchema, webPageSchema, faqSchema } from "@/lib/jsonld";
 import { categoryMetadata, SITE_URL } from "@/lib/seo";
-import { faqItems } from "@/lib/storefront";
 import dynamic from "next/dynamic";
 
 const FAQAccordion = dynamic(() => import("@/components/storefront/FAQAccordion"));
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 
 export const revalidate = 3600; // ISR — revalidate every hour
 
@@ -72,7 +75,7 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: { slug: string };
-  searchParams: { page?: string; in_stock?: string; out_of_stock?: string; promo?: string; min_price?: string; max_price?: string; brand?: string };
+  searchParams: { page?: string; sort?: string; in_stock?: string; out_of_stock?: string; promo?: string; min_price?: string; max_price?: string; brand?: string };
 }) {
   const supabase = createStaticClient();
   const currentPage = parseInt(searchParams.page || "1");
@@ -113,7 +116,18 @@ export default async function CategoryPage({
     categoryIds = [category.id, ...activeSiblingCategories.map(s => s.id)];
   }
 
-  const brandsPromise = supabase.from("brands").select("id, name").order("name");
+  // Fetch only brands relevant to this category (brands that have products in this category)
+  const { data: relevantBrandRows } = await supabase
+    .from("products")
+    .select("brand_id")
+    .in("category_id", categoryIds)
+    .eq("status", "Active")
+    .not("brand_id", "is", null);
+  const relevantBrandIds = [...new Set((relevantBrandRows || []).map((r: any) => r.brand_id).filter(Boolean))];
+
+  const brandsPromise = relevantBrandIds.length > 0
+    ? supabase.from("brands").select("id, name").in("id", relevantBrandIds).order("name")
+    : Promise.resolve({ data: [] as any[] });
   const categoriesPromise = supabase.from("categories").select("id, name, slug").is("parent_id", null).eq("status", true).order("name");
   const attributesPromise = supabase.from("attributes").select("id, name, options").eq("is_filterable", true).order("display_order");
 
@@ -123,21 +137,25 @@ export default async function CategoryPage({
     { ...searchParams, category: category.slug }
   );
 
-  const [categoriesResult, brandsResult, attributesResult] = await Promise.all([
+  const faqsPromise = supabase.from("faqs").select("id, question, answer, category").eq("is_published", true).order("sort_order", { ascending: true }).limit(3);
+
+  const [categoriesResult, brandsResult, attributesResult, faqsResult] = await Promise.all([
     categoriesPromise,
     brandsPromise,
-    attributesPromise
+    attributesPromise,
+    faqsPromise
   ]);
 
   const categoriesList = categoriesResult.data || [];
   const brandsList = brandsResult.data || [];
   const attributesList = attributesResult.data || [];
+  const safeFaqs = faqsResult.data || [];
   const totalPages = Math.ceil(safeTotalCount / 12);
 
   const categoryUrl = `${SITE_URL}/categories/${category.slug}`;
 
   return (
-    <div className="bg-[linear-gradient(180deg,#fff8ef_0%,#ffffff_100%)]">
+    <div className="bg-zinc-50/30 min-h-screen">
       <JsonLd data={[
         breadcrumbSchema([
           { name: "Home", url: SITE_URL },
@@ -151,7 +169,7 @@ export default async function CategoryPage({
           type: "CollectionPage",
         }),
         ...(safeProducts.length > 0 ? [itemListSchema(safeProducts, category.name, categoryUrl)] : []),
-        faqSchema(faqItems.slice(0, 3)),
+        faqSchema(safeFaqs),
       ]} />
 
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-10">
@@ -167,32 +185,23 @@ export default async function CategoryPage({
         </nav>
 
         <div className="mt-6 border-b border-zinc-200/80 pb-8 mb-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Category</p>
           <h1 className="mt-3 text-4xl md:text-5xl font-black tracking-tight text-zinc-900">{category.name}</h1>
           <p className="mt-3 max-w-2xl text-sm text-zinc-500 font-medium leading-relaxed">
             {category.description || "Explore live products under this category with updated pricing and storefront links."}
           </p>
+        </div>
 
-          {/* Only show subcategories pill chips if we are on a top-level category */}
-          {!category.parent_id && activeSiblingCategories && activeSiblingCategories.length > 0 && (
-            <div className="mt-8 pt-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Explore Subcategories</p>
-              <div
-                className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                {activeSiblingCategories.map((sub) => (
-                  <Link
-                    key={sub.id}
-                    href={`/categories/${sub.slug}`}
-                    className="shrink-0 bg-white border border-zinc-200/80 px-4 py-2 rounded-full text-[11px] font-bold text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 hover:border-zinc-300 transition-all shadow-2xs"
-                  >
-                    {sub.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Sorting & Filter Controls Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+          <MobileFilterToggle />
+          <div className="flex items-center gap-3 ml-auto">
+            <Suspense fallback={<div className="h-9 w-40 animate-pulse bg-zinc-100 rounded-lg" />}>
+              <SortDropdown />
+            </Suspense>
+            <span className="text-xs font-medium text-zinc-500 bg-white border border-zinc-200 px-3 h-9 flex items-center rounded-lg shadow-2xs">
+              Total:&nbsp;<span className="font-semibold text-zinc-900">{safeTotalCount || 0} Items</span>
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-col lg:grid lg:grid-cols-4 gap-8 items-start">
@@ -211,9 +220,6 @@ export default async function CategoryPage({
           </MobileFilterWrapper>
 
           <div className="lg:col-span-3 space-y-10">
-            <div className="flex justify-end items-center mb-6 lg:hidden">
-              <MobileFilterToggle />
-            </div>
 
             <InfiniteProductList
               initialProducts={safeProducts}
@@ -271,15 +277,23 @@ export default async function CategoryPage({
           </div>
         </div>
 
+        {/* Dynamic Recommendations */}
+        <div className="mt-16 border-t border-zinc-200/60 pt-12">
+          <RecommendedProducts maxItems={8} categoryId={category.id} />
+        </div>
+
         {/* Category FAQ Section */}
         <div className="mt-16 border-t border-zinc-200/60 pt-12">
           <div className="max-w-3xl mx-auto text-center mb-8">
             <h2 className="text-2xl font-black text-zinc-900 tracking-tight">Frequently Asked Questions</h2>
             <p className="text-sm text-zinc-500 mt-2">Everything you need to know about purchasing {category.name}</p>
           </div>
-          <FAQAccordion items={faqItems.slice(0, 3)} className="max-w-3xl mx-auto" />
+          <FAQAccordion items={safeFaqs} className="max-w-3xl mx-auto" />
         </div>
       </section>
+
+      {/* Floating Mobile Actions for Infinite Scroll */}
+      <MobileFloatingActionBar />
     </div>
   );
 }

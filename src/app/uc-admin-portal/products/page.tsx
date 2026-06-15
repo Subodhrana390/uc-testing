@@ -32,6 +32,12 @@ import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { Pagination } from "@/components/ui/pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
 // Recharts imports
 import {
@@ -628,25 +634,6 @@ export default function ProductsPage() {
     deleteProductMutation.mutate(productToDelete.id);
   };
 
-  const handleToggleFeatured = async (product: any) => {
-    const toastId = toast.loading("Updating featured status...");
-    try {
-      const newFeatured = !product.is_featured;
-      const { error } = await supabase
-        .from("products")
-        .update({ is_featured: newFeatured })
-        .eq("id", product.id);
-
-      if (error) throw error;
-
-      toast.success(newFeatured ? "Product marked as Featured!" : "Product removed from Featured.", { id: toastId });
-      queryClient.invalidateQueries({ queryKey: ["admin-products-table"] });
-    } catch (error: any) {
-      console.error("Error updating featured status:", error);
-      toast.error(error.message || "Failed to update featured status", { id: toastId });
-    }
-  };
-
   const getStatusStyle = (status: string) => {
     const base = "text-[11px] font-medium px-2.5 py-0.5 border rounded-lg flex items-center gap-1.5 w-fit";
     switch (status.toLowerCase()) {
@@ -664,6 +651,135 @@ export default function ProductsPage() {
     if (qty <= 10) return { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-100", bar: "bg-amber-500" };
     return { text: "text-teal-700", bg: "bg-teal-50", border: "border-teal-100", bar: "bg-teal-600" };
   };
+
+  const columnHelper = createColumnHelper<any>();
+
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: "image",
+      header: "Asset Image",
+      cell: (info) => {
+        const product = info.row.original;
+        return (
+          <div className="w-12 h-12 bg-zinc-100 border border-zinc-200 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm transition-all duration-300">
+            {product.image_url ? (
+              <Image
+                src={product.image_url}
+                alt={product.name}
+                width={48}
+                height={48}
+                className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest text-center select-none">No Image</span>
+            )}
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor("name", {
+      header: "Product Details",
+      cell: (info) => {
+        const product = info.row.original;
+        return (
+          <div className="space-y-0.5 max-w-[260px]">
+            <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block">
+              {product.categories?.name || "Catalog Asset"}
+            </span>
+            <span className="text-sm font-semibold text-[#18181b] block truncate">{product.name}</span>
+            <span className="font-mono text-[11px] text-zinc-400 block">
+              SKU: {product.sku || "N/A"}
+            </span>
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor("stock_quantity", {
+      header: "Inventory Level & Gauge",
+      cell: (info) => {
+        const product = info.row.original;
+        const stockColor = getStockColor(product.stock_quantity);
+        const stockPercent = Math.min((product.stock_quantity / 100) * 100, 100);
+        return (
+          <div className="space-y-1.5 w-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-medium border shrink-0", stockColor.bg, stockColor.border, stockColor.text)}>
+                <div className={cn("w-1.5 h-1.5 rounded-full", stockColor.bar)} />
+                {product.stock_quantity === 0 ? "Out of Stock" : `${product.stock_quantity} units`}
+              </span>
+            </div>
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor("price", {
+      header: "Commercial Price",
+      cell: (info) => {
+        const product = info.row.original;
+        return (
+          <div className="space-y-0.5">
+            <span className="text-sm font-bold text-[#18181b] block">
+              ₹{parseFloat(product.price).toLocaleString('en-IN')}
+            </span>
+            {product.sale_price && (
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg inline-block font-sans">
+                Discounted Price: ₹{parseFloat(product.sale_price).toLocaleString('en-IN')}
+              </span>
+            )}
+          </div>
+        );
+      }
+    }),
+    columnHelper.accessor("status", {
+      header: "Store Status",
+      cell: (info) => {
+        const product = info.row.original;
+        return (
+          <span className={getStatusStyle(product.status)}>
+            {product.status}
+          </span>
+        );
+      }
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: (info) => {
+        const product = info.row.original;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Link href={`/uc-admin-portal/products/${product.id}`} passHref legacyBehavior>
+              <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-[#f97316] hover:bg-zinc-100">
+                <Edit className="w-4 h-4" />
+              </Button>
+            </Link>
+
+            <Button
+              variant="ghost"
+              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+              className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => setProductToDelete(product)}
+              className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        );
+      }
+    })
+  ], []);
+
+  const table = useReactTable({
+    data: tableProducts,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   if (loading) return <LogoLoader text="Loading products catalog..." />;
 
@@ -972,320 +1088,231 @@ export default function ProductsPage() {
       {activeView === "table" && (
         <Card className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden text-[#18181b]">
 
-        {/* Table Advanced Filters Layer */}
-        <div className="p-5 border-b border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
-          {/* Main Action Control Search Row */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <input
-                type="text"
-                placeholder="Search by product name, SKU, or category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-8 h-11 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] transition-all placeholder:text-zinc-400 text-[#18181b]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                variant="outline"
-                className={cn(
-                  "h-11 px-4 border-zinc-200 rounded-xl gap-2 text-sm font-semibold transition-all shadow-sm w-full sm:w-auto justify-center text-[#18181b] relative",
-                  showFilters ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800" : "bg-white hover:bg-zinc-50"
+          {/* Table Advanced Filters Layer */}
+          <div className="p-5 border-b border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
+            {/* Main Action Control Search Row */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Search by product name, SKU, or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-8 h-11 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] transition-all placeholder:text-zinc-400 text-[#18181b]"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-all duration-150 animate-in fade-in zoom-in-75"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
-              >
-                <Filter className="w-4 h-4" />
-                {showFilters ? "Hide Filters" : "Filters"}
-                {hasActiveFilters && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#f97316] rounded-full animate-pulse" />
-                )}
-              </Button>
-              {hasActiveFilters && (
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                 <Button
-                  onClick={handleClearFilters}
-                  variant="destructive"
-                  className="h-11 w-11 p-0 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-150 shrink-0 font-bold"
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="outline"
+                  className={cn(
+                    "h-11 px-4 border-zinc-200 rounded-xl gap-2 text-sm font-semibold transition-all shadow-sm w-full sm:w-auto justify-center text-[#18181b] relative",
+                    showFilters ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800" : "bg-white hover:bg-zinc-50"
+                  )}
                 >
-                  <X className="w-4 h-4" />
+                  <Filter className="w-4 h-4" />
+                  {showFilters ? "Hide Filters" : "Filters"}
+                  {hasActiveFilters && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#f97316] rounded-full animate-pulse" />
+                  )}
                 </Button>
-              )}
+                {hasActiveFilters && (
+                  <Button
+                    onClick={handleClearFilters}
+                    variant="destructive"
+                    className="h-11 w-11 p-0 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-150 shrink-0 font-bold"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Advanced Dropdown Filtration Sub-Panel */}
+            {showFilters && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-1 border-t border-zinc-250">
+                <div className="space-y-1.5 text-left">
+                  <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Live Status</span>
+                  <Select value={filters.status} onValueChange={(val) => setFilters({ ...filters, status: val || "All" })}>
+                    <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-zinc-200 rounded-xl">
+                      <SelectItem value="All" className="text-xs">All Statuses</SelectItem>
+                      <SelectItem value="Active" className="text-xs">Active Only</SelectItem>
+                      <SelectItem value="Draft" className="text-xs">Drafts Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 text-left">
+                  <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Category</span>
+                  <Select value={filters.category} onValueChange={(val) => setFilters({ ...filters, category: val || "All" })}>
+                    <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-zinc-200 rounded-xl z-50">
+                      <SelectItem value="All" className="text-xs">All Categories</SelectItem>
+                      {uniqueCategories.map(cat => (
+                        <SelectItem key={cat} value={cat} className="text-xs">{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 text-left">
+                  <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Inventory Level</span>
+                  <Select value={filters.stock} onValueChange={(val) => setFilters({ ...filters, stock: val || "All" })}>
+                    <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
+                      <SelectValue placeholder="Any Stock Level" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-zinc-200 rounded-xl">
+                      <SelectItem value="All" className="text-xs">Any Stock Level</SelectItem>
+                      <SelectItem value="In Stock" className="text-xs">In Stock (&gt;10)</SelectItem>
+                      <SelectItem value="Low Stock" className="text-xs">Low Stock (1-10)</SelectItem>
+                      <SelectItem value="Out of Stock" className="text-xs">Out of Stock (0)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <PriceRangePicker
+                  minPrice={minPrice}
+                  maxPrice={maxPrice}
+                  setMinPrice={setMinPrice}
+                  setMaxPrice={setMaxPrice}
+                />
+
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={(start, end) => {
+                    setStartDate(start);
+                    setEndDate(end);
+                  }}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Advanced Dropdown Filtration Sub-Panel */}
-          {showFilters && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-1 border-t border-zinc-250">
-              <div className="space-y-1.5 text-left">
-                <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Live Status</span>
-                <Select value={filters.status} onValueChange={(val) => setFilters({ ...filters, status: val || "All" })}>
-                  <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-zinc-200 rounded-xl">
-                    <SelectItem value="All" className="text-xs">All Statuses</SelectItem>
-                    <SelectItem value="Active" className="text-xs">Active Only</SelectItem>
-                    <SelectItem value="Draft" className="text-xs">Drafts Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5 text-left">
-                <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Category</span>
-                <Select value={filters.category} onValueChange={(val) => setFilters({ ...filters, category: val || "All" })}>
-                  <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-zinc-200 rounded-xl z-50">
-                    <SelectItem value="All" className="text-xs">All Categories</SelectItem>
-                    {uniqueCategories.map(cat => (
-                      <SelectItem key={cat} value={cat} className="text-xs">{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5 text-left">
-                <span className="text-[11px] font-bold text-zinc-400 tracking-wider ml-0.5 uppercase">Inventory Level</span>
-                <Select value={filters.stock} onValueChange={(val) => setFilters({ ...filters, stock: val || "All" })}>
-                  <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-[#f97316] text-[#18181b]">
-                    <SelectValue placeholder="Any Stock Level" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-zinc-200 rounded-xl">
-                    <SelectItem value="All" className="text-xs">Any Stock Level</SelectItem>
-                    <SelectItem value="In Stock" className="text-xs">In Stock (&gt;10)</SelectItem>
-                    <SelectItem value="Low Stock" className="text-xs">Low Stock (1-10)</SelectItem>
-                    <SelectItem value="Out of Stock" className="text-xs">Out of Stock (0)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <PriceRangePicker
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                setMinPrice={setMinPrice}
-                setMaxPrice={setMaxPrice}
-              />
-
-              <DateRangePicker
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(start, end) => {
-                  setStartDate(start);
-                  setEndDate(end);
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Tabular Segment */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-zinc-200">
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider pl-8 w-28">Asset Image</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Product Details</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider w-52">Inventory Level & Gauge</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Commercial Price</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider w-32">Featured</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Store Status</th>
-                <th className="w-20 pr-8 text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {tableLoading ? (
-                <tr>
-                  <td colSpan={7} className="h-60 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
-                      <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                      <p className="text-xs font-semibold">Loading products...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : tableProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="h-60 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 py-8">
-                      <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
-                        <Search className="w-5 h-5" />
-                      </div>
-                      <p className="text-sm font-bold text-zinc-800 mt-2">No products found</p>
-                      <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any products matching your criteria.</p>
-                      {(searchQuery || hasActiveFilters) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchQuery("");
-                            handleClearFilters();
-                          }}
-                          className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
-                        >
-                          Clear Filters
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                tableProducts.map((product) => {
-                  const stockColor = getStockColor(product.stock_quantity);
-                  const stockPercent = Math.min((product.stock_quantity / 100) * 100, 100);
-
-                  return (
-                    <tr key={product.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
-                    {/* Asset Image */}
-                    <td className="px-6 py-4 pl-8">
-                      <div className="w-12 h-12 bg-zinc-100 border border-zinc-200 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm transition-all duration-300">
-                        <Image
-                          src={product.image_url || "/images/prod_main.png"}
-                          alt={product.name}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
-                    </td>
-
-                    {/* Product Details */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-0.5 max-w-[260px]">
-                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block">
-                          {product.categories?.name || "Catalog Asset"}
-                        </span>
-                        <span className="text-sm font-semibold text-[#18181b] block truncate">{product.name}</span>
-                        <span className="font-mono text-[11px] text-zinc-400 block">
-                          SKU: {product.sku || "N/A"}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Inventory Gauge */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-1.5 w-full">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-medium border shrink-0", stockColor.bg, stockColor.border, stockColor.text)}>
-                            <div className={cn("w-1.5 h-1.5 rounded-full", stockColor.bar)} />
-                            {product.stock_quantity === 0 ? "Out of Stock" : `${product.stock_quantity} units`}
-                          </span>
-                        </div>
-                        <div className="w-full h-1 bg-zinc-150 rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-500", stockColor.bar)}
-                            style={{ width: `${product.stock_quantity === 0 ? 100 : stockPercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Pricing */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-0.5">
-                        <span className="text-sm font-bold text-[#18181b] block">
-                          ₹{parseFloat(product.price).toLocaleString('en-IN')}
-                        </span>
-                        {product.sale_price && (
-                          <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg inline-block font-sans">
-                            Promo: ₹{parseFloat(product.sale_price).toLocaleString('en-IN')}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Featured */}
-                    <td className="px-6 py-4">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleToggleFeatured(product)}
+          {/* Tabular Segment */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id} className="bg-zinc-50 border-b border-zinc-200">
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
                         className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer select-none transition-all",
-                          product.is_featured ? "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100/80" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
+                          "px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider",
+                          header.id === "image" && "pl-8 w-28",
+                          header.id === "stock_quantity" && "w-52",
+                          header.id === "actions" && "w-20 pr-8 text-right"
                         )}
                       >
-                        <Star className={cn("w-3.5 h-3.5", product.is_featured ? "fill-amber-500 text-amber-500" : "")} />
-                        {product.is_featured ? "Featured" : "Standard"}
-                      </Button>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4">
-                      <span className={getStatusStyle(product.status)}>
-                        {product.status}
-                      </span>
-                    </td>
-
-                    {/* Context Grid Actions Trigger Dropdown */}
-                    <td className="px-6 py-4 text-right pr-8">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link href={`/uc-admin-portal/products/${product.id}`} passHref legacyBehavior>
-                          <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-[#f97316] hover:bg-zinc-100">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </Link>
-
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => window.open(`/products/${product.slug}`, '_blank')}
-                          className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => setProductToDelete(product)}
-                          className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {tableLoading ? (
+                  <tr>
+                    <td colSpan={6} className="h-60 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8 text-zinc-500">
+                        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                        <p className="text-xs font-semibold">Loading products...</p>
                       </div>
                     </td>
                   </tr>
-                );
-              }))}
-            </tbody>
-          </table>
+                ) : tableProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="h-60 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 py-8">
+                        <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-inner">
+                          <Search className="w-5 h-5" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800 mt-2">No products found</p>
+                        <p className="text-xs text-zinc-400 max-w-[240px]">We couldn't find any products matching your criteria.</p>
+                        {(searchQuery || hasActiveFilters) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSearchQuery("");
+                              handleClearFilters();
+                            }}
+                            className="mt-2 text-xs border-zinc-200 hover:bg-zinc-50"
+                          >
+                            Clear Filters
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-colors duration-150 group">
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "px-6 py-4",
+                            cell.column.id === "image" && "pl-8",
+                            cell.column.id === "actions" && "text-right pr-8"
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
 
             {!tableLoading && tableProducts.length === 0 && (
               <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white">
-              <div className="w-16 h-16 bg-zinc-50 border border-zinc-150 flex items-center justify-center rounded-2xl">
-                <Package className="w-8 h-8 text-zinc-300" />
+                <div className="w-16 h-16 bg-zinc-50 border border-zinc-150 flex items-center justify-center rounded-2xl">
+                  <Package className="w-8 h-8 text-zinc-300" />
+                </div>
+                <div className="max-w-xs">
+                  <h3 className="text-sm font-bold text-[#18181b]">No Products Found</h3>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">We couldn't find any products matching your current search parameters.</p>
+                </div>
               </div>
-              <div className="max-w-xs">
-                <h3 className="text-sm font-bold text-[#18181b]">No Products Found</h3>
-                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">We couldn't find any products matching your current search parameters.</p>
-              </div>
-            </div>
+            )}
+          </div>
+
+          {!tableLoading && totalItems > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              variantColor="orange"
+            />
           )}
-        </div>
-
-        {!tableLoading && totalItems > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalItems={totalItems}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            variantColor="orange"
-          />
-        )}
-
-        {/* Bottom Metadata Info Ledger */}
-        <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50">
-          <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-            Audit Log: {totalItems} assets matching query criteria
-          </p>
-        </div>
-      </Card>
+        </Card>
       )}
 
       {/* Delete Confirmation Alert Dialog */}

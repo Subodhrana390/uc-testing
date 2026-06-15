@@ -411,42 +411,25 @@ export default function BrandsPage() {
 
   return (
     <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8">
-      {/* Redesigned Header UI Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden mb-6 transition-all duration-300">
-        {/* Subtle colorful neon glows */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-10 w-72 h-72 bg-sky-500/10 rounded-full -ml-20 -mb-20 blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Header Viewport Container */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+      <div className="p-6 md:p-8 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shrink-0">
               <Award className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-3xl font-bold text-slate-300 tracking-tight border-none p-0 !pl-0 before:hidden">
-                  Brand Directory
-                </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-blue-200 border border-white/5 backdrop-blur-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                  {brands.length} Partners
-                </span>
-              </div>
-              <p className="text-sm font-medium text-slate-300 mt-1">
-                Configure authorized industrial creators and localize partner visibility
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+                Brand Directory
+              </h1>
+              <p className="text-sm text-zinc-500 mt-1">
+                Configure authorized industrial creators and manage partner visibility.
               </p>
             </div>
           </div>
-          <Button
-            onClick={() => handleOpenDrawer()}
-            className="h-11 px-5 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-bold text-sm rounded-xl transition-all shadow-lg hover:shadow-blue-500/10 hover:scale-[1.02] active:scale-[0.98] border-0 gap-2 shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Initialize Brand
-          </Button>
+
         </div>
       </div>
+
 
       {/* Unified Tab Workspace System */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
@@ -459,6 +442,12 @@ export default function BrandsPage() {
               Brands Table
             </TabsTrigger>
           </TabsList>
+          <Button
+            onClick={() => handleOpenDrawer()}
+            className="h-8 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border-0 gap-2 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Brand
+          </Button>
         </div>
 
         {/* Tab 1: Brands Table */}
@@ -466,7 +455,7 @@ export default function BrandsPage() {
           {/* Main Table Interface */}
           <Card className="bg-white rounded-2xl border border-zinc-150 shadow-sm overflow-hidden py-0 gap-0">
             {/* Filtration Header */}
-            <div className="p-5 border-b border-zinc-100 bg-zinc-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-5 border-b border-zinc-100 bg-zinc-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="relative w-full max-w-xl">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
@@ -503,7 +492,7 @@ export default function BrandsPage() {
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   {table.getHeaderGroups().map(headerGroup => (
-                    <tr key={headerGroup.id} className="bg-zinc-50/70 border-b border-zinc-100">
+                    <tr key={headerGroup.id} className="bg-zinc-50 border-b border-zinc-100">
                       {headerGroup.headers.map(header => (
                         <th
                           key={header.id}
@@ -536,7 +525,7 @@ export default function BrandsPage() {
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
                   {table.getRowModel().rows.map(row => (
-                    <tr key={row.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                    <tr key={row.id} className="hover:bg-zinc-50 even:bg-zinc-50/10 transition-colors duration-150 group">
                       {row.getVisibleCells().map(cell => (
                         <td
                           key={cell.id}
@@ -799,106 +788,125 @@ export default function BrandsPage() {
 
       {/* Floating Configuration Sheet Panel */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="w-full sm:max-w-lg bg-white rounded-l-2xl border-l border-zinc-100 p-0 flex flex-col overflow-hidden">
-          <SheetHeader className="p-6 border-b border-zinc-100 bg-zinc-50/30">
-            <SheetTitle className="text-lg font-bold text-zinc-800">Brand Specification</SheetTitle>
-            <SheetDescription className="text-xs text-zinc-500 mt-0.5">
+        <SheetContent className="w-full sm:max-w-[640px] bg-white border-l border-zinc-200 p-0 flex flex-col overflow-hidden">
+          <SheetHeader className="p-6 border-b border-zinc-200 bg-white shrink-0">
+            <SheetTitle className="text-lg font-bold text-zinc-900">Brand Specification</SheetTitle>
+            <SheetDescription className="text-xs text-zinc-500 mt-1">
               Configure parameters and manufacturing partner properties.
             </SheetDescription>
           </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-50">
             {/* Logo Media Engine */}
-            <div className="flex justify-center pb-4 border-b border-zinc-100">
-              <SingleImageUpload
-                onChange={(url: string) => setFormData({ ...formData, logo_url: url })}
-                value={formData.logo_url}
-              />
+            <div className="bg-white border border-zinc-200 rounded-2xl p-6">
+              <div className="flex flex-col items-center">
+                <SingleImageUpload
+                  onChange={(url: string) => setFormData({ ...formData, logo_url: url })}
+                  value={formData.logo_url}
+                />
+                <span className="text-xs text-zinc-500 mt-3">Brand Logo</span>
+              </div>
             </div>
 
             {/* Brand Designation */}
-            <div className="space-y-2">
-              <Label htmlFor="brand-name" className="text-xs font-medium text-zinc-500">Brand Designation</Label>
-              <Input
-                id="brand-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400"
-                placeholder="e.g. BOSCH"
-                required
-              />
-            </div>
+            <div className="bg-white border border-zinc-200 p-6 rounded-2xl space-y-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-zinc-800 border-b border-zinc-100 pb-3 flex items-center gap-2">
+                <Award className="w-4 h-4" />
+                Brand Identity
+              </h3>
 
-            {/* Brand Category */}
-            <div className="space-y-2">
-              <Label htmlFor="brand-category" className="text-xs font-medium text-zinc-500">Brand Category</Label>
-              <select
-                id="brand-category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 bg-white"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Toggle Button State wrapper */}
-            <div
-              className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl"
-            >
-              <div className="space-y-0.5 pr-4">
-                <Label className="text-sm font-medium text-zinc-800">Active Listing Status</Label>
-                <p className="text-xs text-zinc-400">Determine visibility across localized client platforms</p>
+              <div className="space-y-2">
+                <Label htmlFor="brand-name">Brand Designation</Label>
+                <Input
+                  id="brand-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="h-11"
+                  placeholder="e.g. BOSCH"
+                  required
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
-                className={cn(
-                  "shrink-0 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2",
-                  formData.status ? "bg-teal-600 text-white" : "bg-zinc-200 text-zinc-600"
-                )}
-              >
-                <div className={cn("w-1.5 h-1.5 rounded-full", formData.status ? "bg-white animate-pulse" : "bg-zinc-400")} />
-                {formData.status ? "Active" : "Inactive"}
-              </button>
+
+              {/* Brand Category */}
+              <div className="space-y-2">
+                <Label htmlFor="brand-category">Brand Category</Label>
+                <select
+                  id="brand-category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full h-11 px-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 bg-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Featured Brand Toggle Button wrapper */}
-            <div
-              className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl"
-            >
-              <div className="space-y-0.5 pr-4">
-                <Label className="text-sm font-medium text-zinc-800">Featured Partner</Label>
-                <p className="text-xs text-zinc-400">Promote this brand on storefront spotlights</p>
+            {/* Settings & Visibility */}
+            <div className="bg-white border border-zinc-200 p-6 rounded-2xl space-y-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-zinc-800 border-b border-zinc-100 pb-3 flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Settings & Visibility
+              </h3>
+
+              {/* Active Status */}
+              <div className={cn(
+                "flex items-center justify-between rounded-2xl border p-4",
+                formData.status
+                  ? "bg-white border-emerald-250"
+                  : "bg-white border-zinc-200"
+              )}>
+                <div>
+                  <h4 className="font-medium text-zinc-900">Active Listing Status</h4>
+                  <p className="text-xs text-zinc-500">Determine visibility across local client platforms</p>
+                </div>
+                <Switch
+                  checked={formData.status}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, status: checked }))}
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, is_featured: !prev.is_featured }))}
-                className={cn(
-                  "shrink-0 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2",
-                  formData.is_featured ? "bg-amber-500 text-white" : "bg-zinc-200 text-zinc-600"
-                )}
-              >
-                <Star className={cn("w-3.5 h-3.5", formData.is_featured ? "fill-current" : "")} />
-                {formData.is_featured ? "Featured" : "Standard"}
-              </button>
+
+              {/* Featured Brand Toggle */}
+              <div className={cn(
+                "flex items-center justify-between rounded-2xl border p-4",
+                formData.is_featured
+                  ? "bg-white border-amber-250"
+                  : "bg-white border-zinc-200"
+              )}>
+                <div>
+                  <h4 className="font-medium text-zinc-900">Featured Partner</h4>
+                  <p className="text-xs text-zinc-500">Promote this brand on storefront spotlights</p>
+                </div>
+                <Switch
+                  checked={formData.is_featured}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
+                />
+              </div>
             </div>
           </form>
 
           {/* Form Action Footer */}
-          <div className="p-6 border-t border-zinc-150/40 bg-zinc-50/30">
+          <div className="p-6 border-t border-zinc-200 bg-white shrink-0">
             <Button
               disabled={saving}
               onClick={handleSubmit}
-              className="w-full bg-zinc-900 hover:bg-zinc-800 text-white h-11 rounded-xl text-sm font-medium transition-all shadow-sm gap-2"
+              className="w-full h-11 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Finalize Brand Entry
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingBrand ? "Save Changes" : "Create Brand"}
+                </>
+              )}
             </Button>
           </div>
         </SheetContent>

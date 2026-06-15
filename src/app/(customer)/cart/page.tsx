@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 
 import WishlistToggleButton from "@/components/storefront/WishlistToggleButton";
-
+import CartRecommendations from "@/components/storefront/CartRecommendations";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 import { useCartStore } from "@/store/useCartStore";
 
 import { formatCurrency } from "@/lib/format";
@@ -217,6 +218,13 @@ export default function CartPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Dynamic Recommendations */}
+        {items.length > 0 ? (
+          <CartRecommendations cartItemIds={items.map((i) => i.id)} />
+        ) : (
+          <RecommendedProducts maxItems={8} />
         )}
       </section>
     </div>

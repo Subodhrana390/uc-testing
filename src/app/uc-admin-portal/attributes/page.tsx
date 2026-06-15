@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createAdminClient as createClient } from "@/utils/supabase/admin-client";
 import {
   Plus,
@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function AttributeManagementPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -240,8 +240,8 @@ export default function AttributeManagementPage() {
   const handleStartEditAttribute = (attr: any) => {
     setEditingAttribute(attr);
     setEditAttrForm({
-      name: attr.name,
-      type: attr.type,
+      name: attr.name || "",
+      type: attr.type || "text",
       is_required: !!attr.is_required,
       is_filterable: !!attr.is_filterable,
       is_searchable: !!attr.is_searchable,
@@ -301,20 +301,21 @@ export default function AttributeManagementPage() {
 
   return (
     <div className="space-y-6 w-full px-4 sm:px-6 lg:px-8">
-      {/* Fuchsia Gradient Banner */}
-      <div className="bg-gradient-to-r from-fuchsia-600 via-fuchsia-700 to-pink-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden mb-8">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 relative z-10">
-          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shrink-0">
-            <Settings2 className="w-6 h-6 text-white" />
-          </div>
+      <div className="p-6 mb-8">
+        <div className="flex items-center gap-4">
+          <Settings2 className="w-8 h-8 text-fuchsia-600" />
+
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Attribute Management</h1>
-            <p className="text-sm font-medium text-fuchsia-50 mt-1">Define dynamic specifications and mapping structures for your product categories</p>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+              Attribute Management
+            </h1>
+
+            <p className="text-sm text-zinc-500 mt-1">
+              Define dynamic specifications and mapping structures for your product categories
+            </p>
           </div>
         </div>
       </div>
-
       {/* 3-Column Workspace Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
@@ -324,26 +325,53 @@ export default function AttributeManagementPage() {
             <Layers className="w-4 h-4 text-teal-600" />
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Categories Directory</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-3 space-y-1">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory?.id === cat.id;
+          <CardContent className="flex-1 overflow-y-auto p-3 space-y-2">
+            {categories.filter(c => !c.parent_id).map((parent) => {
+              const isParentSelected = selectedCategory?.id === parent.id;
+              const subCats = categories.filter(c => c.parent_id === parent.id);
               return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    setSelectedGroup(null);
-                  }}
-                  className={cn(
-                    "w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between border",
-                    isSelected
-                      ? "bg-teal-50/50 text-teal-700 border-teal-150 shadow-sm"
-                      : "border-transparent text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+                <div key={parent.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setSelectedCategory(parent);
+                      setSelectedGroup(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-between border",
+                      isParentSelected
+                        ? "bg-teal-50 text-teal-700 border-teal-200 shadow-sm"
+                        : "border-transparent text-zinc-800 hover:bg-zinc-50 hover:text-zinc-950"
+                    )}
+                  >
+                    <span className="truncate pr-2">{parent.name}</span>
+                    <ChevronRight className={cn("w-4 h-4 transition-transform shrink-0", isParentSelected ? "translate-x-0.5 text-teal-600" : "text-zinc-400")} />
+                  </button>
+                  {subCats.length > 0 && (
+                    <div className="pl-4 border-l border-zinc-100 ml-4 space-y-1 mt-1">
+                      {subCats.map((sub) => {
+                        const isSubSelected = selectedCategory?.id === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => {
+                              setSelectedCategory(sub);
+                              setSelectedGroup(null);
+                            }}
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between border",
+                              isSubSelected
+                                ? "bg-teal-50 text-teal-700 border-teal-200 shadow-sm"
+                                : "border-transparent text-zinc-550 hover:bg-zinc-50 hover:text-zinc-900"
+                            )}
+                          >
+                            <span className="truncate pr-2">{sub.name}</span>
+                            <ChevronRight className={cn("w-3.5 h-3.5 transition-transform shrink-0", isSubSelected ? "translate-x-0.5 text-teal-600" : "text-zinc-400")} />
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                >
-                  <span className="truncate pr-2">{cat.name}</span>
-                  <ChevronRight className={cn("w-4 h-4 transition-transform shrink-0", isSelected ? "translate-x-0.5 text-teal-600" : "text-zinc-400")} />
-                </button>
+                </div>
               );
             })}
           </CardContent>
@@ -547,7 +575,7 @@ export default function AttributeManagementPage() {
                           </button>
                           <button
                             onClick={() => setAttributeToDelete(attr)}
-                            className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-650 hover:bg-red-50 rounded-lg transition-all"
+                            className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -640,7 +668,7 @@ export default function AttributeManagementPage() {
               onClick={handleDeleteGroup}
               disabled={isDeletingGroup}
               variant="destructive"
-              className="h-10 rounded-xl gap-2 text-sm font-medium bg-red-650 hover:bg-red-700 text-white"
+              className="h-10 rounded-xl gap-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeletingGroup ? (
                 <>
@@ -655,7 +683,6 @@ export default function AttributeManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Dialog: Edit Attribute Details */}
       <Dialog open={!!editingAttribute} onOpenChange={(open) => !open && setEditingAttribute(null)}>
         <DialogContent className="sm:max-w-[440px] bg-white rounded-2xl border border-zinc-200 p-6 shadow-xl text-zinc-900 z-[700]">
           <DialogHeader className="space-y-1.5">
@@ -677,20 +704,16 @@ export default function AttributeManagementPage() {
 
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-zinc-500">Type</Label>
-              <Select
+              <select
                 value={editAttrForm.type}
-                onValueChange={(val) => setEditAttrForm({ ...editAttrForm, type: val || "text" })}
+                onChange={(e) => setEditAttrForm({ ...editAttrForm, type: e.target.value || "text" })}
+                className="w-full h-10 px-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 bg-white"
               >
-                <SelectTrigger className="h-10 border-zinc-200 bg-white rounded-xl text-sm focus:ring-teal-600">
-                  <SelectValue placeholder="Select Type" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-zinc-200 rounded-xl z-[800]">
-                  <SelectItem value="text" className="text-xs">Text value</SelectItem>
-                  <SelectItem value="number" className="text-xs">Numeric value</SelectItem>
-                  <SelectItem value="dropdown" className="text-xs">Dropdown choices</SelectItem>
-                  <SelectItem value="boolean" className="text-xs">Yes/No flag</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="text">Text value</option>
+                <option value="number">Numeric value</option>
+                <option value="dropdown">Dropdown choices</option>
+                <option value="boolean">Yes/No flag</option>
+              </select>
             </div>
 
             {editAttrForm.type === 'dropdown' && (
@@ -796,7 +819,7 @@ export default function AttributeManagementPage() {
               onClick={handleDeleteAttribute}
               disabled={isDeletingAttribute}
               variant="destructive"
-              className="h-10 rounded-xl gap-2 text-sm font-medium bg-red-650 hover:bg-red-700 text-white"
+              className="h-10 rounded-xl gap-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeletingAttribute ? (
                 <>

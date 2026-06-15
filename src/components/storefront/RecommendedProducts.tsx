@@ -21,7 +21,7 @@ interface Props {
  * Priority order:
  * 1. Products from categories the user has recently browsed (category affinity).
  * 2. Products from the current product's category (contextual).
- * 3. Best-seller / high-rating fallback (popular products).
+ * 3. Automatic best-seller fallback (popular products ranked by actual sales).
  *
  * Excludes already-viewed & current product.
  */
@@ -128,7 +128,7 @@ export default function RecommendedProducts({
         }
       }
 
-      // ── STEP 3: Popular fallback — high-rating products ─────────────────────
+      // ── STEP 3: Popular fallback — automatic top-selling products ───────────
       if (results.length < maxItems) {
         const alreadyIds = [
           ...excludeIds,
@@ -140,12 +140,11 @@ export default function RecommendedProducts({
           : `('')`; // safe empty
 
         const { data: popular } = await supabase
-          .from("products")
+          .from("top_selling_products")
           .select(
             "*, categories(name, slug, parent:categories!parent_id(name, slug)), product_reviews(rating)"
           )
           .eq("status", "Active")
-          .eq("is_best_seller", true)
           .not("id", "in", notInClause)
           .limit(maxItems - results.length);
 
@@ -242,23 +241,6 @@ export default function RecommendedProducts({
             </h2>
           </div>
         </div>
-
-        {showArrows && (
-          <div className="hidden md:flex items-center gap-2">
-            <button
-              onClick={() => scroll("left")}
-              className="h-8 w-8 flex items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => scroll("right")}
-              className="h-8 w-8 flex items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Pill chips — show which categories are being recommended */}
@@ -279,6 +261,26 @@ export default function RecommendedProducts({
 
       {/* Carousel */}
       <div className="relative">
+        {/* Floating Navigation Arrows */}
+        {showArrows && (
+          <>
+            <button
+              onClick={() => scroll("left")}
+              aria-label="Scroll left"
+              className="absolute -left-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              aria-label="Scroll right"
+              className="absolute -right-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
+
         <div
           ref={scrollRef}
           className="flex gap-5 overflow-x-auto pb-3"
@@ -294,8 +296,8 @@ export default function RecommendedProducts({
           ))}
         </div>
 
-        <div className="pointer-events-none absolute left-0 top-0 bottom-3 w-8 bg-gradient-to-r from-white to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white to-transparent z-10" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-3 w-8 bg-gradient-to-r from-white/10 to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white/10 to-transparent z-10" />
       </div>
     </section>
   );

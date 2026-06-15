@@ -714,6 +714,7 @@ export default function OrdersPage() {
   }, [supabase, fetchOrders, fetchTableOrders]);
 
   const updateStatus = async (id: string, status: string): Promise<any> => {
+    const toastId = toast.loading(`Updating order status to ${status}...`);
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -730,22 +731,23 @@ export default function OrdersPage() {
       if (updatedOrder) {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder } : o));
         setTableOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder, items: o.items } : o));
-        toast.success(`Order marked as ${status}`);
+        toast.success(`Order marked as ${status}`, { id: toastId });
         return updatedOrder;
       } else {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
         setTableOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-        toast.success(`Order marked as ${status}`);
+        toast.success(`Order marked as ${status}`, { id: toastId });
         return null;
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to update status", { id: toastId });
       return null;
     }
   };
 
   const updateBulkStatus = async (status: string) => {
     if (selectedOrders.length === 0) return;
+    const toastId = toast.loading(`Updating ${selectedOrders.length} orders to ${status}...`);
     try {
       const promises = selectedOrders.map(id =>
         fetch("/api/orders/status", {
@@ -765,14 +767,15 @@ export default function OrdersPage() {
         return res?.order ? { ...o, ...res.order, items: o.items } : (selectedOrders.includes(o.id) ? { ...o, status } : o);
       }));
 
-      toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`);
+      toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`, { id: toastId });
       setSelectedOrders([]);
     } catch (error: any) {
-      toast.error("Failed to update some orders");
+      toast.error("Failed to update some orders", { id: toastId });
     }
   };
 
   const updatePaymentStatus = async (orderId: string, paymentStatus: string, paymentMethod?: string) => {
+    const toastId = toast.loading(`Updating payment status to ${paymentStatus}...`);
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -787,9 +790,9 @@ export default function OrdersPage() {
 
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
       setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
-      toast.success(`Payment marked as ${paymentStatus}`);
+      toast.success(`Payment marked as ${paymentStatus}`, { id: toastId });
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to update payment status", { id: toastId });
     }
   };
 
@@ -853,25 +856,37 @@ export default function OrdersPage() {
 
   const updateTracking = async (orderId: string) => {
     setIsUpdatingTracking(true);
+    const toastId = toast.loading("Updating logistics...");
     try {
+      const currentOrder = orders.find(o => o.id === orderId) || tableOrders.find(o => o.id === orderId);
+      const isProcessing = !currentOrder || currentOrder.status?.toUpperCase() === "PROCESSING";
+      const targetStatus = isProcessing ? "Shipped" : currentOrder.status;
+
       const response = await fetch("/api/orders/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, status: "Shipped", trackingId, carrier })
+        body: JSON.stringify({ orderId, status: targetStatus, trackingId, carrier })
       });
 
+      const resData = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const resData = await response.json().catch(() => ({}));
         throw new Error(resData.error || "Tracking update failed");
       }
 
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
-      setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
-      toast.success("Logistics updated");
+      const updatedOrder = resData.order;
+      if (updatedOrder) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedOrder } : o));
+        setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedOrder, items: o.items } : o));
+      } else {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: targetStatus } : o));
+        setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, tracking_id: trackingId, carrier, status: targetStatus } : o));
+      }
+
+      toast.success("Logistics updated", { id: toastId });
       setIsTrackingOpen(false);
       setSelectedOrder(null);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to update logistics", { id: toastId });
     } finally {
       setIsUpdatingTracking(false);
     }
@@ -1702,10 +1717,10 @@ export default function OrdersPage() {
                         <TableRow
                           key={order.id}
                           className={cn(
-                            "hover:bg-zinc-50 transition-all duration-200",
+                            "hover:bg-zinc-50 transition-colors duration-150",
                             selectedOrders.includes(order.id)
                               ? "bg-blue-50/40"
-                              : "even:bg-zinc-50/30 hover:translate-x-0.5 hover:shadow-sm"
+                              : "even:bg-zinc-50/30"
                           )}
                         >
                           <TableCell className="text-center">
@@ -1793,7 +1808,7 @@ export default function OrdersPage() {
                                       </DropdownMenuSub>
                                     )}
 
-                                    {order.status?.toUpperCase() === 'PROCESSING' && (
+                                    {['PROCESSING', 'SHIPPED', 'DELIVERED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURNED'].includes(order.status?.toUpperCase()) && (
                                       <DropdownMenuItem onClick={() => {
                                         setSelectedOrder(order);
                                         setTrackingId(order.tracking_id || "");

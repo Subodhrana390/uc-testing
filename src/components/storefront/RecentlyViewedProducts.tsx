@@ -89,23 +89,6 @@ export default function RecentlyViewedProducts({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Scroll buttons */}
-          {showArrows && (
-            <>
-              <button
-                onClick={() => scroll("left")}
-                className="hidden md:flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => scroll("right")}
-                className="hidden md:flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 transition-all"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </>
-          )}
           {/* Clear button */}
           <button
             onClick={clearRecentlyViewed}
@@ -119,6 +102,26 @@ export default function RecentlyViewedProducts({
 
       {/* Carousel */}
       <div className="relative">
+        {/* Floating Navigation Arrows */}
+        {showArrows && (
+          <>
+            <button
+              onClick={() => scroll("left")}
+              aria-label="Scroll left"
+              className="absolute -left-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              aria-label="Scroll right"
+              className="absolute -right-5 top-1/2 -translate-y-1/2 z-20 h-11 w-11 bg-zinc-950 text-white shadow-2xl rounded-full flex items-center justify-center transition-all opacity-40 hover:opacity-100 hover:scale-110 hidden md:flex"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
+
         <div
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto pb-3"
@@ -157,8 +160,8 @@ export default function RecentlyViewedProducts({
         </div>
 
         {/* Fade edges */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-3 w-6 bg-gradient-to-r from-white to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-6 bg-gradient-to-l from-white to-transparent z-10" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-3 w-8 bg-gradient-to-r from-white/10 to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white/10 to-transparent z-10" />
       </div>
     </section>
   );

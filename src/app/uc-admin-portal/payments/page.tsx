@@ -571,6 +571,7 @@ export default function PaymentsPage() {
 
 
   const updateStatus = async (paymentId: string, orderId: string, status: string) => {
+    const toastId = toast.loading(`Updating order status to ${status}...`);
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -580,13 +581,14 @@ export default function PaymentsPage() {
       if (!response.ok) throw new Error("Update failed");
       setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, status } : o));
       setTablePayments(prev => prev.map(o => o.id === paymentId ? { ...o, status } : o));
-      toast.success(`Order marked as ${status}`);
+      toast.success(`Order marked as ${status}`, { id: toastId });
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to update status", { id: toastId });
     }
   };
 
   const issueRefund = async (paymentId: string, orderId: string) => {
+    const toastId = toast.loading("Issuing refund...");
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -597,13 +599,14 @@ export default function PaymentsPage() {
 
       setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
       setTablePayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: "Refunded" } : p));
-      toast.success(`Refund issued successfully`);
+      toast.success(`Refund issued successfully`, { id: toastId });
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to issue refund", { id: toastId });
     }
   };
 
   const updateTracking = async (orderId: string, paymentId: string) => {
+    const toastId = toast.loading("Updating logistics...");
     try {
       const response = await fetch("/api/orders/status", {
         method: "POST",
@@ -613,10 +616,10 @@ export default function PaymentsPage() {
       if (!response.ok) throw new Error("Tracking update failed");
       setPayments(prev => prev.map(o => o.id === paymentId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
       setTablePayments(prev => prev.map(o => o.id === paymentId ? { ...o, tracking_id: trackingId, carrier, status: "Shipped" } : o));
-      toast.success("Logistics updated");
+      toast.success("Logistics updated", { id: toastId });
       setIsTrackingOpen(false);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to update tracking", { id: toastId });
     }
   };
 
@@ -1287,7 +1290,7 @@ export default function PaymentsPage() {
                   </TableRow>
                 ) : (
                   tablePayments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm border-zinc-200">
+                    <TableRow key={payment.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-colors duration-150 border-zinc-200">
 
                       <TableCell className="pl-6 py-4">
                         <div className="flex flex-col gap-1">

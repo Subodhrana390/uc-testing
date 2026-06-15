@@ -14,6 +14,7 @@ import ProductSidebarFilters from "@/components/storefront/ProductSidebarFilters
 import JsonLd from "@/components/seo/JsonLd";
 import { itemListSchema, breadcrumbSchema, webPageSchema } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/seo";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 
 export async function generateMetadata({
   searchParams,
@@ -232,6 +233,11 @@ export default async function SearchPage({
             )}
           </div>
 
+        </div>
+
+        {/* Dynamic Recommendations */}
+        <div className="mt-12 border-t border-zinc-200/80 pt-8">
+          <RecommendedProducts maxItems={8} />
         </div>
       </section>
 

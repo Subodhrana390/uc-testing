@@ -180,7 +180,7 @@ export default function BannersPage() {
             onClick={() => handleOpenDrawer()}
             className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2"
           >
-            <Plus className="w-4 h-4" /> Initialize Banner
+            <Plus className="w-4 h-4" /> Create Banner
           </Button>
         </div>
 
@@ -262,7 +262,7 @@ export default function BannersPage() {
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {paginatedBanners.map((banner) => (
-                <tr key={banner.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                <tr key={banner.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-colors duration-150 group">
                   <td className="px-6 py-4 pl-8">
                     <div className="w-20 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden transition-all flex items-center justify-center shrink-0">
                       {banner.image_url ? (

@@ -298,6 +298,11 @@ export default function ProductDetailsClient({
   };
 
   const isOutOfStock = product?.stock_quantity === 0;
+  const isReadyStock = product?.stock_quantity > 0;
+  const isIndustrialGrade =
+    product?.categories?.name?.toLowerCase().includes("industrial") ||
+    product?.categories?.parent?.name?.toLowerCase().includes("industrial") ||
+    Number(product?.price || 0) >= 50000;
 
   return (
     <>
@@ -393,14 +398,7 @@ export default function ProductDetailsClient({
 
         <div className="space-y-8">
           <div className="flex flex-wrap gap-2">
-            {discount && (
-              <span className="bg-red-50 text-primary text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-red-100">
-                {discount}% OFF
-              </span>
-            )}
-            {product.is_ready_stock && <span className="bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald-100">Ready to Ship</span>}
-            {product.is_industrial_grade && <span className="bg-zinc-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">Industrial Grade</span>}
-            {product.is_best_seller && <span className="bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-amber-100">Best Seller</span>}
+            {isIndustrialGrade && <span className="bg-zinc-900 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">Industrial Grade</span>}
           </div>
 
           <div className="space-y-4">
@@ -447,7 +445,7 @@ export default function ProductDetailsClient({
                 </span>
               )}
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
-                GST Inclusive
+                Inclusive of all taxes
               </span>
             </div>
 
