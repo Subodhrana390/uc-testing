@@ -18,6 +18,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
+  ChevronDown,
+  ShoppingBag,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -63,6 +65,7 @@ export default function CheckoutPage() {
   const couponsEnabledSetting = siteSettings?.coupons_enabled ?? true;
 
   const [items, setItems] = useState<CartItemWithTax[]>([]);
+  const [mobileOrderSummaryOpen, setMobileOrderSummaryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -467,12 +470,14 @@ export default function CheckoutPage() {
     } else if (currentStep === 2) {
       setCurrentStep(3);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePlaceOrder = async (
@@ -721,11 +726,11 @@ export default function CheckoutPage() {
   // Verifying Payment Screen
   if (verifyingPayment && verificationData) {
     return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 antialiased">
+    <div className="flex flex-col items-center pt-12 sm:pt-20 p-6 antialiased">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
         
-        {/* Main Card - Separated entirely by a rich, soft shadow */}
-        <div className="bg-white rounded-3xl p-8 text-center space-y-8 shadow-2xl shadow-zinc-300/40">
+        {/* Main Card */}
+        <div className="rounded-3xl p-8 text-center space-y-8">
           
           {/* Animated Verification Icon Container */}
           <div className="flex justify-center pt-2">
@@ -796,28 +801,29 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-20">
-      <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-28 lg:pb-20">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
           <Link
             href="/cart"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
-            Back to Cart
+            <span className="hidden sm:inline">Back to Cart</span>
+            <span className="sm:hidden">Cart</span>
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-zinc-950">
             Secure Checkout
           </h1>
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[1fr_400px]">
           {/* Left Side */}
-          <div className="space-y-8">
+          <div className="space-y-5 sm:space-y-8">
             {/* Stepper UI */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between relative px-2 z-10">
-                <div className="absolute left-[28px] right-[28px] top-5 -translate-y-1/2 h-1.5 bg-zinc-100 rounded-full -z-10">
+            <div className="mb-4 sm:mb-8">
+              <div className="flex items-center justify-between relative px-1 sm:px-2 z-10">
+                <div className="absolute left-[20px] right-[20px] sm:left-[28px] sm:right-[28px] top-[16px] sm:top-5 -translate-y-1/2 h-1 sm:h-1.5 bg-zinc-100 rounded-full -z-10">
                   <div className="h-full bg-primary rounded-full transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
                 </div>
 
@@ -831,15 +837,15 @@ export default function CheckoutPage() {
                   const isPending = currentStep < item.step;
 
                   return (
-                    <div key={item.step} className="flex flex-col items-center gap-3">
+                    <div key={item.step} className="flex flex-col items-center gap-1.5 sm:gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ring-4 ring-white shadow-sm",
+                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 ring-2 sm:ring-4 ring-white shadow-sm",
                         isCompleted ? "bg-primary text-white" : isActive ? "bg-zinc-950 text-white scale-110" : "bg-zinc-100 text-zinc-400"
                       )}>
-                        {isCompleted ? <Check className="w-5 h-5" /> : item.step}
+                        {isCompleted ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : item.step}
                       </div>
                       <span className={cn(
-                        "text-[11px] font-bold uppercase tracking-wider bg-white px-2",
+                        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-white px-1 sm:px-2",
                         isActive ? "text-zinc-950" : isCompleted ? "text-primary" : "text-zinc-400"
                       )}>
                         {item.label}
@@ -853,7 +859,7 @@ export default function CheckoutPage() {
             {currentStep === 1 && (
               <>
                 {/* Contact Information */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <User className="h-5 w-5" />
@@ -903,7 +909,7 @@ export default function CheckoutPage() {
                 </section>
 
                 {/* Address */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
@@ -915,8 +921,9 @@ export default function CheckoutPage() {
                     </div>
 
                     <Link href="/account/address-book?returnTo=/checkout">
-                      <button className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-xs font-bold text-zinc-700 transition">
-                        Change / Manage
+                      <button className="inline-flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded-lg sm:rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-[10px] sm:text-xs font-bold text-zinc-700 transition">
+                        <span className="hidden sm:inline">Change / Manage</span>
+                        <span className="sm:hidden">Manage</span>
                       </button>
                     </Link>
                   </div>
@@ -984,7 +991,7 @@ export default function CheckoutPage() {
                 </section>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
-                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Payment
                   </button>
                 </div>
@@ -994,7 +1001,7 @@ export default function CheckoutPage() {
             {currentStep === 2 && (
               <>
                 {/* Payment Method */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <CreditCard className="h-5 w-5" />
@@ -1162,11 +1169,11 @@ export default function CheckoutPage() {
                   )}
                 </section>
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
-                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-2 sm:gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Shipping
                   </button>
-                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Review
                   </button>
                 </div>
@@ -1175,7 +1182,7 @@ export default function CheckoutPage() {
 
             {currentStep === 3 && (
               <>
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <CheckCircle2 className="h-5 w-5" />
@@ -1259,14 +1266,14 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
-                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-2 sm:gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Payment
                   </button>
                   <button
                     onClick={handlePlaceOrder}
                     disabled={submitting || isPlacingOrder}
-                    className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {submitting || isPlacingOrder
                       ? "Processing..."
@@ -1279,8 +1286,8 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Right Sidebar */}
-          <aside className="space-y-6">
+          {/* Right Sidebar - Desktop */}
+          <aside className="hidden lg:block space-y-6">
             <div className="bg-white shadow-sm border border-zinc-200 rounded-3xl overflow-hidden sticky top-24">
               <div className="p-6 sm:p-8 bg-zinc-50/50 border-b border-zinc-100">
                 <h2 className="text-xl font-black text-zinc-950">Order Summary</h2>
@@ -1421,11 +1428,159 @@ export default function CheckoutPage() {
               </div>
             </div>
           </aside>
+
+          {/* Mobile Order Summary - Collapsible (visible below lg) */}
+          <div className="lg:hidden">
+            <div className="bg-white shadow-sm border border-zinc-200 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setMobileOrderSummaryOpen(!mobileOrderSummaryOpen)}
+                className="w-full flex items-center justify-between p-4 bg-zinc-50/50 border-b border-zinc-100"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-5 h-5 text-zinc-700" />
+                  <span className="text-sm font-black text-zinc-950">Order Summary</span>
+                  <span className="text-xs font-bold text-zinc-400">({items.length} {items.length === 1 ? "item" : "items"})</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-primary">{formatCurrency(grandTotal)}</span>
+                  <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform duration-300", mobileOrderSummaryOpen && "rotate-180")} />
+                </div>
+              </button>
+
+              {mobileOrderSummaryOpen && (
+                <div className="p-4 space-y-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {/* Items List */}
+                  <div className="space-y-3 pb-4 border-b border-zinc-100 max-h-[200px] overflow-y-auto">
+                    {items.map((item) => (
+                      <div key={`mobile-summary-${item.id}`} className="flex gap-3">
+                        <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-zinc-50">
+                          <Image
+                            src={item.image_url || "/images/prod_main.png"}
+                            alt={item.name}
+                            fill
+                            className="object-contain p-1.5"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <p className="text-xs font-bold text-zinc-950 truncate">{item.name}</p>
+                          <div className="flex justify-between items-center text-[11px] font-bold text-zinc-500">
+                            <span>{item.quantity} × {formatCurrency(item.price)}</span>
+                            <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-medium text-zinc-600">
+                      <span>Subtotal</span>
+                      <span className="font-bold text-zinc-950">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-medium text-zinc-600">
+                      <span>Shipping</span>
+                      <span className="font-bold text-zinc-950">{formatCurrency(deliveryCharge)}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-emerald-600">
+                        <span>Coupon Discount</span>
+                        <span>-{formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
+                    {deliveryEstimate && (
+                      <div className="flex justify-between text-xs font-bold text-emerald-700 bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-100/60 mt-2">
+                        <span className="flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5" />
+                          Delivery by
+                        </span>
+                        <span>{deliveryEstimate.date}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Coupon Block */}
+                  <div className="pt-3 border-t border-zinc-100 space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Coupon / Promo</span>
+                    {!couponsEnabledSetting ? (
+                      <p className="text-xs font-bold text-zinc-400 italic">Coupons are currently disabled.</p>
+                    ) : appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-xl">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded inline-block w-fit">{appliedCoupon.code}</span>
+                          <span className="text-[10px] text-emerald-600 font-bold mt-0.5">Saved {formatCurrency(discountAmount)}</span>
+                        </div>
+                        <button type="button" onClick={handleRemoveCoupon} className="text-[11px] font-bold text-red-500">Remove</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponCodeInput}
+                          onChange={(e) => { setCouponCodeInput(e.target.value); setCouponError(null); }}
+                          placeholder="Enter code"
+                          className="h-9 border-zinc-200 rounded-lg focus-visible:ring-zinc-950 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={applyingCoupon}
+                          className="px-3 h-9 bg-zinc-950 hover:bg-primary text-white rounded-lg text-xs font-bold transition disabled:opacity-50 shrink-0"
+                        >
+                          {applyingCoupon ? "..." : "Apply"}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && (
+                      <p className="text-[10px] text-red-500 font-semibold">{couponError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                    <span className="font-black text-zinc-950 text-sm">Total</span>
+                    <span className="font-black text-primary text-base">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Dynamic Recommendations - Post Checkout Addons */}
-        <div className="mt-12 border-t border-zinc-200/60 pt-12">
+        <div className="mt-8 sm:mt-12 border-t border-zinc-200/60 pt-8 sm:pt-12">
           <RecommendedProducts maxItems={4} />
+        </div>
+
+        {/* Mobile Sticky Bottom Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-zinc-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50 px-4 py-3 safe-area-bottom">
+          <div className="flex items-center justify-between max-w-5xl mx-auto">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total</span>
+              <span className="text-lg font-black text-primary leading-tight">{formatCurrency(grandTotal)}</span>
+              {items.length > 0 && (
+                <span className="text-[10px] text-zinc-500 font-medium">{items.length} {items.length === 1 ? "item" : "items"}</span>
+              )}
+            </div>
+            {currentStep < 3 ? (
+              <button
+                onClick={handleNextStep}
+                className="rounded-xl h-11 px-6 bg-zinc-950 hover:bg-primary text-white font-bold text-xs transition inline-flex items-center justify-center gap-1.5"
+              >
+                {currentStep === 1 ? "Continue" : "Review Order"}
+              </button>
+            ) : (
+              <button
+                onClick={handlePlaceOrder}
+                disabled={submitting || isPlacingOrder}
+                className="rounded-xl h-11 px-6 bg-zinc-950 hover:bg-primary text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+              >
+                {submitting || isPlacingOrder
+                  ? "Processing..."
+                  : paymentMethod === "ONLINE"
+                  ? "Pay Now"
+                  : "Place Order"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
