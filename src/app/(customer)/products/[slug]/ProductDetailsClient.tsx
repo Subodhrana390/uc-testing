@@ -599,7 +599,13 @@ export default function ProductDetailsClient({
         </div>
 
         {/* Desktop Content */}
-        <div className="hidden sm:block pt-2 lg:pt-4">
+        <div className={`hidden sm:block pt-2 lg:pt-4 transition-all duration-300 ${
+          activeTab === "shipping"
+            ? "max-w-3xl"
+            : activeTab === "reviews"
+            ? "max-w-none"
+            : "max-w-5xl"
+        }`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
