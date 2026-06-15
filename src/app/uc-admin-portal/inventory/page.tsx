@@ -21,6 +21,7 @@ import {
   TrendingDown
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { Pagination } from "@/components/ui/pagination";
@@ -204,7 +205,7 @@ export default function InventoryPage() {
       const { data, error } = await supabase
         .from("products")
         .select(`
-          id, name, stock_quantity, low_stock_threshold, manage_stock, created_at,
+          id, name, stock_quantity, low_stock_threshold, manage_stock, created_at, price, image_url,
           categories(name),
           product_variants(id, name, stock_quantity, sku)
         `)
@@ -226,7 +227,9 @@ export default function InventoryPage() {
               category: Array.isArray(p.categories) ? p.categories[0]?.name : (p.categories as any)?.name,
               threshold: p.low_stock_threshold,
               created_at: p.created_at,
-              is_variant: true
+              is_variant: true,
+              price: p.price || 0,
+              image_url: p.image_url
             });
           });
         } else if (p.manage_stock) {
@@ -239,7 +242,9 @@ export default function InventoryPage() {
             category: Array.isArray(p.categories) ? p.categories[0]?.name : (p.categories as any)?.name,
             threshold: p.low_stock_threshold,
             created_at: p.created_at,
-            is_variant: false
+            is_variant: false,
+            price: p.price || 0,
+            image_url: p.image_url
           });
         }
       });
@@ -327,24 +332,50 @@ export default function InventoryPage() {
     return filteredProducts.slice(startIndex, startIndex + pageSize);
   }, [filteredProducts, currentPage, pageSize]);
 
-  // Chart Analytics Dataset 1: Structural Categorization Breakdown
+  // Chart Analytics Dataset 1: Structural Categorization Breakdown by Inventory Value
   const distributionDataset = useMemo(() => {
-    let depleted = 0;
-    let critical = 0;
-    let stable = 0;
+    let depletedVal = 0;
+    let criticalVal = 0;
+    let stableVal = 0;
+    let depletedSKUs = 0;
+    let criticalSKUs = 0;
+    let stableSKUs = 0;
+    let depletedStock = 0;
+    let criticalStock = 0;
+    let stableStock = 0;
 
     products.forEach(p => {
-      if (p.stock_quantity === 0) depleted++;
-      else if (p.stock_quantity <= (p.threshold || 5)) critical++;
-      else stable++;
+      const qty = p.stock_quantity || 0;
+      const itemValue = qty * Number(p.price || 0);
+      if (qty === 0) {
+        depletedVal += itemValue;
+        depletedSKUs++;
+        depletedStock += qty;
+      } else if (qty <= (p.threshold || 5)) {
+        criticalVal += itemValue;
+        criticalSKUs++;
+        criticalStock += qty;
+      } else {
+        stableVal += itemValue;
+        stableSKUs++;
+        stableStock += qty;
+      }
     });
 
     return [
-      { name: "Stable Stock", count: stable, fill: "#0d9488" },
-      { name: "Low Stock", count: critical, fill: "#f59e0b" },
-      { name: "Out of Stock", count: depleted, fill: "#ef4444" }
+      { name: "Stable Stock", value: stableVal, skus: stableSKUs, stock: stableStock, fill: "#0d9488" },
+      { name: "Low Stock", value: criticalVal, skus: criticalSKUs, stock: criticalStock, fill: "#f59e0b" },
+      { name: "Out of Stock", value: depletedVal, skus: depletedSKUs, stock: depletedStock, fill: "#ef4444" }
     ];
   }, [products]);
+
+  const totalDistributionValue = useMemo(() => {
+    return distributionDataset.reduce((sum, item) => sum + item.value, 0);
+  }, [distributionDataset]);
+
+  const totalDistributionStock = useMemo(() => {
+    return distributionDataset.reduce((sum, item) => sum + item.stock, 0);
+  }, [distributionDataset]);
 
   // Chart Analytics Dataset 2: Chronological Timeline Velocities
   const trendDataset = useMemo(() => {
@@ -363,39 +394,6 @@ export default function InventoryPage() {
 
     return Object.values(monthlyData);
   }, [products]);
-
-  const metricCards = useMemo(() => {
-    return [
-      {
-        title: "Total Products",
-        value: stats?.totalProducts || 0,
-        sub: "Managed items",
-        icon: <Package className="w-4 h-4 text-emerald-100" />,
-        dataKey: "totalProducts",
-      },
-      {
-        title: "Inventory Value",
-        value: `₹${stats?.totalValue?.toLocaleString('en-IN') || 0}`,
-        sub: "Estimated physical worth",
-        icon: <Activity className="w-4 h-4 text-emerald-100" />,
-        dataKey: "totalValue",
-      },
-      {
-        title: "Low Stock",
-        value: stats?.lowStockCount || 0,
-        sub: "Approaching thresholds",
-        icon: <AlertTriangle className="w-4 h-4 text-emerald-100" />,
-        dataKey: "lowStockCount",
-      },
-      {
-        title: "Out of Stock",
-        value: stats?.outOfStockCount || 0,
-        sub: "Depleted items",
-        icon: <TrendingDown className="w-4 h-4 text-emerald-100" />,
-        dataKey: "outOfStockCount",
-      }
-    ];
-  }, [stats]);
 
   const exportToCSV = () => {
     if (!filteredProducts.length) return toast.error("No dataset available to export");
@@ -423,56 +421,9 @@ export default function InventoryPage() {
       {/* Emerald Gradient Banner */}
       <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
-          <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Stock Inventory</h1>
-            <p className="text-sm font-medium text-emerald-50 mt-1">Monitor ledgers, variants, and update product availability in real-time</p>
-          </div>
-        </div>        {/* Analytics Summary Core Matrix */}
-        <div className="grid gap-5 grid-cols-2 md:grid-cols-4 relative z-10">
-          {metricCards.map((card, idx) => (
-            <Card
-              key={idx}
-              className="bg-white/10 border-white/10 text-white shadow-sm rounded-2xl backdrop-blur-md hover:bg-white/15 transition-all duration-300 flex flex-col justify-between overflow-hidden group pb-0"
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-2">
-                <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">{card.title}</span>
-                {card.icon}
-              </CardHeader>
-              <CardContent className="p-5 pt-0 pb-0">
-                <div className="text-2xl font-black tracking-tight text-white">{card.value}</div>
-                <p className="text-[11px] text-emerald-100/60 mt-1">{card.sub}</p>
-              </CardContent>
-
-              {/* Sparkline wave line chart at bottom (clean white color) */}
-              <div className="w-full h-12 mt-4 -mx-5 px-5 select-none pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
-                {isMounted && stats?.trendData && stats.trendData.length > 0 && (
-                  <ResponsiveContainer width="112%" height="100%">
-                    <AreaChart
-                      data={stats.trendData}
-                      margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id={`grad-white-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <Area
-                        type="monotone"
-                        dataKey={card.dataKey}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                        fill={`url(#grad-white-${idx})`}
-                        dot={false}
-                        animationDuration={1500}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </Card>
-          ))}
+        <div className="relative z-10">
+          <h1 className="text-3xl font-extrabold text-white tracking-tight border-none p-0 !pl-0 before:hidden">Stock Inventory</h1>
+          <p className="text-sm font-medium text-emerald-50 mt-1">Monitor ledgers, variants, and update product availability in real-time</p>
         </div>
       </div>
 
@@ -559,11 +510,24 @@ export default function InventoryPage() {
                     const uniqueId = product.variant_id || product.id;
                     
                     return (
-                      <tr key={uniqueId} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                      <tr key={uniqueId} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-colors duration-150 group">
                         <td className="px-6 py-4 pl-8">
-                          <div className="space-y-0.5">
-                            <span className="text-sm font-medium text-zinc-700 block">{product.name}</span>
-                            <span className="text-[11px] text-zinc-400 font-mono">SKU: {product.sku?.toUpperCase().slice(0, 12)}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 shrink-0 flex items-center justify-center overflow-hidden">
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-full h-full object-contain mix-blend-multiply"
+                                />
+                              ) : (
+                                <Package className="w-6 h-6 text-zinc-350 shrink-0" />
+                              )}
+                            </div>
+                            <div className="space-y-0.5">
+                              <span className="text-sm font-medium text-zinc-700 block">{product.name}</span>
+                              <span className="text-[11px] text-zinc-400 font-mono">SKU: {product.sku?.toUpperCase().slice(0, 12)}</span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -681,23 +645,24 @@ export default function InventoryPage() {
         <TabsContent value="distribution" className="outline-none">
           <Card className="bg-white rounded-2xl border border-zinc-100 p-6 shadow-sm">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 lg:gap-16">
-              <div className="relative w-48 h-48 flex-shrink-0">
+              <div className="relative w-56 h-56 flex-shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
                       data={distributionDataset}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={65}
+                      outerRadius={85}
                       paddingAngle={4}
-                      dataKey="count"
+                      dataKey="value"
                     >
                       {distributionDataset.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
                     <Tooltip
+                      formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, "Inventory Value"]}
                       contentStyle={{
                         backgroundColor: "#fff",
                         border: "1px solid #e4e4e7",
@@ -708,12 +673,15 @@ export default function InventoryPage() {
                     />
                   </RechartsPieChart>
                 </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                  <span className="text-3xl font-black tracking-tight text-zinc-800 leading-none">
-                    {products.length}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none p-2 text-center">
+                  <span className="text-sm font-black tracking-tight text-zinc-800 leading-none">
+                    ₹{totalDistributionValue.toLocaleString('en-IN')}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-1.5">
-                    Total SKUs
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mt-1 mb-1">
+                    Value
+                  </span>
+                  <span className="text-xs font-bold text-zinc-650 leading-none border-t border-zinc-100 pt-1 w-20">
+                    {totalDistributionStock.toLocaleString('en-IN')} units
                   </span>
                 </div>
               </div>
@@ -721,7 +689,7 @@ export default function InventoryPage() {
               {/* Details Legend Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 flex-1 w-full max-w-2xl">
                 {distributionDataset.map((item, idx) => {
-                  const percentage = products.length ? Math.round((item.count / products.length) * 100) : 0;
+                  const percentage = totalDistributionValue ? Math.round((item.value / totalDistributionValue) * 100) : 0;
                   return (
                     <div key={idx} className="p-4 rounded-xl border border-zinc-100 bg-zinc-50/20 hover:bg-zinc-50/50 transition-colors flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-2">
@@ -733,9 +701,15 @@ export default function InventoryPage() {
                           {percentage}%
                         </span>
                       </div>
-                      <div className="mt-2">
-                        <span className="text-2xl font-bold tracking-tight text-zinc-800">
-                          {item.count}
+                      <div className="mt-2 space-y-0.5">
+                        <span className="text-2xl font-bold tracking-tight text-zinc-800 block">
+                          ₹{item.value.toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[11px] text-zinc-600 font-bold block">
+                          {item.stock.toLocaleString('en-IN')} units
+                        </span>
+                        <span className="text-[10px] text-zinc-450 font-medium block">
+                          {item.skus} {item.skus === 1 ? "variant" : "variants"}
                         </span>
                       </div>
                     </div>
@@ -810,7 +784,7 @@ export default function InventoryPage() {
                     const style = typeStyles[tx.type] || { label: tx.type, color: "bg-zinc-50 text-zinc-600 border-zinc-100", dot: "bg-zinc-400" };
 
                     return (
-                      <tr key={tx.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-all duration-200">
+                      <tr key={tx.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/20 transition-colors duration-150">
                         <td className="px-6 py-4 pl-8">
                           <span className="text-xs text-zinc-500 block">
                             {new Date(tx.created_at).toLocaleString("en-IN", {

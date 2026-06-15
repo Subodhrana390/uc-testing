@@ -88,6 +88,7 @@ export async function getDynamicSections() {
 
     if (data) {
       topSelling = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
+      if (topSelling.length === 0) topSelling = data.slice(0, 12); // Fallback for small catalogs
       topSelling.forEach(p => excludeIds.add(p.id));
     }
   } catch (e) {
@@ -107,25 +108,52 @@ export async function getDynamicSections() {
     const { data } = await query;
     if (data) {
       newArrivals = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
+      if (newArrivals.length === 0) newArrivals = data.slice(0, 12); // Fallback for small catalogs
       newArrivals.forEach(p => excludeIds.add(p.id));
     }
   } catch (e) {
     console.error("Error fetching new arrivals:", e);
   }
 
-  // 4. Fetch Featured Products (using is_featured flag)
+  // 4. Fetch Featured Products (Dynamic: highly rated and most reviewed)
   let featuredProducts: ProductSummary[] = [];
   try {
-    const { data } = await supabase
-      .from("products")
-      .select(selectQuery)
-      .eq("status", "Active")
-      .eq("is_featured", true)
+    const { data: filterableData } = await supabase
+      .from("filterable_products")
+      .select("id")
+      .gte("average_rating", 4)
+      .order("review_count", { ascending: false })
       .limit(30);
 
-    if (data) {
-      featuredProducts = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
-      featuredProducts.forEach(p => excludeIds.add(p.id));
+    if (filterableData && filterableData.length > 0) {
+      const featIds = filterableData.map(d => d.id).filter(id => !excludeIds.has(id)).slice(0, 12);
+      if (featIds.length > 0) {
+        const { data } = await supabase
+          .from("products")
+          .select(selectQuery)
+          .in("id", featIds);
+
+        if (data) {
+          featuredProducts = data;
+          featuredProducts.forEach(p => excludeIds.add(p.id));
+        }
+      }
+    }
+    
+    // Fallback if no highly reviewed products exist
+    if (featuredProducts.length === 0) {
+      const { data } = await supabase
+        .from("products")
+        .select(selectQuery)
+        .eq("status", "Active")
+        .order("stock_quantity", { ascending: false })
+        .limit(30);
+        
+      if (data) {
+        featuredProducts = data.filter(p => !excludeIds.has(p.id)).slice(0, 12);
+        if (featuredProducts.length === 0) featuredProducts = data.slice(0, 12);
+        featuredProducts.forEach(p => excludeIds.add(p.id));
+      }
     }
   } catch (e) {
     console.error("Error fetching featured products:", e);

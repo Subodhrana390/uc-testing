@@ -7,7 +7,6 @@ import { createClient } from "@/utils/supabase/server";
 import CategorySelector from "@/components/storefront/CategorySelector";
 import BannerCarousel from "@/components/storefront/BannerCarousel";
 import DealBanner from "@/components/storefront/DealBanner";
-import { faqItems } from "@/lib/storefront";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqSchema, itemListSchema, webPageSchema } from "@/lib/jsonld";
 import { homepageMetadata, SITE_URL } from "@/lib/seo";
@@ -31,12 +30,14 @@ export default async function HomePage() {
     { flashDeals, newArrivals, featuredProducts, sections },
     { data: categories },
     { data: banners },
-    { data: deals }
+    { data: deals },
+    { data: faqs }
   ] = await Promise.all([
     getDynamicSections(),
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", true).order("name", { ascending: true }),
     supabase.from("banners").select("*").eq("status", true).order("position", { ascending: true }),
-    supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true })
+    supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true }),
+    supabase.from("faqs").select("id, question, answer, category").eq("is_published", true).order("sort_order", { ascending: true })
   ]);
 
   const safeCategories = categories || [];
@@ -44,6 +45,7 @@ export default async function HomePage() {
 
   const safeFlashDeals = flashDeals || [];
   const safeDeals = (deals as any[]) || [];
+  const safeFaqs = faqs || [];
 
   // Load promotional campaigns directly from the database table managed via the admin portal
   const deal1 = safeDeals[0];
@@ -59,7 +61,7 @@ export default async function HomePage() {
           url: SITE_URL,
           type: "WebPage",
         }),
-        faqSchema(faqItems.slice(0, 5)),
+        faqSchema(safeFaqs.slice(0, 5)),
         ...(sections[0] ? [itemListSchema(sections[0].products, sections[0].title, `${SITE_URL}${sections[0].href}`)] : []),
         ...(sections[1] ? [itemListSchema(sections[1].products, sections[1].title, `${SITE_URL}${sections[1].href}`)] : []),
       ]} />
@@ -262,14 +264,13 @@ export default async function HomePage() {
             </section>
           )}
 
-          {/* Inject Testimonials after the second section */}
-          {idx === 1 && (
-            <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
-              <Testimonials />
-            </section>
-          )}
         </React.Fragment>
       ))}
+
+      {/* Testimonials Section */}
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
+        <Testimonials />
+      </section>
 
       {/* Personalised sections — only visible to returning visitors */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
@@ -288,7 +289,7 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <FAQAccordion items={faqItems.slice(0, 5)} className="max-w-3xl mx-auto" />
+        <FAQAccordion items={safeFaqs.slice(0, 5)} className="max-w-3xl mx-auto" />
 
         <div className="text-center mt-10">
           <Link

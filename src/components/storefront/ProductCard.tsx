@@ -52,7 +52,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   useEffect(() => {
     setIsMounted(true);
-    
+
     async function checkWishlist() {
       if (!user) return;
 
@@ -85,9 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
-  const categoryName = product.categories?.name || product.category_name || "Industrial";
-  const parentName = product.categories?.parent?.name || product.parent_category_name;
-  const displayCategory = parentName ? `${parentName} › ${categoryName}` : categoryName;
+  const displayCategory = product.categories?.name || product.category_name || "Industrial";
 
   const toggleCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -244,12 +242,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         <button
           onClick={toggleCart}
           disabled={product.stock_quantity === 0}
-          className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${
-            product.stock_quantity === 0
+          className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${product.stock_quantity === 0
               ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
               : inCart
-              ? "bg-emerald-600 text-white"
-              : "bg-primary text-white hover:bg-zinc-950"
+                ? "bg-emerald-600 text-white"
+                : "bg-primary text-white hover:bg-zinc-950"
             }`}
         >
           {product.stock_quantity === 0 ? (

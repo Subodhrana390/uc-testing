@@ -41,17 +41,8 @@ export default function AddProductPage() {
     warranty_info: "",
     images: [] as string[],
     tax_rate: "0",
-    is_featured: false,
-    is_recommended: false,
-    is_best_seller: false,
-    is_trending: false,
-    is_new_arrival: false,
-    is_on_sale: false,
-    is_hot_deal: false,
-    is_top_rated: false,
     is_industrial_grade: false,
     is_ready_stock: false,
-    is_high_demand: false,
     is_tax_inclusive: false,
     datasheet_url: "",
     visibility: true,
@@ -218,17 +209,8 @@ export default function AddProductPage() {
           tax_rate: taxRate,
           is_tax_inclusive: true,
           visibility: formData.visibility,
-          is_featured: formData.is_featured,
-          is_recommended: formData.is_recommended,
-          is_best_seller: formData.is_best_seller,
-          is_trending: formData.is_trending,
-          is_new_arrival: formData.is_new_arrival,
-          is_on_sale: formData.is_on_sale,
-          is_hot_deal: formData.is_hot_deal,
-          is_top_rated: formData.is_top_rated,
           is_industrial_grade: formData.is_industrial_grade,
           is_ready_stock: formData.is_ready_stock,
-          is_high_demand: formData.is_high_demand,
           seo_title: formData.seo_title || null,
           seo_keywords: formData.seo_keywords || null,
           seo_description: formData.seo_description || null,
@@ -829,17 +811,7 @@ export default function AddProductPage() {
                   {formData.visibility ? 'Active' : 'Hidden'}
                 </button>
               </div>
-              <div className="flex items-center justify-between border-t pt-4">
-                <span className="text-sm font-medium">Featured Product</span>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, is_featured: !formData.is_featured })}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.is_featured ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  {formData.is_featured ? 'Featured' : 'Standard'}
-                </button>
               </div>
-            </div>
           </section>
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">

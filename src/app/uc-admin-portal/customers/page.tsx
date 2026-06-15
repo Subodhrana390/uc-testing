@@ -531,7 +531,7 @@ export default function CustomersPage() {
                 </tr>
               ) : (
                 tableCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-all duration-200 hover:translate-x-0.5 hover:shadow-sm group">
+                  <tr key={customer.id} className="hover:bg-zinc-50 even:bg-zinc-50/30 transition-colors duration-150 group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center text-sm font-bold text-zinc-500 transition-all border border-zinc-200 group-hover:bg-[#14b8a6] group-hover:text-zinc-950 group-hover:border-[#14b8a6]">

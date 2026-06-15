@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 
 import { type CartItem } from "@/store/useCartStore";
 import { useCartStore } from "@/store/useCartStore";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 
 import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
@@ -1420,6 +1421,11 @@ export default function CheckoutPage() {
               </div>
             </div>
           </aside>
+        </div>
+
+        {/* Dynamic Recommendations - Post Checkout Addons */}
+        <div className="mt-12 border-t border-zinc-200/60 pt-12">
+          <RecommendedProducts maxItems={4} />
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, X, HelpCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { faqItems } from "@/lib/storefront";
+
 import FAQAccordion from "@/components/storefront/FAQAccordion";
 import { cn } from "@/lib/utils";
 import JsonLd from "@/components/seo/JsonLd";
@@ -37,14 +37,10 @@ export default function FAQPage() {
           .order("sort_order", { ascending: true });
 
         if (error) throw error;
-        if (data && data.length > 0) {
-          setFaqs(data);
-        } else {
-          setFaqs(faqItems);
-        }
+        setFaqs(data || []);
       } catch (err) {
         console.error("Error loading FAQs:", err);
-        setFaqs(faqItems);
+        setFaqs([]);
       } finally {
         setLoading(false);
       }
@@ -78,7 +74,7 @@ export default function FAQPage() {
           url: `${SITE_URL}/faq`,
           type: "FAQPage",
         }),
-        faqSchema(faqs.length > 0 ? faqs : faqItems),
+        faqSchema(faqs),
       ]} />
       {/* Decorative blurs */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-red-500/[0.012] rounded-full blur-[130px] pointer-events-none -z-10" />

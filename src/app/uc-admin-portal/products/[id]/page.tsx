@@ -56,17 +56,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     warranty_info: "",
     images: [] as string[],
     tax_rate: "0",
-    is_featured: false,
-    is_recommended: false,
-    is_best_seller: false,
-    is_trending: false,
-    is_new_arrival: false,
-    is_on_sale: false,
-    is_hot_deal: false,
-    is_top_rated: false,
     is_industrial_grade: false,
     is_ready_stock: false,
-    is_high_demand: false,
     is_tax_inclusive: false,
     datasheet_url: "",
     visibility: true,
@@ -173,17 +164,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         warranty_info: product.warranty_info || "",
         images: product.images || [],
         tax_rate: (product.tax_rate || 0).toString(),
-        is_featured: product.is_featured || false,
-        is_recommended: product.is_recommended || false,
-        is_best_seller: product.is_best_seller || false,
-        is_trending: product.is_trending || false,
-        is_new_arrival: product.is_new_arrival || false,
-        is_on_sale: product.is_on_sale || false,
-        is_hot_deal: product.is_hot_deal || false,
-        is_top_rated: product.is_top_rated || false,
         is_industrial_grade: product.is_industrial_grade || false,
         is_ready_stock: product.is_ready_stock || false,
-        is_high_demand: product.is_high_demand || false,
         is_tax_inclusive: product.is_tax_inclusive || false,
         datasheet_url: product.datasheet_url || "",
         visibility: product.visibility !== false,
@@ -263,12 +245,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           specification: formData.specification.trim(),
           manufacturing_info: formData.manufacturing_info.trim(),
           warranty_info: formData.warranty_info.trim(),
+          image_url: formData.images[0] || null,
           images: formData.images,
           tax_rate: taxRate,
           is_tax_inclusive: true,
           datasheet_url: formData.datasheet_url,
           visibility: formData.visibility,
-          is_featured: formData.is_featured,
           seo_title: formData.seo_title,
           seo_keywords: formData.seo_keywords,
           seo_description: formData.seo_description,
@@ -918,17 +900,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   {formData.visibility ? 'Active' : 'Hidden'}
                 </button>
               </div>
-              <div className="flex items-center justify-between border-t pt-4">
-                <span className="text-sm font-medium">Featured Product</span>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, is_featured: !formData.is_featured })}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${formData.is_featured ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  {formData.is_featured ? 'Featured' : 'Standard'}
-                </button>
               </div>
-            </div>
           </section>
 
 

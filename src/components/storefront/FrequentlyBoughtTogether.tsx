@@ -60,6 +60,8 @@ export default function FrequentlyBoughtTogether({
     }
   }, [bundleProducts, currentProduct.id]);
 
+  const addItem = useCartStore((state) => state.addItem);
+
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
       const { scrollLeft, clientWidth } = scrollContainerRef.current;
@@ -102,8 +104,6 @@ export default function FrequentlyBoughtTogether({
   const discountPercentage = 10; // 10% discount
   const discountMultiplier = isBundleEligible ? (100 - discountPercentage) / 100 : 1;
   const totalPrice = baseTotalPrice * discountMultiplier;
-
-  const addItem = useCartStore((state) => state.addItem);
 
   const handleAddBundleToCart = () => {
     selectedProducts.forEach((p) => {

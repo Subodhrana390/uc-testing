@@ -112,36 +112,5 @@ export const footerLinks = {
   ],
 };
 
-export const faqItems = [
-  {
-    id: "ordering-process",
-    category: "Ordering",
-    question: "How do I place an order for laboratory or industrial supplies?",
-    answer: "To place an order, browse our categories or search for specific products. Adjust the quantity and click 'Add to Cart'. You can complete checkout securely using credit/debit cards, net banking, or UPI.",
-  },
-  {
-    id: "shipping-timelines",
-    category: "Shipping",
-    question: "How long does shipping take and how are estimates calculated?",
-    answer: "Transit times depend on your destination. We calculate estimates dynamically using your pincode's prefix mapping. Standard delivery takes 3-7 business days, while regional express zones can receive items in 24-48 hours. Use the 'Delivery Check' tool on the product page to see options for your location.",
-  },
-  {
-    id: "tracking-shipment",
-    category: "Shipping",
-    question: "Can I track my shipment in real-time?",
-    answer: "Yes, once your order is dispatched, a tracking number and logistics link will be sent to your registered email and mobile number. You can also input your Order ID on our 'Track Order' page to check the fulfillment status.",
-  },
-  {
-    id: "product-certification",
-    category: "Products",
-    question: "Are your chemical reagents and lab equipment certified?",
-    answer: "Yes, all reagents, precision glassware, and testing instruments supplied by UC Enterprises conform to strict quality guidelines. Certificates of Analysis (COA) and MSDS document sheets are available on request for chemical products.",
-  },
-  {
-    id: "returns-policy",
-    category: "Support",
-    question: "What is your return and replacement policy?",
-    answer: "Due to the sensitive nature of scientific equipment and chemical reagents, we accept returns within 7 days of delivery only for items that arrive damaged, defective, or unopened in original packaging. Please contact our support team to initiate a return request.",
-  },
-];
+
 

@@ -4,6 +4,7 @@ import ProductDetailsClient from "./ProductDetailsClient";
 import ProductCarousel from "@/components/storefront/ProductCarousel";
 import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
 import RelatedProducts from "@/components/storefront/RelatedProducts";
+import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTogether";
 
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const supabase = await createClient();
@@ -52,6 +53,9 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
     <div className="bg-white min-h-screen">
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8">
         <ProductDetailsClient product={product} attributes={attrData || []} />
+
+        {/* Frequently Bought Together */}
+        <FrequentlyBoughtTogether currentProduct={product} />
 
         {/* Similar Products */}
         <SimilarProducts categoryId={product.category_id} currentProductId={product.id} price={product.price} />

@@ -19,6 +19,7 @@ import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 
 const sidebarLinks = [
   { name: "My Profile", icon: User, href: "/account/profile" },
@@ -239,9 +240,13 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
             </div>
 
             {/* Slot for page content */}
-            <main className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <main className="animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[50vh]">
               {children}
             </main>
+
+            <div className="mt-12 border-t border-zinc-200/80 pt-8">
+              <RecommendedProducts maxItems={4} />
+            </div>
           </div>
         </div>
       </div>

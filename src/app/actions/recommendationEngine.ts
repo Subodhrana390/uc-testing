@@ -226,3 +226,82 @@ export async function getFrequentlyBoughtTogether(product: ProductContext, limit
 
   return fetchedProducts;
 }
+
+/**
+ * Get Cross-Sell/Upsell recommendations for the Cart.
+ * Suggests products based on categories currently in the cart and top-selling items.
+ */
+export async function getCartRecommendations(cartItemIds: string[], limit = 4) {
+  const supabase = await createClient();
+  let fetchedProducts: any[] = [];
+  
+  if (cartItemIds.length > 0) {
+    // 1. Get categories of items currently in the cart
+    const { data: cartItems } = await supabase
+      .from("products")
+      .select("category_id")
+      .in("id", cartItemIds);
+      
+    const catIds = [...new Set(cartItems?.map((i) => i.category_id).filter(Boolean))];
+    
+    if (catIds.length > 0) {
+      // 2. Find popular products in the same categories that are not already in the cart
+      const { data: sameCat } = await supabase
+        .from("products")
+        .select(selectQuery)
+        .in("category_id", catIds)
+        .not("id", "in", `(${cartItemIds.join(",")})`)
+        .eq("status", "Active")
+        .order("stock_quantity", { ascending: false }) // Heuristic for popularity within category
+        .limit(limit);
+        
+      if (sameCat) {
+        fetchedProducts = sameCat;
+      }
+    }
+  }
+  
+  // 3. Fallback to general top-selling products (if cart is empty or we need more items)
+  if (fetchedProducts.length < limit) {
+    const excludeIds = [...cartItemIds, ...fetchedProducts.map(p => p.id)];
+    const notInClause = excludeIds.length > 0 ? `(${excludeIds.join(",")})` : `('')`;
+    
+    const { data: topSelling } = await supabase
+      .from("top_selling_products")
+      .select("id")
+      .not("id", "in", notInClause)
+      .limit(limit - fetchedProducts.length);
+      
+    if (topSelling && topSelling.length > 0) {
+      const { data: tsProducts } = await supabase
+        .from("products")
+        .select(selectQuery)
+        .in("id", topSelling.map(t => t.id))
+        .eq("status", "Active");
+        
+      if (tsProducts) {
+        fetchedProducts = [...fetchedProducts, ...tsProducts];
+      }
+    }
+  }
+
+  // 4. Final fallback to recently added active products
+  if (fetchedProducts.length < limit) {
+    const excludeIds = [...cartItemIds, ...fetchedProducts.map(p => p.id)];
+    const notInClause = excludeIds.length > 0 ? `(${excludeIds.join(",")})` : `('')`;
+    
+    const { data: general } = await supabase
+      .from("products")
+      .select(selectQuery)
+      .not("id", "in", notInClause)
+      .eq("status", "Active")
+      .order("created_at", { ascending: false })
+      .limit(limit - fetchedProducts.length);
+      
+    if (general) {
+      fetchedProducts = [...fetchedProducts, ...general];
+    }
+  }
+
+  return fetchedProducts;
+}

@@ -55,6 +55,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CategoryListProps {
   type: "main" | "sub";
@@ -70,9 +77,9 @@ export default function CategoryList({ type }: CategoryListProps) {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedParent, setSelectedParent] = useState("All");
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isCustomTax, setIsCustomTax] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -97,11 +104,11 @@ export default function CategoryList({ type }: CategoryListProps) {
     try {
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, parent_id, status")
+        .select("id, name, parent_id, status, tax_rate")
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      
+
       const mappedData = (data || []).map((c: any) => ({
         ...c,
         is_active: c.status === true
@@ -144,7 +151,7 @@ export default function CategoryList({ type }: CategoryListProps) {
         .range(start, end);
 
       if (error) throw error;
-      
+
       const mappedData = (data || []).map((c: any) => ({
         ...c,
         is_active: c.status === true
@@ -202,8 +209,12 @@ export default function CategoryList({ type }: CategoryListProps) {
         parent_id: category.parent_id,
         tax_rate: category.tax_rate || 0
       });
+      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(category.tax_rate || 0));
     } else {
       setEditingCategory(null);
+      const defaultParent = type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null);
+      const parentCat = allCategories.find(c => c.id === defaultParent);
+      const inheritedTax = parentCat ? parentCat.tax_rate : 0;
       setFormData({
         name: "",
         slug: "",
@@ -211,12 +222,12 @@ export default function CategoryList({ type }: CategoryListProps) {
         image_url: "",
         is_active: true,
         display_order: totalItems,
-        parent_id: type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null),
-        tax_rate: 0
+        parent_id: defaultParent,
+        tax_rate: inheritedTax || 0
       });
+      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(inheritedTax || 0));
     }
     setIsDrawerOpen(true);
-    setActiveDropdown(null);
   };
 
   const generateSlug = (name: string) => {
@@ -253,6 +264,16 @@ export default function CategoryList({ type }: CategoryListProps) {
       if (editingCategory) {
         const { error } = await supabase.from("categories").update(submitData).eq("id", editingCategory.id);
         if (error) throw error;
+
+        // Cascade tax_rate update to subcategories if editing a main category
+        if (type === "main" || !editingCategory.parent_id) {
+          const { error: subError } = await supabase
+            .from("categories")
+            .update({ tax_rate: submitData.tax_rate })
+            .eq("parent_id", editingCategory.id);
+          if (subError) throw subError;
+        }
+
         toast.success("Category updated successfully");
       } else {
         const { error } = await supabase.from("categories").insert([submitData]);
@@ -290,15 +311,15 @@ export default function CategoryList({ type }: CategoryListProps) {
     const toastId = toast.loading("Updating status...");
     try {
       const result = await toggleCategoryStatus(category.id, category.status);
-      
+
       if (!result.success) {
         throw new Error(result.error);
       }
-      
-      setTableCategories(prev => prev.map(c => 
+
+      setTableCategories(prev => prev.map(c =>
         c.id === category.id ? { ...c, is_active: result.newStatus, status: result.newStatus } : c
       ));
-      setAllCategories(prev => prev.map(c => 
+      setAllCategories(prev => prev.map(c =>
         c.id === category.id ? { ...c, is_active: result.newStatus, status: result.newStatus } : c
       ));
       toast.success(`Category is now ${result.newStatus ? "Active" : "Archived"}`, { id: toastId });
@@ -317,8 +338,8 @@ export default function CategoryList({ type }: CategoryListProps) {
       {/* Category Themed Gradient Banner */}
       <div className={cn(
         "rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden mb-8",
-        isMain 
-          ? "bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600" 
+        isMain
+          ? "bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600"
           : "bg-gradient-to-r from-violet-600 via-violet-700 to-fuchsia-600"
       )}>
         {/* Subtle decorative glows */}
@@ -367,7 +388,7 @@ export default function CategoryList({ type }: CategoryListProps) {
       {/* Main Framework Interface */}
       <Card className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
         {/* Search & Filters Action Bar */}
-        <div className="p-5 border-b border-zinc-100 bg-zinc-50/30 flex flex-col sm:flex-row gap-3 items-center">
+        <div className="p-5 border-b border-zinc-100 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
@@ -406,7 +427,7 @@ export default function CategoryList({ type }: CategoryListProps) {
 
         {/* Expandable Advanced Filtering Control */}
         {showFilters && type === "sub" && (
-          <div className="px-5 pb-5 pt-1 flex flex-wrap gap-4 border-b border-zinc-100 bg-zinc-50/15">
+          <div className="px-5 pb-5 pt-1 flex flex-wrap gap-4 border-b border-zinc-100 bg-zinc-50">
             <div className="flex flex-col gap-1.5 min-w-[240px]">
               <Label className="text-xs font-medium text-zinc-500 ml-0.5">Parent Category</Label>
               <Select value={selectedParent} onValueChange={(val) => setSelectedParent(val || "All")}>
@@ -428,11 +449,12 @@ export default function CategoryList({ type }: CategoryListProps) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-zinc-50/70 border-b border-zinc-100">
+              <tr className="bg-zinc-50 border-b border-zinc-100">
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider w-28 pl-8">Image</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category Info</th>
                 {type === "sub" && <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Parent</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">URL Slug</th>
+                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">GST Rate</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
                 <th className="w-14 pr-8 text-right"></th>
               </tr>
@@ -440,7 +462,7 @@ export default function CategoryList({ type }: CategoryListProps) {
             <tbody className="divide-y divide-zinc-100">
               {tableLoading ? (
                 <tr>
-                  <td colSpan={type === "sub" ? 6 : 5} className="py-12 text-center">
+                  <td colSpan={type === "sub" ? 7 : 6} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-zinc-500">
                       <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
                       <p className="text-xs font-semibold">Loading categories...</p>
@@ -449,7 +471,7 @@ export default function CategoryList({ type }: CategoryListProps) {
                 </tr>
               ) : tableCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={type === "sub" ? 6 : 5} className="p-16 text-center text-zinc-500 bg-white">
+                  <td colSpan={type === "sub" ? 7 : 6} className="p-16 text-center text-zinc-500 bg-white">
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100 text-zinc-300">
                         <FolderTree className="w-8 h-8" />
@@ -463,9 +485,9 @@ export default function CategoryList({ type }: CategoryListProps) {
                 </tr>
               ) : (
                 tableCategories.map((category) => (
-                  <tr key={category.id} className="hover:bg-zinc-50/40 transition-all group">
+                  <tr key={category.id} className="hover:bg-zinc-50 transition-colors duration-150 group">
                     <td className="px-6 py-4 pl-8">
-                      <div className="w-12 h-12 bg-zinc-100 border border-zinc-200/60 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shrink-0 shadow-sm">
+                      <div className="w-12 h-12 bg-zinc-100 border border-zinc-200 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shrink-0 shadow-sm">
                         {category.image_url ? (
                           <Image src={category.image_url} alt="" width={48} height={48} unoptimized className="w-full h-full object-contain mix-blend-multiply" />
                         ) : (
@@ -492,6 +514,11 @@ export default function CategoryList({ type }: CategoryListProps) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <span className="text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg inline-block font-mono">
+                        {category.tax_rate !== null && category.tax_rate !== undefined ? `${category.tax_rate}%` : "0%"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => handleToggleStatus(category)}
@@ -505,35 +532,29 @@ export default function CategoryList({ type }: CategoryListProps) {
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right pr-8 relative">
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === category.id ? null : category.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-455 hover:text-zinc-800 transition-all ml-auto border border-zinc-200 bg-white"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-
-                      {activeDropdown === category.id && (
-                        <div className="absolute right-6 top-12 w-52 bg-white border border-zinc-200 shadow-lg rounded-xl z-50 p-1.5 text-left">
-                          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Category Actions</div>
-                          <button
+                    <td className="px-6 py-4 text-right pr-8">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={
+                          <Button variant="ghost" size="icon" className="w-8 h-8 p-0 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg ml-auto border border-zinc-200 bg-white">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        } />
+                        <DropdownMenuContent align="end" className="w-48 bg-white border border-zinc-200 shadow-xl rounded-xl p-1.5 z-50">
+                          <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 mb-1">Category Actions</DropdownMenuLabel>
+                          <DropdownMenuItem
                             onClick={() => handleOpenDrawer(category)}
-                            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 transition-all rounded-lg"
+                            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-650 hover:bg-zinc-50 hover:text-zinc-950 transition-all font-semibold"
                           >
                             <Edit className="w-4 h-4 text-zinc-400" /> Edit Category
-                          </button>
-                          <div className="h-px bg-zinc-100 my-1 mx-1" />
-                          <button
-                            onClick={() => {
-                              setCategoryToDelete(category);
-                              setActiveDropdown(null);
-                            }}
-                            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-all rounded-lg"
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setCategoryToDelete(category)}
+                            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 focus:text-red-750 focus:bg-red-50 transition-all font-semibold"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" /> Delete Category
-                          </button>
-                        </div>
-                      )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -556,144 +577,235 @@ export default function CategoryList({ type }: CategoryListProps) {
 
       {/* Configuration Slider Sheet Overlay Panel */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="w-full sm:max-w-lg bg-white rounded-l-2xl border-l border-zinc-100 p-0 flex flex-col overflow-hidden">
-          <SheetHeader className="p-6 border-b border-zinc-100 bg-zinc-50/30">
-            <SheetTitle className="text-lg font-bold text-zinc-800">Category Details</SheetTitle>
-            <SheetDescription className="text-xs text-zinc-500 mt-0.5">
-              Configure parameters blueprint and layout meta specifications details.
-            </SheetDescription>
+        <SheetContent className="w-full sm:max-w-[640px] bg-white border-l border-zinc-200 p-0 flex flex-col overflow-hidden">
+          {/* Header */}
+          <SheetHeader className="p-6 border-b border-zinc-200 bg-white shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center border border-zinc-200">
+                <FolderTree className="w-5 h-5 text-zinc-700" />
+              </div>
+
+              <div>
+                <SheetTitle className="text-lg font-bold text-zinc-900">
+                  {editingCategory ? "Update Category" : "Add New Category"}
+                </SheetTitle>
+
+                <SheetDescription className="text-xs text-zinc-500 mt-1">
+                  {isMain ? "Main Department Setup" : "Sub-department Setup"} • Configure category settings
+                </SheetDescription>
+              </div>
+            </div>
           </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-            {/* Category Image Media Engine */}
-            <div className="flex justify-center pb-4 border-b border-zinc-100">
-              <SingleImageUpload
-                label="Category Image"
-                value={formData.image_url}
-                onChange={(url: string) => setFormData({ ...formData, image_url: url })}
-                bucket="category-icons"
-              />
+          <form
+            onSubmit={handleSubmit}
+            className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-50"
+          >
+
+            {/* Image Upload */}
+            <div className="bg-white border border-zinc-200 rounded-2xl p-6">
+              <div className="flex flex-col items-center">
+                <SingleImageUpload
+                  label="Category Icon / Image"
+                  value={formData.image_url}
+                  onChange={(url: string) =>
+                    setFormData({ ...formData, image_url: url })
+                  }
+                  bucket="category-icons"
+                />
+
+                <span className="text-xs text-zinc-500 mt-3">
+                  Category Image
+                </span>
+              </div>
             </div>
 
-            {/* Title Identity */}
-            <div className="space-y-2">
-              <Label htmlFor="cat-name" className="text-xs font-medium text-zinc-500">Category Name</Label>
-              <Input
-                id="cat-name"
-                value={formData.name}
-                onChange={e => {
-                  setFormData({ ...formData, name: e.target.value });
-                  handleNameChange(e.target.value);
-                }}
-                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400"
-                placeholder="e.g. Electrical Tools"
-                required
-              />
-            </div>
+            {/* Department Identity */}
+            <div className="bg-white border border-zinc-200 p-6 rounded-2xl space-y-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-zinc-800 border-b border-zinc-100 pb-3 flex items-center gap-2">
+                <FolderTree className="w-4 h-4" />
+                Department Identity
+              </h3>
 
-            {/* URL Identifier Slug */}
-            <div className="space-y-2">
-              <Label htmlFor="cat-slug" className="text-xs font-medium text-zinc-500">URL Slug Label</Label>
-              <Input
-                id="cat-slug"
-                value={formData.slug}
-                onChange={e => setFormData({ ...formData, slug: generateSlug(e.target.value) })}
-                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400 font-mono"
-                placeholder="electrical-tools"
-                required
-              />
-            </div>
-
-            {/* Parent Dropdown (Sub-categories view execution context only) */}
-            {type === "sub" && (
+              {/* Category Name */}
               <div className="space-y-2">
-                <Label htmlFor="parent-selector" className="text-xs font-medium text-zinc-500">Parent Directory Scope</Label>
+                <Label htmlFor="cat-name">Category Name</Label>
+
+                <Input
+                  id="cat-name"
+                  value={formData.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  className="h-11"
+                  placeholder="Electrical Tools"
+                  required
+                />
+              </div>
+
+              {/* Slug */}
+              <div className="space-y-2">
+                <Label htmlFor="cat-slug">URL Slug</Label>
+
+                <Input
+                  id="cat-slug"
+                  value={formData.slug}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      slug: generateSlug(e.target.value),
+                    })
+                  }
+                  className="h-11"
+                  placeholder="electrical-tools"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="bg-white border border-zinc-200 p-6 rounded-2xl space-y-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-zinc-800 border-b border-zinc-100 pb-3 flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Settings & Taxation
+              </h3>
+
+              {/* GST */}
+              <div className="space-y-2">
+                <Label>GST Rate (%)</Label>
+
                 <Select
-                  value={formData.parent_id || undefined}
-                  onValueChange={val => setFormData({ ...formData, parent_id: val || null })}
+                  value={isCustomTax ? "custom" : formData.tax_rate.toString()}
+                  onValueChange={(val) => {
+                    if (val === "custom") {
+                      setIsCustomTax(true);
+                    } else {
+                      setIsCustomTax(false);
+                      setFormData({
+                        ...formData,
+                        tax_rate: parseFloat(val || "0"),
+                      });
+                    }
+                  }}
                 >
-                  <SelectTrigger id="parent-selector" className="h-11 border-zinc-200 bg-white rounded-xl text-sm focus:ring-teal-600">
-                    <SelectValue placeholder="Select Parent Structural Department" />
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select GST Rate" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border border-zinc-200 rounded-xl z-[600]">
-                    {allCategories.filter(c => !c.parent_id).map(c => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
-                    ))}
+
+                  <SelectContent>
+                    <SelectItem value="0">0%</SelectItem>
+                    <SelectItem value="3">3%</SelectItem>
+                    <SelectItem value="5">5%</SelectItem>
+                    <SelectItem value="12">12%</SelectItem>
+                    <SelectItem value="18">18%</SelectItem>
+                    <SelectItem value="28">28%</SelectItem>
+                    <SelectItem value="custom">Custom Rate</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {/* Narrative Descriptive Block */}
-            <div className="space-y-2">
-              <Label htmlFor="cat-desc" className="text-xs font-medium text-zinc-500">Description Summary Text</Label>
-              <Textarea
-                id="cat-desc"
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="min-h-[100px] border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400 resize-none"
-                placeholder="Describe this category context pipeline..."
-              />
-            </div>
+              {/* Display Order */}
+              <div className="space-y-2">
+                <Label>Display Priority</Label>
 
-            {/* Display Priority Order */}
-            <div className="space-y-2">
-              <Label htmlFor="cat-order" className="text-xs font-medium text-zinc-500">Display Priority Order</Label>
-              <Input
-                id="cat-order"
-                type="number"
-                value={formData.display_order}
-                onChange={e => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
-              />
-            </div>
-
-            {/* Default GST Tax Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="cat-tax" className="text-xs font-medium text-zinc-500">Default GST Rate (%)</Label>
-              <Input
-                id="cat-tax"
-                type="number"
-                value={formData.tax_rate}
-                onChange={e => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) || 0 })}
-                className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600"
-                placeholder="e.g. 18"
-              />
-            </div>
-
-            {/* State Active Toggle Context Card */}
-            <div className="flex items-center justify-between p-4 bg-zinc-50/50 border border-zinc-100 rounded-xl">
-              <div className="space-y-0.5">
-                <Label htmlFor="cat-status" className="text-sm font-medium text-zinc-800">Active Routing State</Label>
-                <p className="text-xs text-zinc-400">Determine status availability thresholds live inside clients viewports</p>
+                <Input
+                  type="number"
+                  value={formData.display_order}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      display_order: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="h-11"
+                />
               </div>
-              <Switch
-                id="cat-status"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                className="data-[checked]:bg-teal-600"
-              />
+
+              {/* Status */}
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-2xl border p-4",
+                  formData.is_active
+                    ? "bg-white border-emerald-200"
+                    : "bg-white border-zinc-200"
+                )}
+              >
+                <div>
+                  <h4 className="font-medium text-zinc-900">
+                    Category Status
+                  </h4>
+
+                  <p className="text-xs text-zinc-500">
+                    {formData.is_active
+                      ? "Visible on storefront"
+                      : "Hidden from storefront"}
+                  </p>
+                </div>
+
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      is_active: checked,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white border border-zinc-200 p-6 rounded-2xl shadow-sm">
+              <div className="space-y-2">
+                <Label>Description</Label>
+
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description: e.target.value,
+                    })
+                  }
+                  className="min-h-[120px]"
+                  placeholder="Category description..."
+                />
+              </div>
             </div>
           </form>
 
-          {/* Form Action Footer */}
-          <div className="p-6 border-t border-zinc-100 bg-zinc-50/30">
+          {/* Footer */}
+          <div className="p-6 border-t border-zinc-200 bg-white shrink-0">
             <Button
               disabled={saving}
               onClick={handleSubmit}
-              className="w-full bg-zinc-900 hover:bg-zinc-800 text-white h-11 rounded-xl text-sm font-medium transition-all shadow-sm gap-2"
+              className={cn(
+                "w-full h-11 rounded-xl font-semibold text-white",
+                isMain
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-violet-600 hover:bg-violet-700"
+              )}
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Category Parameters
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingCategory
+                    ? "Save Changes"
+                    : "Create Category"}
+                </>
+              )}
             </Button>
           </div>
+
+
         </SheetContent>
       </Sheet>
 
-      {/* Global Context Dropdown Dismiss Screen Overlay */}
-      {activeDropdown && (
-        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
-      )}
+
+
 
       {/* Delete Confirmation Modal Execution */}
       <Dialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
