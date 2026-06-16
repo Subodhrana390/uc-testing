@@ -212,59 +212,15 @@ export async function requestPasswordReset(formData: FormData, origin: string) {
     return { error: "Email is required." }
   }
 
-  const supabase = createServiceRoleClient()
+  const supabase = await createClient()
 
-  // Try to find profile details to personalize email greeting
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('email', email)
-    .single()
-
-  const customerName = profile?.full_name || "Customer"
-
-  // Generate recovery link
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: 'recovery',
-    email: email,
-    options: {
-      redirectTo: `${origin}/api/auth/callback?next=/reset-password`
-    }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/api/auth/callback?next=/reset-password`
   })
 
   if (error) {
     return { error: error.message }
   }
 
-  const resetLink = data?.properties?.action_link
-  if (!resetLink) {
-    return { error: "Failed to generate recovery link." }
-  }
-
-  // Send Custom Email via Supabase Edge Function to avoid Brevo's "Unauthorized IP Address" errors
-  try {
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('send-reset-email', {
-      body: {
-        email,
-        customerName,
-        resetLink,
-        apiKey: env.BREVO_API_KEY,
-        senderEmail: env.BREVO_SENDER_EMAIL || "info@ucenterprises.com",
-        senderName: env.BREVO_SENDER_NAME || "UC Enterprises"
-      }
-    })
-
-    if (functionError) {
-      throw new Error(functionError.message || JSON.stringify(functionError))
-    }
-
-    if (functionData?.error) {
-      throw new Error(functionData.error)
-    }
-
-    return { success: true }
-  } catch (emailErr: any) {
-    console.error("Error sending custom reset password email via edge function:", emailErr)
-    return { error: `Failed to send recovery email: ${emailErr.message || emailErr}` }
-  }
+  return { success: true }
 }
