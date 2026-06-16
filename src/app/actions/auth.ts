@@ -6,12 +6,12 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin-server'
 import { cookies } from 'next/headers'
 import { createServiceRoleClient } from '@/utils/supabase/service-role'
-import { sendResetPasswordEmail } from '@/lib/email'
+import { env } from '@/env'
 
 export async function login(formData: FormData) {
   const redirectTo = (formData.get('redirectTo') as string) || '/account/profile'
   const isAdminLogin = redirectTo.startsWith('/uc-admin-portal')
-  
+
   const supabase = await (isAdminLogin ? createAdminClient() : createClient())
 
   const email = formData.get('email') as string
@@ -38,7 +38,7 @@ export async function login(formData: FormData) {
 
   if (profile?.status === 'suspended') {
     await (supabase.auth as any).signOut()
-    return { error: 'Your account has been suspended. Please contact support.' }
+    return { error: 'Your account has been suspended. Please contact support for assistance.' }
   }
 
   if (isAdminLogin) {
@@ -241,12 +241,30 @@ export async function requestPasswordReset(formData: FormData, origin: string) {
     return { error: "Failed to generate recovery link." }
   }
 
-  // Send Custom Email
+  // Send Custom Email via Supabase Edge Function to avoid Brevo's "Unauthorized IP Address" errors
   try {
-    await sendResetPasswordEmail(email, customerName, resetLink)
+    const { data: functionData, error: functionError } = await supabase.functions.invoke('send-reset-email', {
+      body: {
+        email,
+        customerName,
+        resetLink,
+        apiKey: env.BREVO_API_KEY,
+        senderEmail: env.BREVO_SENDER_EMAIL || "info@ucenterprises.com",
+        senderName: env.BREVO_SENDER_NAME || "UC Enterprises"
+      }
+    })
+
+    if (functionError) {
+      throw new Error(functionError.message || JSON.stringify(functionError))
+    }
+
+    if (functionData?.error) {
+      throw new Error(functionData.error)
+    }
+
     return { success: true }
   } catch (emailErr: any) {
-    console.error("Error sending custom reset password email:", emailErr)
+    console.error("Error sending custom reset password email via edge function:", emailErr)
     return { error: `Failed to send recovery email: ${emailErr.message || emailErr}` }
   }
 }

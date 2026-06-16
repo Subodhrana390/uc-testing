@@ -178,20 +178,8 @@ export default function AddressBookPage() {
     );
   }
 
-  const formFields = [
-    { label: 'Full Name', key: 'full_name', span: 2 },
-    { label: 'Mobile Number', key: 'phone', span: 2 },
-    { label: 'Address Line 1', key: 'address_line1', span: 2 },
-    { label: 'Address Line 2 (Optional)', key: 'address_line2', span: 2 },
-    { label: 'City', key: 'city', span: 1 },
-    { label: 'State', key: 'state', span: 1 },
-    { label: 'PIN Code', key: 'postal_code', span: 1 },
-    { label: 'Country', key: 'country', span: 1 },
-  ];
-
   return (
     <div className="space-y-6">
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-zinc-200">
         <div>
@@ -223,7 +211,7 @@ export default function AddressBookPage() {
               });
               setIsEditing(true);
             }}
-            className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium"
+            className="h-9 bg-red-600 hover:bg-red-700 text-white text-sm font-medium animate-in fade-in duration-205"
           >
             <Plus className="w-4 h-4 mr-2" /> New Address
           </Button>
@@ -253,7 +241,7 @@ export default function AddressBookPage() {
                     type="button"
                     onClick={() => setCurrentAddress({ ...currentAddress, type: t.id })}
                     className={`flex items-center gap-3 px-5 py-3 rounded-lg border transition-all text-sm ${currentAddress.type === t.id
-                      ? "border-indigo-600 bg-gray-50 text-indigo-600"
+                      ? "border-red-600 bg-gray-50 text-red-650 font-bold"
                       : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
                       }`}
                   >
@@ -267,19 +255,87 @@ export default function AddressBookPage() {
               </div>
             </div>
 
-            {/* Form Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {formFields.map((field) => (
-                <div key={field.key} className={`space-y-2 ${field.span === 2 ? 'sm:col-span-2' : ''}`}>
-                  <Label className="text-sm">{field.label}</Label>
-                  <Input
-                    type="text"
-                    value={currentAddress[field.key]}
-                    onChange={(e) => setCurrentAddress({ ...currentAddress, [field.key]: e.target.value })}
-                    className="h-10 border-zinc-200"
-                  />
-                </div>
-              ))}
+            {/* Form Fields - Premium Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="space-y-2 md:col-span-3">
+                <Label className="text-sm">Full Name</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.full_name || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, full_name: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-3">
+                <Label className="text-sm">Mobile Number</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.phone || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, phone: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-6">
+                <Label className="text-sm">Address Line 1</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.address_line1 || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, address_line1: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-6">
+                <Label className="text-sm">Address Line 2 (Optional)</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.address_line2 || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, address_line2: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-sm">City</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.city || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, city: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-sm">State</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.state || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, state: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-1">
+                <Label className="text-sm">PIN Code</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.postal_code || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, postal_code: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-1">
+                <Label className="text-sm">Country</Label>
+                <Input
+                  type="text"
+                  value={currentAddress.country || ""}
+                  onChange={(e) => setCurrentAddress({ ...currentAddress, country: e.target.value })}
+                  className="h-10 border-zinc-200"
+                />
+              </div>
             </div>
 
             <Separator />
@@ -287,7 +343,7 @@ export default function AddressBookPage() {
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <Button
                 onClick={handleSave}
-                className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto text-sm"
+                className="h-9 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto text-sm"
               >
                 <Save className="w-4 h-4 mr-2" /> Save Address
               </Button>
@@ -306,11 +362,11 @@ export default function AddressBookPage() {
       {/* Address Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {addresses.map((addr) => (
-          <Card key={addr.id} className={`border transition-all ${addr.is_default ? "border-indigo-600 shadow-md" : "border-zinc-200 hover:border-zinc-300"}`}>
+          <Card key={addr.id} className={`border transition-all ${addr.is_default ? "border-red-600 shadow-md" : "border-zinc-200 hover:border-zinc-300"}`}>
             <CardContent className="py-5 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${addr.is_default ? "bg-indigo-600 text-white" : "bg-zinc-100 text-zinc-500"}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${addr.is_default ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-500"}`}>
                     {addr.type === "Work" ? <Briefcase className="w-4 h-4" /> : <Home className="w-4 h-4" />}
                   </div>
                   <div>
@@ -321,7 +377,7 @@ export default function AddressBookPage() {
                   </div>
                 </div>
                 {addr.is_default && (
-                  <Badge className="bg-indigo-600 text-white text-[10px]">
+                  <Badge className="bg-red-600 text-white text-[10px]">
                     <CheckCircle2 className="w-3 h-3 mr-1" /> Primary
                   </Badge>
                 )}
@@ -388,7 +444,7 @@ export default function AddressBookPage() {
                 </div>
                 <Button
                   onClick={() => setIsEditing(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 text-sm"
+                  className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm"
                 >
                   Add Your First Address
                 </Button>

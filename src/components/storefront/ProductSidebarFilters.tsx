@@ -32,21 +32,21 @@ export default function ProductSidebarFilters({
   const urlMinPrice = searchParams.get("min_price");
   const urlMaxPrice = searchParams.get("max_price");
 
-  // Local state for price inputs
-  const [minPriceInput, setMinPriceInput] = useState(urlMinPrice || "");
-  const [maxPriceInput, setMaxPriceInput] = useState(urlMaxPrice || "");
+  // Local state for price range slider
+  const [minPrice, setMinPrice] = useState(urlMinPrice ? parseInt(urlMinPrice) : 0);
+  const [maxPrice, setMaxPrice] = useState(urlMaxPrice ? parseInt(urlMaxPrice) : 200000);
 
-  // Sync inputs with URL if URL changes
+  // Sync range slider with URL if URL changes
   useEffect(() => {
-    setMinPriceInput(urlMinPrice || "");
-    setMaxPriceInput(urlMaxPrice || "");
+    setMinPrice(urlMinPrice ? parseInt(urlMinPrice) : 0);
+    setMaxPrice(urlMaxPrice ? parseInt(urlMaxPrice) : 200000);
   }, [urlMinPrice, urlMaxPrice]);
 
   // Handle reset triggered from mobile filter drawer's "Clear All" button
   useEffect(() => {
     const handleReset = () => {
-      setMinPriceInput("");
-      setMaxPriceInput("");
+      setMinPrice(0);
+      setMaxPrice(200000);
       router.push(window.location.pathname, { scroll: false });
     };
     window.addEventListener("reset-mobile-filters", handleReset);
@@ -89,17 +89,9 @@ export default function ProductSidebarFilters({
     router.push(`${window.location.pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const handlePriceApply = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMultipleFilters({
-      min_price: minPriceInput || null,
-      max_price: maxPriceInput || null
-    });
-  };
-
   const setPricePreset = (min: number | null, max: number | null) => {
-    setMinPriceInput(min !== null ? min.toString() : "");
-    setMaxPriceInput(max !== null ? max.toString() : "");
+    setMinPrice(min !== null ? min : 0);
+    setMaxPrice(max !== null ? max : 200000);
     updateMultipleFilters({
       min_price: min !== null ? min.toString() : null,
       max_price: max !== null ? max.toString() : null
@@ -127,8 +119,8 @@ export default function ProductSidebarFilters({
         <h2 className="text-sm font-black uppercase tracking-widest text-zinc-950">Filters</h2>
         <button
           onClick={() => {
-            setMinPriceInput("");
-            setMaxPriceInput("");
+            setMinPrice(0);
+            setMaxPrice(200000);
             router.push(window.location.pathname, { scroll: false });
           }}
           className="text-[10px] font-bold text-zinc-500 hover:text-red-500 transition-colors uppercase tracking-widest"
@@ -210,56 +202,108 @@ export default function ProductSidebarFilters({
 
       <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Price (₹)</h3>
-        <form onSubmit={handlePriceApply} className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              placeholder="Min"
-              value={minPriceInput}
-              onChange={(e) => setMinPriceInput(e.target.value)}
-              className="w-full text-xs border border-zinc-200 rounded-lg h-9 px-2.5 outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30"
+        
+        <div className="space-y-4 py-2">
+          {/* Dual Range Slider Container */}
+          <div className="relative h-2 w-full bg-zinc-100 rounded-lg">
+            {/* Highlights the range between min and max */}
+            <div 
+              className="absolute h-2 bg-primary rounded-lg"
+              style={{
+                left: `${(minPrice / 200000) * 100}%`,
+                right: `${100 - (maxPrice / 200000) * 100}%`
+              }}
             />
-            <span className="text-zinc-400 text-xs font-bold">–</span>
+            
+            {/* Min Range Slider */}
             <input
-              type="number"
-              placeholder="Max"
-              value={maxPriceInput}
-              onChange={(e) => setMaxPriceInput(e.target.value)}
-              className="w-full text-xs border border-zinc-200 rounded-lg h-9 px-2.5 outline-hidden focus:border-primary focus:ring-1 focus:ring-primary/30"
+              type="range"
+              min="0"
+              max="200000"
+              step="1000"
+              value={minPrice}
+              onChange={(e) => {
+                const value = Math.min(Number(e.target.value), maxPrice - 5000);
+                setMinPrice(value);
+              }}
+              onMouseUp={(e) => {
+                const val = Number(e.currentTarget.value);
+                updateMultipleFilters({
+                  min_price: val > 0 ? val.toString() : null,
+                  max_price: maxPrice < 200000 ? maxPrice.toString() : null
+                });
+              }}
+              onTouchEnd={(e) => {
+                const val = Number(e.currentTarget.value);
+                updateMultipleFilters({
+                  min_price: val > 0 ? val.toString() : null,
+                  max_price: maxPrice < 200000 ? maxPrice.toString() : null
+                });
+              }}
+              className="absolute pointer-events-none appearance-none z-20 h-2 w-full bg-transparent outline-none left-0 top-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-950 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-zinc-950 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
             />
-            <button
-              type="submit"
-              className="h-9 px-3 bg-zinc-900 hover:bg-zinc-700 text-white rounded-lg text-xs font-bold transition-colors"
-            >
-              Go
-            </button>
+
+            {/* Max Range Slider */}
+            <input
+              type="range"
+              min="0"
+              max="200000"
+              step="1000"
+              value={maxPrice}
+              onChange={(e) => {
+                const value = Math.max(Number(e.target.value), minPrice + 5000);
+                setMaxPrice(value);
+              }}
+              onMouseUp={(e) => {
+                const val = Number(e.currentTarget.value);
+                updateMultipleFilters({
+                  min_price: minPrice > 0 ? minPrice.toString() : null,
+                  max_price: val < 200000 ? val.toString() : null
+                });
+              }}
+              onTouchEnd={(e) => {
+                const val = Number(e.currentTarget.value);
+                updateMultipleFilters({
+                  min_price: minPrice > 0 ? minPrice.toString() : null,
+                  max_price: val < 200000 ? val.toString() : null
+                });
+              }}
+              className="absolute pointer-events-none appearance-none z-20 h-2 w-full bg-transparent outline-none left-0 top-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-950 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-zinc-950 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
+            />
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { label: "< ₹1,000", min: null, max: 1000 },
-              { label: "₹1K – ₹5K", min: 1000, max: 5000 },
-              { label: "₹5K – ₹15K", min: 5000, max: 15000 },
-              { label: "₹15,000+", min: 15000, max: null },
-            ].map((preset, idx) => {
-              const isActive = urlMinPrice === (preset.min?.toString() || null) && urlMaxPrice === (preset.max?.toString() || null);
-              return (
-                <button
-                  type="button"
-                  key={idx}
-                  onClick={() => setPricePreset(preset.min, preset.max)}
-                  className={cn(
-                    "text-[10px] font-semibold py-1.5 px-2 text-center rounded-md border transition-all truncate",
-                    isActive
-                      ? "bg-zinc-950 text-white border-zinc-950 font-bold"
-                      : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50"
-                  )}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
+
+          {/* Price Label display */}
+          <div className="flex justify-between items-center text-xs font-bold text-zinc-700">
+            <span>₹{minPrice.toLocaleString('en-IN')}</span>
+            <span>₹{maxPrice.toLocaleString('en-IN')}</span>
           </div>
-        </form>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-zinc-100">
+          {[
+            { label: "< ₹1,000", min: null, max: 1000 },
+            { label: "₹1K – ₹5K", min: 1000, max: 5000 },
+            { label: "₹5K – ₹15K", min: 5000, max: 15000 },
+            { label: "₹15,000+", min: 15000, max: null },
+          ].map((preset, idx) => {
+            const isActive = urlMinPrice === (preset.min?.toString() || null) && urlMaxPrice === (preset.max?.toString() || null);
+            return (
+              <button
+                type="button"
+                key={idx}
+                onClick={() => setPricePreset(preset.min, preset.max)}
+                className={cn(
+                  "text-[10px] font-semibold py-1.5 px-2 text-center rounded-md border transition-all truncate",
+                  isActive
+                    ? "bg-zinc-950 text-white border-zinc-950 font-bold"
+                    : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50"
+                )}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {brands.length > 0 && (

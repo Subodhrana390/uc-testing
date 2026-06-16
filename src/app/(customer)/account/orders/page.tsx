@@ -300,10 +300,10 @@ export default function OrderHistoryPage() {
           </Button>
           <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "current" | "archived")}>
             <TabsList className="bg-zinc-100 rounded-lg h-9">
-              <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-indigo-600 data-[active]:shadow-sm">
+              <TabsTrigger value="current" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-red-600 data-[active]:shadow-sm">
                 Active Orders
               </TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-indigo-600 data-[active]:shadow-sm">
+              <TabsTrigger value="archived" className="text-xs font-medium rounded-md px-4 data-[active]:bg-white data-[active]:text-red-600 data-[active]:shadow-sm">
                 Completed
               </TabsTrigger>
             </TabsList>
@@ -364,8 +364,8 @@ export default function OrderHistoryPage() {
 
                 {order.delivery_estimate && order.status?.toLowerCase() !== "delivered" && (
                   <div>
-                    <span className="text-[10px] font-medium text-indigo-500 uppercase tracking-wider block">Est. Delivery</span>
-                    <span className="text-sm font-medium text-indigo-600 flex items-center gap-1 mt-0.5">
+                    <span className="text-[10px] font-medium text-red-500 uppercase tracking-wider block">Est. Delivery</span>
+                    <span className="text-sm font-medium text-red-600 flex items-center gap-1 mt-0.5">
                       <Clock className="w-3.5 h-3.5" /> {order.delivery_estimate}
                     </span>
                   </div>
@@ -433,7 +433,7 @@ export default function OrderHistoryPage() {
                         router.push(`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`);
                       }}
                       title="Track Order"
-                      className="h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 text-xs font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all"
+                      className="h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 active:scale-95 transition-all"
                     >
                       <Truck className="w-4 h-4" />
                       Track
@@ -465,7 +465,7 @@ export default function OrderHistoryPage() {
                 <p className="text-sm text-zinc-500 max-w-xs mx-auto mt-1">No orders match your current filters.</p>
               </div>
               <Link href="/products">
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 text-sm">
+                <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
                   Start Shopping
                 </Button>
               </Link>

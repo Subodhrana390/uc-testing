@@ -54,7 +54,7 @@ export default function WishlistPage() {
     }
   }
 
-  const removeFromWishlist = async (id: string) => {
+  const removeFromWishlist = async (id: string, silent = false) => {
     setRemovingId(id);
     try {
       const { error } = await supabase
@@ -65,10 +65,14 @@ export default function WishlistPage() {
       if (error) throw error;
 
       window.dispatchEvent(new CustomEvent("wishlist-updated"));
-      toast.success("Removed from wishlist");
+      if (!silent) {
+        toast.success("Removed from wishlist");
+      }
       await fetchWishlist();
     } catch (error: any) {
-      toast.error("Error removing item");
+      if (!silent) {
+        toast.error("Error removing item");
+      }
     } finally {
       setRemovingId(null);
     }
@@ -87,8 +91,7 @@ export default function WishlistPage() {
         price: Number(item.products.price),
         image_url: item.products.image_url || "",
       });
-      toast.success("Added to cart");
-      await removeFromWishlist(item.id);
+      await removeFromWishlist(item.id, true);
     } catch (error) {
       toast.error("Error adding to cart");
     } finally {
@@ -148,7 +151,7 @@ export default function WishlistPage() {
                 </div>
 
                 <h3 className="text-sm sm:text-base font-semibold text-zinc-900 leading-snug line-clamp-2">
-                  <Link href={`/products/${item.products?.slug}`} className="hover:text-indigo-600 transition-colors">
+                  <Link href={`/products/${item.products?.slug}`} className="hover:text-red-650 transition-colors">
                     {item.products?.name}
                   </Link>
                 </h3>
@@ -174,7 +177,7 @@ export default function WishlistPage() {
                 <Button
                   onClick={() => handleAddToCart(item)}
                   disabled={addingToCart === item.id || item.products?.stock_quantity === 0}
-                  className={`h-10 px-6 rounded-lg font-medium text-sm w-full md:w-[150px] flex items-center justify-center gap-2 ${item.products?.stock_quantity === 0 ? "bg-zinc-200 text-zinc-500 hover:bg-zinc-200" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
+                  className={`h-10 px-6 rounded-lg font-medium text-sm w-full md:w-[150px] flex items-center justify-center gap-2 ${item.products?.stock_quantity === 0 ? "bg-zinc-200 text-zinc-500 hover:bg-zinc-200" : "bg-red-600 hover:bg-red-700 text-white"}`}
                 >
                   {addingToCart === item.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -222,7 +225,7 @@ export default function WishlistPage() {
                 </p>
               </div>
               <Link href="/products" className="inline-block">
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 text-sm">
+                <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
                   Discover Products <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>

@@ -84,7 +84,7 @@ export default function ProfilePage() {
         <Button
           onClick={handleUpdate}
           disabled={saving}
-          className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm"
+          className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm"
         >
           {saving ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -167,22 +167,22 @@ export default function ProfilePage() {
 
         {/* Sidebar Info Card */}
         <div className="space-y-4">
-          <Card className="bg-indigo-950 text-white border-zinc-850">
+          <Card className="bg-red-950 text-white border-zinc-850">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-zinc-400">Account Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center pb-3 border-b border-indigo-900">
+              <div className="flex justify-between items-center pb-3 border-b border-red-900">
                 <div className="flex items-center gap-2">
                   <User className="w-3.5 h-3.5 text-zinc-500" />
                   <span className="text-xs text-zinc-400">Account Type</span>
                 </div>
-                <Badge variant="secondary" className="bg-indigo-800 text-indigo-200 border-indigo-750 text-xs">
+                <Badge variant="secondary" className="bg-red-800 text-red-200 border-red-750 text-xs">
                   {profile.role === 'admin' ? 'Admin' : 'Customer'}
                 </Badge>
               </div>
 
-              <div className="flex justify-between items-center pb-3 border-b border-indigo-900">
+              <div className="flex justify-between items-center pb-3 border-b border-red-900">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-xs text-zinc-400">Status</span>

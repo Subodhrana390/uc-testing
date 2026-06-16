@@ -4,19 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function WishlistButton({ className }: { className?: string }) {
   const [count, setCount] = useState(0);
   const supabase = createClient();
+  const user = useAuthStore((state) => state.user);
 
   async function updateCount() {
-    try {
-      const { data: { user } } = await (supabase.auth as any).getUser();
-      if (!user) {
-        setCount(0);
-        return;
-      }
+    if (!user) {
+      setCount(0);
+      return;
+    }
 
+    try {
       const { count: wishlistCount, error } = await supabase
         .from("wishlist")
         .select("*", { count: "exact", head: true })
@@ -31,21 +32,20 @@ export default function WishlistButton({ className }: { className?: string }) {
   }
 
   useEffect(() => {
+    if (!user) {
+      setCount(0);
+      return;
+    }
+
     updateCount();
     
     // Listen for custom event
     window.addEventListener("wishlist-updated", updateCount);
-    
-    // Also listen for auth state changes to update count when user logs in/out
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      updateCount();
-    });
 
     return () => {
       window.removeEventListener("wishlist-updated", updateCount);
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [user]);
 
   return (
     <Link 

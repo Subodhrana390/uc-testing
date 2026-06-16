@@ -110,12 +110,8 @@ export default function CartPage() {
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1 bg-white border border-zinc-200/80 rounded-xl p-1 shrink-0 shadow-sm">
                         <button
-                          className={`rounded-md p-1.5 transition-all ${item.quantity <= 1
-                            ? "text-zinc-300 cursor-not-allowed"
-                            : "text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95"
-                            }`}
+                          className="rounded-md p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-white hover:shadow-sm active:scale-95 transition-all"
                           onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
@@ -135,7 +131,7 @@ export default function CartPage() {
                         <WishlistToggleButton
                           productId={item.id}
                           variant="save-later"
-                          onAdded={() => removeCartItem(item.id)}
+                          onAdded={() => removeCartItem(item.id, true)}
                           className="!h-auto !py-1.5 !px-3 !bg-transparent !border-transparent text-xs sm:text-sm font-bold text-zinc-400 hover:!text-primary hover:!bg-primary/5 !rounded-lg"
                         />
 

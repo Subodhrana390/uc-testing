@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { SiteSettings } from "@/app/actions/settings";
 
 interface WhatsAppButtonProps {
@@ -7,6 +8,9 @@ interface WhatsAppButtonProps {
 }
 
 export default function WhatsAppButton({ settings }: WhatsAppButtonProps) {
+  const pathname = usePathname();
+  const isCheckout = pathname?.startsWith("/checkout");
+
   if (!settings || !settings.whatsapp_enabled || !settings.whatsapp_number) {
     return null;
   }
@@ -19,7 +23,7 @@ export default function WhatsAppButton({ settings }: WhatsAppButtonProps) {
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-20 right-6 z-[89] p-3 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#20ba5a] hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group"
+      className={`fixed right-6 z-[89] p-3 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#20ba5a] hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group ${isCheckout ? "bottom-[8.5rem] lg:bottom-20" : "bottom-20"}`}
       aria-label="Chat on WhatsApp"
     >
       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">

@@ -20,6 +20,8 @@ export async function POST(req: Request) {
       razorpayPaymentId,
       razorpaySignature,
       remarks,
+      returnTrackingId,
+      returnCarrier,
     } = await req.json();
 
     if (!orderId) {
@@ -47,18 +49,23 @@ export async function POST(req: Request) {
       user = customerUser;
     }
 
-    if (!user) {
+    const isPaymentVerification = paymentStatus === "Paid" && paymentMethod === "ONLINE";
+
+    if (!user && !isPaymentVerification) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Determine actor role from profile
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+    let actor = "customer";
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    const actor = profile?.role || "customer";
+      actor = profile?.role || "customer";
+    }
 
     const isAdmin = actor === "admin";
     const serviceRoleSupabase = createServiceRoleClient();
@@ -74,8 +81,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Enforce authorization: only admins can view other users' orders. Customers can only view their own.
-    if (!isAdmin && existingOrder.user_id !== user.id) {
+    // Enforce authorization: only admins can view other users' orders. Customers/guests can only view their own.
+    const isAuthorized = isAdmin || 
+      (isPaymentVerification && existingOrder.user_id === null) ||
+      (user && existingOrder.user_id === user.id);
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -89,7 +100,7 @@ export async function POST(req: Request) {
           p_order_id: orderId,
           p_new_status: status.toUpperCase(),
           p_actor_type: actor,
-          p_actor_id: user.id,
+          p_actor_id: user ? user.id : null,
           p_remarks: remarks || `Updated by ${actor}`
         }
       );
@@ -111,7 +122,7 @@ export async function POST(req: Request) {
             p_order_id: orderId,
             p_new_status: "REFUND_PENDING",
             p_actor_type: "system",
-            p_actor_id: user.id,
+            p_actor_id: user ? user.id : null,
             p_remarks: "Auto-processed to refund pending after product returned"
           }
         );
@@ -152,7 +163,7 @@ export async function POST(req: Request) {
                 p_order_id: orderId,
                 p_new_status: "REFUNDED",
                 p_actor_type: "system",
-                p_actor_id: user.id,
+                p_actor_id: user ? user.id : null,
                 p_remarks: "Auto-refund processed successfully"
               }
             );
@@ -181,6 +192,8 @@ export async function POST(req: Request) {
     if (paymentMethod !== undefined) updateData.payment_method = paymentMethod;
     if (razorpayPaymentId !== undefined) updateData.razorpay_payment_id = razorpayPaymentId;
     if (razorpaySignature !== undefined) updateData.razorpay_signature = razorpaySignature;
+    if (returnTrackingId !== undefined && isAdmin) updateData.return_tracking_id = returnTrackingId;
+    if (returnCarrier !== undefined && isAdmin) updateData.return_carrier = returnCarrier;
 
     // Auto-cancel pending orders if payment fails
     if (paymentStatus === "Failed" && ["PENDING", "PLACED"].includes(existingOrder.status.toUpperCase())) {
@@ -190,7 +203,7 @@ export async function POST(req: Request) {
           p_order_id: orderId,
           p_new_status: "CANCELLED",
           p_actor_type: "system",
-          p_actor_id: user.id,
+          p_actor_id: user ? user.id : null,
           p_remarks: "Auto-cancelled due to payment failure"
         }
       );
@@ -269,7 +282,7 @@ export async function POST(req: Request) {
             p_order_id: orderId,
             p_new_status: targetConfirmedStatus,
             p_actor_type: "system",
-            p_actor_id: user.id,
+            p_actor_id: user ? user.id : null,
             p_remarks: "Paid online via Razorpay (verified)"
           }
         );
@@ -283,7 +296,7 @@ export async function POST(req: Request) {
               p_order_id: orderId,
               p_new_status: "CONFIRMED",
               p_actor_type: "system",
-              p_actor_id: user.id,
+              p_actor_id: user ? user.id : null,
               p_remarks: "Paid online via Razorpay (verified) - fallback"
             }
           );

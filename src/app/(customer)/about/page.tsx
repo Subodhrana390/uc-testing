@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { companyTagline, companyCoreValues } from "@/lib/storefront";
+import WhyChooseUs from "@/components/storefront/WhyChooseUs";
 import {
   CheckCircle2,
   ShieldCheck,
@@ -263,6 +264,11 @@ export default async function AboutPage() {
             );
           })}
         </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto max-w-7xl py-12">
+        <WhyChooseUs />
       </section>
 
       {/* Corporate Journey & Leadership Context */}

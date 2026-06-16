@@ -18,6 +18,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
+  ChevronDown,
+  ShoppingBag,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -63,6 +65,8 @@ export default function CheckoutPage() {
   const couponsEnabledSetting = siteSettings?.coupons_enabled ?? true;
 
   const [items, setItems] = useState<CartItemWithTax[]>([]);
+  const [isBuyNow, setIsBuyNow] = useState(false);
+  const [mobileOrderSummaryOpen, setMobileOrderSummaryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -219,9 +223,25 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!isAuthInitialized) return;
 
-    const cartItems = useCartStore.getState().items;
+    const params = new URLSearchParams(window.location.search);
+    const buyNowActive = params.get("buyNow") === "true";
+    setIsBuyNow(buyNowActive);
 
-    if (cartItems.length === 0) {
+    let checkoutItems: CartItem[] = [];
+    if (buyNowActive) {
+      const buyNowStr = sessionStorage.getItem("buy_now_item");
+      if (buyNowStr) {
+        try {
+          checkoutItems = [JSON.parse(buyNowStr)];
+        } catch (e) {
+          console.error("Failed to parse buy_now_item:", e);
+        }
+      }
+    } else {
+      checkoutItems = useCartStore.getState().items;
+    }
+
+    if (checkoutItems.length === 0) {
       router.push("/cart");
       return;
     }
@@ -229,22 +249,15 @@ export default function CheckoutPage() {
     async function fetchData() {
       loadRazorpayScript();
 
-      if (!user) {
-        toast.error("Please login to proceed");
-        router.push("/login?returnTo=/checkout");
-        return;
-      }
-
-
       const { data: products } = await supabase
         .from("products")
         .select("id, price, sale_price, tax_rate, is_tax_inclusive, stock_quantity")
         .in(
           "id",
-          cartItems.map((i) => i.id)
+          checkoutItems.map((i) => i.id)
         );
 
-      const itemsWithTax = cartItems.map((item) => {
+      const itemsWithTax = checkoutItems.map((item) => {
         const prod = products?.find(
           (p: any) => p.id === item.id
         );
@@ -263,16 +276,25 @@ export default function CheckoutPage() {
       const outOfStockItems = itemsWithTax.filter(item => item.stock_quantity === 0);
 
       if (outOfStockItems.length > 0) {
-        const wishlistInserts = outOfStockItems.map(item => ({
-          user_id: user.id,
-          product_id: item.id
-        }));
+        if (user) {
+          const wishlistInserts = outOfStockItems.map(item => ({
+            user_id: user.id,
+            product_id: item.id
+          }));
 
-        const { error } = await supabase.from('wishlist').upsert(wishlistInserts, { onConflict: 'user_id,product_id' });
-        
-        if (!error) {
-          outOfStockItems.forEach(item => useCartStore.getState().removeItem(item.id));
-          toast.error(`${outOfStockItems.length} out-of-stock item(s) were automatically moved to your wishlist.`, { duration: 5000 });
+          const { error } = await supabase.from('wishlist').upsert(wishlistInserts, { onConflict: 'user_id,product_id' });
+          
+          if (!error) {
+            if (!buyNowActive) {
+              outOfStockItems.forEach(item => useCartStore.getState().removeItem(item.id));
+            }
+            toast.error(`${outOfStockItems.length} out-of-stock item(s) were automatically moved to your wishlist.`, { duration: 5000 });
+          }
+        } else {
+          if (!buyNowActive) {
+            outOfStockItems.forEach(item => useCartStore.getState().removeItem(item.id));
+          }
+          toast.error(`${outOfStockItems.length} out-of-stock item(s) were removed from checkout.`, { duration: 5000 });
         }
       }
 
@@ -282,57 +304,60 @@ export default function CheckoutPage() {
         router.push("/cart");
         return;
       }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email, phone")
-        .eq("id", user.id)
-        .maybeSingle();
 
-      if (profile) {
-        setForm((prev) => ({
-          ...prev,
-          fullName:
-            profile.full_name ||
-            user.user_metadata?.full_name ||
-            "",
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email, phone")
+          .eq("id", user.id)
+          .maybeSingle();
 
-          email:
-            profile.email || user.email || "",
+        if (profile) {
+          setForm((prev) => ({
+            ...prev,
+            fullName:
+              profile.full_name ||
+              user.user_metadata?.full_name ||
+              "",
 
-          phone: profile.phone || "",
-        }));
-      }
+            email:
+              profile.email || user.email || "",
 
-      const { data: addrData } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("is_default", {
-          ascending: false,
-        });
+            phone: profile.phone || "",
+          }));
+        }
 
-      if (addrData && addrData.length > 0) {
-        setAddresses(addrData);
+        const { data: addrData } = await supabase
+          .from("addresses")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("is_default", {
+            ascending: false,
+          });
 
-        const defaultAddr =
-          addrData.find(
-            (a: any) => a.is_default
-          ) || addrData[0];
+        if (addrData && addrData.length > 0) {
+          setAddresses(addrData);
 
-        setSelectedAddressId(defaultAddr.id);
+          const defaultAddr =
+            addrData.find(
+              (a: any) => a.is_default
+            ) || addrData[0];
 
-        setForm((prev) => ({
-          ...prev,
-          address: `${defaultAddr.address_line1}${defaultAddr.address_line2
-            ? ", " +
-            defaultAddr.address_line2
-            : ""
-            }`,
-          city: defaultAddr.city || "",
-          state: defaultAddr.state || "",
-          postalCode: defaultAddr.postal_code || "",
-          country: defaultAddr.country || "India",
-        }));
+          setSelectedAddressId(defaultAddr.id);
+
+          setForm((prev) => ({
+            ...prev,
+            address: `${defaultAddr.address_line1}${defaultAddr.address_line2
+              ? ", " +
+              defaultAddr.address_line2
+              : ""
+              }`,
+            city: defaultAddr.city || "",
+            state: defaultAddr.state || "",
+            postalCode: defaultAddr.postal_code || "",
+            country: defaultAddr.country || "India",
+          }));
+        }
       }
 
       setLoading(false);
@@ -455,24 +480,22 @@ export default function CheckoutPage() {
 
   const handleNextStep = () => {
     if (currentStep === 1) {
-      if (!form.fullName || !form.phone || !form.address || !form.city || !form.postalCode) {
-        toast.error("Please fill all required shipping fields");
-        return;
-      }
-      if (!selectedAddressId) {
-        toast.error("Please select a shipping address");
+      if (!form.fullName || !form.phone || !form.email || !form.address || !form.city || !form.state || !form.postalCode) {
+        toast.error("Please fill all required fields (Name, Phone, Email, Address, City, State, PIN Code)");
         return;
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePlaceOrder = async (
@@ -502,10 +525,7 @@ export default function CheckoutPage() {
     let createdOrderId: string | null = null;
 
     try {
-      const selectedAddr = addresses.find(a => a.id === selectedAddressId);
-      const shippingAddressString = selectedAddr
-        ? `${selectedAddr.address_line1}${selectedAddr.address_line2 ? ", " + selectedAddr.address_line2 : ""}`
-        : form.address;
+      const shippingAddressString = form.address;
 
       const { createOrder } = await import("@/app/actions/orders");
 
@@ -604,7 +624,11 @@ export default function CheckoutPage() {
 
               if (confirmRes.ok) {
                 toast.success("Payment verified successfully! Order placed.");
-                clearCart();
+                if (isBuyNow) {
+                  sessionStorage.removeItem("buy_now_item");
+                } else {
+                  clearCart();
+                }
                 // Add small delay to let user see the success state
                 setTimeout(() => {
                   router.push(`/checkout/success?orderId=${supabaseOrderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
@@ -620,7 +644,7 @@ export default function CheckoutPage() {
               // Verification threw — clean up the unpaid order
               setVerifyingPayment(false);
               setVerificationData(null);
-              try { await deleteFailedOrder(supabaseOrderId); } catch (_) { }
+              try { await deleteFailedOrder(supabaseOrderId, 'FAILED'); } catch (_) { }
               toast.error("An unexpected error occurred during order verification.");
               router.push(`/checkout/failed?error=${encodeURIComponent(err.message || "An unexpected error occurred during payment verification.")}`);
             }
@@ -639,7 +663,7 @@ export default function CheckoutPage() {
           modal: {
             ondismiss: async function () {
               try {
-                await deleteFailedOrder(supabaseOrderId);
+                await deleteFailedOrder(supabaseOrderId, 'CANCELLED');
               } catch (e) {
                 console.error("Cleanup dismissed order error:", e);
               }
@@ -660,7 +684,7 @@ export default function CheckoutPage() {
         // Handle Razorpay payment failure — clean up the unpaid order immediately
         rzp.on("payment.failed", async function (response: any) {
           try {
-            await deleteFailedOrder(supabaseOrderId);
+            await deleteFailedOrder(supabaseOrderId, 'FAILED');
           } catch (e) {
             console.error("Cleanup failed order error:", e);
           }
@@ -690,7 +714,11 @@ export default function CheckoutPage() {
 
         if (res?.success) {
           toast.success("Order placed successfully! (COD)");
-          clearCart();
+          if (isBuyNow) {
+            sessionStorage.removeItem("buy_now_item");
+          } else {
+            clearCart();
+          }
           router.push(`/checkout/success?orderId=${res.orderId}&total=${grandTotal}&date=${encodeURIComponent(deliveryEstimate?.date || "")}`);
         } else {
           toast.error(res?.error || "Failed to place order");
@@ -700,7 +728,7 @@ export default function CheckoutPage() {
     } catch (error: any) {
       // Clean up any Unpaid order that was created before the failure
       if (createdOrderId) {
-        try { await deleteFailedOrder(createdOrderId); } catch (_) { }
+        try { await deleteFailedOrder(createdOrderId, 'FAILED'); } catch (_) { }
       }
       toast.error(error.message || "Failed to place order");
       router.push(`/checkout/failed?error=${encodeURIComponent(error.message || "Failed to place order")}`);
@@ -721,11 +749,11 @@ export default function CheckoutPage() {
   // Verifying Payment Screen
   if (verifyingPayment && verificationData) {
     return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 antialiased">
+    <div className="flex flex-col items-center pt-12 sm:pt-20 p-6 antialiased">
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
         
-        {/* Main Card - Separated entirely by a rich, soft shadow */}
-        <div className="bg-white rounded-3xl p-8 text-center space-y-8 shadow-2xl shadow-zinc-300/40">
+        {/* Main Card */}
+        <div className="rounded-3xl p-8 text-center space-y-8">
           
           {/* Animated Verification Icon Container */}
           <div className="flex justify-center pt-2">
@@ -796,28 +824,29 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-20">
-      <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-28 lg:pb-20">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
           <Link
             href="/cart"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
-            Back to Cart
+            <span className="hidden sm:inline">Back to Cart</span>
+            <span className="sm:hidden">Cart</span>
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-zinc-950">
             Secure Checkout
           </h1>
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[1fr_400px]">
           {/* Left Side */}
-          <div className="space-y-8">
+          <div className="space-y-5 sm:space-y-8">
             {/* Stepper UI */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between relative px-2 z-10">
-                <div className="absolute left-[28px] right-[28px] top-5 -translate-y-1/2 h-1.5 bg-zinc-100 rounded-full -z-10">
+            <div className="mb-4 sm:mb-8">
+              <div className="flex items-center justify-between relative px-1 sm:px-2 z-10">
+                <div className="absolute left-[20px] right-[20px] sm:left-[28px] sm:right-[28px] top-[16px] sm:top-5 -translate-y-1/2 h-1 sm:h-1.5 bg-zinc-100 rounded-full -z-10">
                   <div className="h-full bg-primary rounded-full transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
                 </div>
 
@@ -831,15 +860,15 @@ export default function CheckoutPage() {
                   const isPending = currentStep < item.step;
 
                   return (
-                    <div key={item.step} className="flex flex-col items-center gap-3">
+                    <div key={item.step} className="flex flex-col items-center gap-1.5 sm:gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ring-4 ring-white shadow-sm",
+                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 ring-2 sm:ring-4 ring-white shadow-sm",
                         isCompleted ? "bg-primary text-white" : isActive ? "bg-zinc-950 text-white scale-110" : "bg-zinc-100 text-zinc-400"
                       )}>
-                        {isCompleted ? <Check className="w-5 h-5" /> : item.step}
+                        {isCompleted ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : item.step}
                       </div>
                       <span className={cn(
-                        "text-[11px] font-bold uppercase tracking-wider bg-white px-2",
+                        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-white px-1 sm:px-2",
                         isActive ? "text-zinc-950" : isCompleted ? "text-primary" : "text-zinc-400"
                       )}>
                         {item.label}
@@ -853,7 +882,7 @@ export default function CheckoutPage() {
             {currentStep === 1 && (
               <>
                 {/* Contact Information */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <User className="h-5 w-5" />
@@ -903,8 +932,8 @@ export default function CheckoutPage() {
                 </section>
 
                 {/* Address */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
-                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                         <MapPin className="h-5 w-5" />
@@ -914,77 +943,135 @@ export default function CheckoutPage() {
                       </h2>
                     </div>
 
-                    <Link href="/account/address-book?returnTo=/checkout">
-                      <button className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-xs font-bold text-zinc-700 transition">
-                        Change / Manage
-                      </button>
-                    </Link>
-                  </div>
-
-                  {addresses.length > 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {addresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          onClick={() => handleSelectAddress(addr)}
-                          className={cn(
-                            "p-5 border rounded-2xl cursor-pointer transition-all relative overflow-hidden",
-                            selectedAddressId === addr.id
-                              ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
-                              : "border-zinc-200 hover:border-zinc-400 hover:shadow-sm"
-                          )}
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-black uppercase tracking-widest text-zinc-500 bg-white px-2 py-1 rounded border border-zinc-100 shadow-sm">
-                              {addr.type}
-                            </span>
-                            {selectedAddressId === addr.id && (
-                              <CheckCircle2 className="w-5 h-5 text-zinc-950" />
-                            )}
-                          </div>
-                          <p className="text-sm font-black text-zinc-950 mb-1">
-                            {addr.full_name}
-                          </p>
-                          <p className="text-xs font-semibold text-zinc-700 leading-relaxed">
-                            {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ""}
-                          </p>
-                          <p className="text-xs text-zinc-500 font-medium">
-                            {addr.city}, {addr.state} — {addr.postal_code}
-                          </p>
-                          <p className="text-xs text-zinc-400 font-medium mt-0.5">
-                            {addr.country}
-                          </p>
-                          {addr.phone && (
-                            <p className="text-xs text-zinc-500 font-semibold mt-2 border-t border-zinc-100 pt-1.5">
-                              Mobile: {addr.phone}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-10 border-2 border-dashed border-zinc-200 rounded-3xl text-center">
-                      <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <MapPin className="h-8 w-8 text-zinc-300" />
-                      </div>
-                      <p className="text-sm font-bold text-zinc-950 mb-2">
-                        No saved addresses found
-                      </p>
-                      <p className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto">
-                        Add a delivery address to continue placing your order.
-                      </p>
-
+                    {user && (
                       <Link href="/account/address-book?returnTo=/checkout">
-                        <button className="rounded-xl h-12 px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center gap-2">
-                          <Plus className="h-4 w-4" /> Add Delivery Address
+                        <button className="inline-flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded-lg sm:rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-[10px] sm:text-xs font-bold text-zinc-700 transition">
+                          <span className="hidden sm:inline">Change / Manage</span>
+                          <span className="sm:hidden">Manage</span>
                         </button>
                       </Link>
+                    )}
+                  </div>
+
+                  {user && addresses.length > 0 && (
+                    <div className="pb-6 border-b border-zinc-100">
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 ml-1">
+                        Select a Saved Address
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {addresses.map((addr) => (
+                          <div
+                            key={addr.id}
+                            onClick={() => handleSelectAddress(addr)}
+                            className={cn(
+                              "p-5 border rounded-2xl cursor-pointer transition-all relative overflow-hidden",
+                              selectedAddressId === addr.id
+                                ? "border-zinc-950 bg-zinc-50 shadow-sm ring-1 ring-zinc-950"
+                                : "border-zinc-200 hover:border-zinc-400 hover:shadow-sm"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-black uppercase tracking-widest text-zinc-500 bg-white px-2 py-1 rounded border border-zinc-100 shadow-sm">
+                                {addr.type}
+                              </span>
+                              {selectedAddressId === addr.id && (
+                                <CheckCircle2 className="w-5 h-5 text-zinc-950" />
+                              )}
+                            </div>
+                            <p className="text-sm font-black text-zinc-950 mb-1">
+                              {addr.full_name}
+                            </p>
+                            <p className="text-xs font-semibold text-zinc-700 leading-relaxed">
+                              {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ""}
+                            </p>
+                            <p className="text-xs text-zinc-500 font-medium">
+                              {addr.city}, {addr.state} — {addr.postal_code}
+                            </p>
+                            <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                              {addr.country}
+                            </p>
+                            {addr.phone && (
+                              <p className="text-xs text-zinc-500 font-semibold mt-2 border-t border-zinc-100 pt-1.5">
+                                Mobile: {addr.phone}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
+
+                  {/* Manual input fields */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">
+                      Shipping Address Details
+                    </h3>
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs font-bold text-zinc-600 ml-1">
+                          Street Address <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={form.address}
+                          onChange={(e) => setForm({ ...form, address: e.target.value })}
+                          placeholder="Flat/House No., Building, Street/Locality"
+                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-600 ml-1">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={form.city}
+                          onChange={(e) => setForm({ ...form, city: e.target.value })}
+                          placeholder="City"
+                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-600 ml-1">
+                          State <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={form.state}
+                          onChange={(e) => setForm({ ...form, state: e.target.value })}
+                          placeholder="State"
+                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-600 ml-1">
+                          PIN Code <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={form.postalCode}
+                          onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
+                          placeholder="6-digit PIN code"
+                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-600 ml-1">
+                          Country <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={form.country}
+                          onChange={(e) => setForm({ ...form, country: e.target.value })}
+                          placeholder="Country"
+                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
-                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Payment
                   </button>
                 </div>
@@ -994,7 +1081,7 @@ export default function CheckoutPage() {
             {currentStep === 2 && (
               <>
                 {/* Payment Method */}
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <CreditCard className="h-5 w-5" />
@@ -1162,11 +1249,11 @@ export default function CheckoutPage() {
                   )}
                 </section>
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
-                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-2 sm:gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Shipping
                   </button>
-                  <button onClick={handleNextStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Review
                   </button>
                 </div>
@@ -1175,7 +1262,7 @@ export default function CheckoutPage() {
 
             {currentStep === 3 && (
               <>
-                <section className="bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm rounded-3xl">
+                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
                       <CheckCircle2 className="h-5 w-5" />
@@ -1186,32 +1273,27 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="grid gap-6">
-                    {(() => {
-                      const selectedAddr = addresses.find(a => a.id === selectedAddressId);
-                      return (
-                        <div className="p-5 border border-zinc-200 rounded-2xl">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Shipping To</h3>
-                            <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
-                          </div>
-                          <p className="font-bold text-sm text-zinc-950">
-                            {selectedAddr ? selectedAddr.full_name : form.fullName}
-                          </p>
-                          <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
-                          <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
-                          <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
-                          
-                          <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Recipient Phone</span>
-                              <span className="font-medium text-zinc-700">
-                                {selectedAddr ? selectedAddr.phone || "—" : form.phone}
-                              </span>
-                            </div>
-                          </div>
+                    <div className="p-5 border border-zinc-200 rounded-2xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">Shipping To</h3>
+                        <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
+                      </div>
+                      <p className="font-bold text-sm text-zinc-950">
+                        {form.fullName}
+                      </p>
+                      <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
+                      <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
+                      <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
+                      
+                      <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Recipient Phone</span>
+                          <span className="font-medium text-zinc-700">
+                            {form.phone}
+                          </span>
                         </div>
-                      );
-                    })()}
+                      </div>
+                    </div>
 
                     <div className="p-5 border border-zinc-200 rounded-2xl">
                       <div className="flex justify-between items-start mb-2">
@@ -1259,14 +1341,14 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-3">
-                  <button onClick={handlePrevStep} className="rounded-xl h-14 w-full sm:w-auto px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-sm transition inline-flex items-center justify-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between pt-4 gap-2 sm:gap-3">
+                  <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Payment
                   </button>
                   <button
                     onClick={handlePlaceOrder}
                     disabled={submitting || isPlacingOrder}
-                    className="rounded-xl h-14 w-full sm:w-auto px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {submitting || isPlacingOrder
                       ? "Processing..."
@@ -1279,8 +1361,8 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Right Sidebar */}
-          <aside className="space-y-6">
+          {/* Right Sidebar - Desktop */}
+          <aside className="hidden lg:block space-y-6">
             <div className="bg-white shadow-sm border border-zinc-200 rounded-3xl overflow-hidden sticky top-24">
               <div className="p-6 sm:p-8 bg-zinc-50/50 border-b border-zinc-100">
                 <h2 className="text-xl font-black text-zinc-950">Order Summary</h2>
@@ -1421,11 +1503,159 @@ export default function CheckoutPage() {
               </div>
             </div>
           </aside>
+
+          {/* Mobile Order Summary - Collapsible (visible below lg) */}
+          <div className="lg:hidden">
+            <div className="bg-white shadow-sm border border-zinc-200 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setMobileOrderSummaryOpen(!mobileOrderSummaryOpen)}
+                className="w-full flex items-center justify-between p-4 bg-zinc-50/50 border-b border-zinc-100"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-5 h-5 text-zinc-700" />
+                  <span className="text-sm font-black text-zinc-950">Order Summary</span>
+                  <span className="text-xs font-bold text-zinc-400">({items.length} {items.length === 1 ? "item" : "items"})</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-primary">{formatCurrency(grandTotal)}</span>
+                  <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform duration-300", mobileOrderSummaryOpen && "rotate-180")} />
+                </div>
+              </button>
+
+              {mobileOrderSummaryOpen && (
+                <div className="p-4 space-y-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {/* Items List */}
+                  <div className="space-y-3 pb-4 border-b border-zinc-100 max-h-[200px] overflow-y-auto">
+                    {items.map((item) => (
+                      <div key={`mobile-summary-${item.id}`} className="flex gap-3">
+                        <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-zinc-50">
+                          <Image
+                            src={item.image_url || "/images/prod_main.png"}
+                            alt={item.name}
+                            fill
+                            className="object-contain p-1.5"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <p className="text-xs font-bold text-zinc-950 truncate">{item.name}</p>
+                          <div className="flex justify-between items-center text-[11px] font-bold text-zinc-500">
+                            <span>{item.quantity} × {formatCurrency(item.price)}</span>
+                            <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-medium text-zinc-600">
+                      <span>Subtotal</span>
+                      <span className="font-bold text-zinc-950">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-medium text-zinc-600">
+                      <span>Shipping</span>
+                      <span className="font-bold text-zinc-950">{formatCurrency(deliveryCharge)}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-xs font-bold text-emerald-600">
+                        <span>Coupon Discount</span>
+                        <span>-{formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
+                    {deliveryEstimate && (
+                      <div className="flex justify-between text-xs font-bold text-emerald-700 bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-100/60 mt-2">
+                        <span className="flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5" />
+                          Delivery by
+                        </span>
+                        <span>{deliveryEstimate.date}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Coupon Block */}
+                  <div className="pt-3 border-t border-zinc-100 space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Coupon / Promo</span>
+                    {!couponsEnabledSetting ? (
+                      <p className="text-xs font-bold text-zinc-400 italic">Coupons are currently disabled.</p>
+                    ) : appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-xl">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded inline-block w-fit">{appliedCoupon.code}</span>
+                          <span className="text-[10px] text-emerald-600 font-bold mt-0.5">Saved {formatCurrency(discountAmount)}</span>
+                        </div>
+                        <button type="button" onClick={handleRemoveCoupon} className="text-[11px] font-bold text-red-500">Remove</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponCodeInput}
+                          onChange={(e) => { setCouponCodeInput(e.target.value); setCouponError(null); }}
+                          placeholder="Enter code"
+                          className="h-9 border-zinc-200 rounded-lg focus-visible:ring-zinc-950 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={applyingCoupon}
+                          className="px-3 h-9 bg-zinc-950 hover:bg-primary text-white rounded-lg text-xs font-bold transition disabled:opacity-50 shrink-0"
+                        >
+                          {applyingCoupon ? "..." : "Apply"}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && (
+                      <p className="text-[10px] text-red-500 font-semibold">{couponError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                    <span className="font-black text-zinc-950 text-sm">Total</span>
+                    <span className="font-black text-primary text-base">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Dynamic Recommendations - Post Checkout Addons */}
-        <div className="mt-12 border-t border-zinc-200/60 pt-12">
+        <div className="mt-8 sm:mt-12 border-t border-zinc-200/60 pt-8 sm:pt-12">
           <RecommendedProducts maxItems={4} />
+        </div>
+
+        {/* Mobile Sticky Bottom Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-zinc-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50 px-4 py-3 safe-area-bottom">
+          <div className="flex items-center justify-between max-w-5xl mx-auto">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total</span>
+              <span className="text-lg font-black text-primary leading-tight">{formatCurrency(grandTotal)}</span>
+              {items.length > 0 && (
+                <span className="text-[10px] text-zinc-500 font-medium">{items.length} {items.length === 1 ? "item" : "items"}</span>
+              )}
+            </div>
+            {currentStep < 3 ? (
+              <button
+                onClick={handleNextStep}
+                className="rounded-xl h-11 px-6 bg-zinc-950 hover:bg-primary text-white font-bold text-xs transition inline-flex items-center justify-center gap-1.5"
+              >
+                {currentStep === 1 ? "Continue" : "Review Order"}
+              </button>
+            ) : (
+              <button
+                onClick={handlePlaceOrder}
+                disabled={submitting || isPlacingOrder}
+                className="rounded-xl h-11 px-6 bg-zinc-950 hover:bg-primary text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+              >
+                {submitting || isPlacingOrder
+                  ? "Processing..."
+                  : paymentMethod === "ONLINE"
+                  ? "Pay Now"
+                  : "Place Order"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

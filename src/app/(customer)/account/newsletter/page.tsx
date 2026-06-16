@@ -128,7 +128,7 @@ export default function NewsletterPage() {
                   key={topic.id}
                   className={`flex items-start justify-between p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
                     topic.active
-                      ? "bg-gray-50 border-indigo-600"
+                      ? "bg-gray-50 border-red-600"
                       : "bg-white border-zinc-200 hover:border-zinc-300"
                   }`}
                 >
@@ -154,7 +154,7 @@ export default function NewsletterPage() {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm w-full sm:w-auto flex items-center justify-center gap-2"
+                className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm w-full sm:w-auto flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -168,10 +168,10 @@ export default function NewsletterPage() {
         </Card>
 
         {/* SMS Alert Section */}
-        <Card className="bg-indigo-950 text-white border-zinc-850 relative overflow-hidden group">
+        <Card className="bg-red-950 text-white border-zinc-850 relative overflow-hidden group">
           <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
             <div className="space-y-3 text-center md:text-left">
-              <div className="inline-flex items-center gap-1.5 bg-indigo-900 px-3 py-1 rounded-md border border-indigo-850 w-fit">
+              <div className="inline-flex items-center gap-1.5 bg-red-900 px-3 py-1 rounded-md border border-red-800 w-fit">
                 <Bell className="w-3.5 h-3.5 text-zinc-400" />
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-300">Logistics Notification</span>
               </div>
@@ -187,7 +187,7 @@ export default function NewsletterPage() {
 
             <Button
               onClick={() => window.location.href = "/account/profile"}
-              className="h-11 bg-white text-indigo-950 hover:bg-indigo-50 font-medium px-6 rounded-lg w-full md:w-auto flex items-center justify-center gap-2 text-sm shadow-md shrink-0"
+              className="h-11 bg-white text-red-950 hover:bg-red-50 font-medium px-6 rounded-lg w-full md:w-auto flex items-center justify-center gap-2 text-sm shadow-md shrink-0"
             >
               {phone ? "Change Registered Number" : "Enable SMS Alerts"}
               <ArrowRight className="w-4 h-4" />

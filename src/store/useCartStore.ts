@@ -14,7 +14,7 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  removeItem: (id: string) => void;
+  removeItem: (id: string, silent?: boolean) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getCartCount: () => number;
@@ -41,16 +41,22 @@ export const useCartStore = create<CartState>()(
           return { items: [...state.items, { ...item, quantity }] };
         });
       },
-      removeItem: (id) => {
+      removeItem: (id, silent = false) => {
         set((state) => ({
           items: state.items.filter((i) => i.id !== id),
         }));
-        toast.success("Removed from cart");
+        if (!silent) {
+          toast.success("Removed from cart");
+        }
       },
       updateQuantity: (id, quantity) => {
+        if (quantity < 1) {
+          get().removeItem(id);
+          return;
+        }
         set((state) => ({
           items: state.items.map((i) =>
-            i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i
+            i.id === id ? { ...i, quantity } : i
           ),
         }));
       },

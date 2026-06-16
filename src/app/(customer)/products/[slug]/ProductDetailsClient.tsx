@@ -16,6 +16,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import ShareModal from "@/components/storefront/ShareModal";
 import { useCartStore } from "@/store/useCartStore";
+import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTogether";
 
 export default function ProductDetailsClient({
   product,
@@ -25,7 +26,8 @@ export default function ProductDetailsClient({
   attributes: any[]
 }) {
   const router = useRouter();
-  const { addItem, updateQuantity, isInCart } = useCartStore();
+  const { addItem, updateQuantity, isInCart, items: cartItems } = useCartStore();
+  const existingCartItem = useMemo(() => cartItems.find((item) => item.id === product.id), [cartItems, product.id]);
 
   const originalPrice = Number(product.price);
   const salePriceVal = product.sale_price ? Number(product.sale_price) : 0;
@@ -33,6 +35,16 @@ export default function ProductDetailsClient({
     ? Math.round(((originalPrice - salePriceVal) / originalPrice) * 100)
     : null;
   const [quantity, setQuantity] = useState(1);
+
+  // Sync quantity state when existingCartItem changes or product changes
+  useEffect(() => {
+    if (existingCartItem) {
+      setQuantity(existingCartItem.quantity);
+    } else {
+      setQuantity(1);
+    }
+  }, [existingCartItem, product.id]);
+
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -48,17 +60,16 @@ export default function ProductDetailsClient({
 
   const handleBuyNow = () => {
     const price = Number(product.sale_price || product.price) || 0;
-    addItem(
-      {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        price,
-        image_url: product.image_url || "",
-      },
-      quantity
-    );
-    router.push("/checkout");
+    const item = {
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      price,
+      image_url: product.image_url || "",
+      quantity,
+    };
+    sessionStorage.setItem("buy_now_item", JSON.stringify(item));
+    router.push("/checkout?buyNow=true");
   };
 
   const handleUserInteraction = () => {
@@ -176,10 +187,10 @@ export default function ProductDetailsClient({
   };
 
   useEffect(() => {
-    if (product && isInCart(product.id)) {
+    if (product && isInCart(product.id) && existingCartItem && existingCartItem.quantity !== quantity) {
       updateQuantity(product.id, quantity);
     }
-  }, [quantity, product]);
+  }, [quantity, product.id, existingCartItem, isInCart, updateQuantity]);
 
   const renderTabContent = (tabId: string) => {
     switch (tabId) {
@@ -619,6 +630,7 @@ export default function ProductDetailsClient({
           </AnimatePresence>
         </div>
       </section>
+      <FrequentlyBoughtTogether currentProduct={product} />
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}

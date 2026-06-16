@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const pathname = usePathname();
+  const isCheckout = pathname?.startsWith("/checkout");
 
   useEffect(() => {
     const toggleVisibility = () => {
@@ -31,7 +34,8 @@ export default function BackToTop() {
     <button
       onClick={scrollToTop}
       className={cn(
-        "fixed bottom-6 right-6 z-[90] p-3 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 hover:scale-110 active:scale-95 transition-all duration-300",
+        "fixed right-6 z-[90] p-3 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 hover:scale-110 active:scale-95 transition-all duration-300",
+        isCheckout ? "bottom-20 lg:bottom-6" : "bottom-6",
         isVisible ? "translate-y-0 opacity-100 visible" : "translate-y-10 opacity-0 invisible"
       )}
       aria-label="Back to top"

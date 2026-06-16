@@ -2,15 +2,17 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
+import { useAuthStore } from "@/store/useAuthStore";
 import toast from "react-hot-toast";
 
 const supabase = createClient();
 
 export function useWishlistStatus(productId: string) {
+  const user = useAuthStore((state) => state.user);
+
   return useQuery({
     queryKey: ["wishlist", productId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
       const { data } = await supabase
@@ -22,6 +24,7 @@ export function useWishlistStatus(productId: string) {
 
       return data?.id || null;
     },
+    enabled: !!user, // Don't run query at all when logged out
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

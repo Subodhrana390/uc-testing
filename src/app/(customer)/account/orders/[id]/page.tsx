@@ -370,7 +370,7 @@ export default function OrderDetailsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
       </div>
     );
   }
@@ -378,7 +378,7 @@ export default function OrderDetailsPage() {
   if (!order) {
     return (
       <div className="space-y-6">
-        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-indigo-600 transition-colors">
+        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </Link>
         <Card className="border-dashed py-16 text-center space-y-4">
@@ -390,7 +390,7 @@ export default function OrderDetailsPage() {
             <p className="text-sm text-zinc-500 max-w-xs mx-auto mt-1">We couldn't retrieve the details for this order. It may not exist or you may not have permission to view it.</p>
           </div>
           <Link href="/account/orders">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 text-sm">
+            <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
               View Order History
             </Button>
           </Link>
@@ -408,7 +408,7 @@ export default function OrderDetailsPage() {
     <div className="space-y-6">
       {/* Navigation Breadcrumbs */}
       <div className="flex items-center justify-between">
-        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-indigo-600 transition-colors">
+        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </Link>
 
@@ -452,7 +452,7 @@ export default function OrderDetailsPage() {
                   <Button
                     onClick={handlePayOnline}
                     disabled={paying}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 px-4 rounded-lg shadow-sm font-semibold transition-colors"
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 px-4 rounded-lg shadow-sm font-semibold transition-colors"
                   >
                     {paying ? (
                       <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Processing</>
@@ -585,14 +585,14 @@ export default function OrderDetailsPage() {
                     <p className="text-zinc-400 italic text-xs">Not yet dispatched</p>
                   )}
                   {order.delivery_estimate && order.status?.toLowerCase() !== "delivered" && (
-                    <p className="text-indigo-650 text-xs font-semibold flex items-center gap-1 mt-2">
+                    <p className="text-red-600 text-xs font-semibold flex items-center gap-1 mt-2">
                       <Clock className="w-3.5 h-3.5" /> Est. Delivery: {order.delivery_estimate}
                     </p>
                   )}
                 </div>
                 {order.tracking_id && !["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
                   <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="inline-block mt-3">
-                    <Button variant="link" size="sm" className="text-indigo-600 hover:text-indigo-755 p-0 text-xs font-semibold h-auto">
+                    <Button variant="link" size="sm" className="text-red-600 hover:text-red-700 p-0 text-xs font-semibold h-auto">
                       Live tracking view <ChevronRight className="w-3 h-3 ml-0.5" />
                     </Button>
                   </Link>
@@ -997,7 +997,7 @@ export default function OrderDetailsPage() {
             </Button>
             <Button
               onClick={handleSubmitReturn}
-              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-705 text-white font-bold rounded-xl"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl"
               disabled={returnSubmitting}
             >
               {returnSubmitting ? (
