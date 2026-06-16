@@ -11,27 +11,61 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  try {
-    const { email, customerName, resetLink, apiKey, senderEmail, senderName } = await req.json();
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Content-Type': 'application/json'
+  };
 
-    // Validate inputs
-    if (!email || !resetLink) {
-      return new Response(JSON.stringify({ error: "Missing email or resetLink" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-      });
+  try {
+    console.log(`[send-reset-email] Received new request method: ${req.method}`);
+    
+    // 1. Validate Authorization Header & Service Role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("[send-reset-email] Missing Authorization header");
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: corsHeaders });
     }
 
-    // Determine Brevo API key: payload or environment variable
+    try {
+      const token = authHeader.replace('Bearer ', '');
+      const payloadB64 = token.split('.')[1];
+      const payload = JSON.parse(atob(payloadB64));
+      
+      // Ensure only the service_role can execute this backend function
+      if (payload.role !== 'service_role') {
+        console.error(`[send-reset-email] Unauthorized: Expected service_role, got ${payload.role}`);
+        return new Response(JSON.stringify({ error: "Unauthorized: Function must be called with service_role key" }), { status: 403, headers: corsHeaders });
+      }
+    } catch (e) {
+      console.error("[send-reset-email] Invalid JWT format", e);
+      return new Response(JSON.stringify({ error: "Invalid JWT format" }), { status: 401, headers: corsHeaders });
+    }
+
+    // 2. Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("[send-reset-email] Failed to parse request JSON body");
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: corsHeaders });
+    }
+
+    const { email, customerName, resetLink, apiKey, senderEmail, senderName } = body;
+
+    if (!email || !resetLink) {
+      console.error("[send-reset-email] Validation failed: Missing email or resetLink");
+      return new Response(JSON.stringify({ error: "Missing email or resetLink" }), { status: 400, headers: corsHeaders });
+    }
+
+    // 3. Configure Brevo Settings
     const finalApiKey = apiKey || Deno.env.get("BREVO_API_KEY");
     const finalSenderEmail = senderEmail || Deno.env.get("BREVO_SENDER_EMAIL") || "info@ucenterprises.com";
     const finalSenderName = senderName || Deno.env.get("BREVO_SENDER_NAME") || "UC Enterprises";
 
     if (!finalApiKey) {
-      return new Response(JSON.stringify({ error: "Brevo API key is not configured" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-      });
+      console.error("[send-reset-email] Server Configuration Error: Missing Brevo API key");
+      return new Response(JSON.stringify({ error: "Brevo API key is not configured" }), { status: 500, headers: corsHeaders });
     }
 
     // Construct the payload for Brevo
@@ -106,14 +140,14 @@ Deno.serve(async (req: Request) => {
               }
               .btn {
                 display: inline-block;
-                background-color: #f97316;
+                background-color: #dc2626; /* Updated to red brand color */
                 color: #ffffff !important;
                 text-decoration: none;
                 font-size: 14px;
                 font-weight: 700;
                 padding: 14px 32px;
                 border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+                box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
               }
@@ -173,7 +207,10 @@ Deno.serve(async (req: Request) => {
         </html>
       `
     };
+    
+    console.log(`[send-reset-email] Dispatching email to Brevo for ${email}...`);
 
+    // 4. Call Brevo API
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -186,22 +223,17 @@ Deno.serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(JSON.stringify({ error: `Brevo API Error: ${errorText}` }), {
-        status: response.status,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" }
-      });
+      console.error(`[send-reset-email] Brevo API Error [HTTP ${response.status}]: ${errorText}`);
+      // Bubble as 502 Bad Gateway to separate upstream provider errors from our own edge function errors
+      return new Response(JSON.stringify({ error: "Email provider error", details: errorText }), { status: 502, headers: corsHeaders });
     }
 
     const resData = await response.json();
-    return new Response(JSON.stringify({ success: true, data: resData }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" }
-    });
+    console.log(`[send-reset-email] Email successfully sent to ${email}. MessageId: ${resData.messageId}`);
+    return new Response(JSON.stringify({ success: true, data: resData }), { status: 200, headers: corsHeaders });
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" }
-    });
+    console.error("[send-reset-email] Unexpected internal error:", err.message);
+    return new Response(JSON.stringify({ error: "Internal server error", details: err.message }), { status: 500, headers: corsHeaders });
   }
 });
