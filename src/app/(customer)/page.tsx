@@ -17,7 +17,7 @@ const RecentlyViewedProducts = dynamic(() => import("@/components/storefront/Rec
 const RecommendedProducts = dynamic(() => import("@/components/storefront/RecommendedProducts"));
 const ProductCarousel = dynamic(() => import("@/components/storefront/ProductCarousel"));
 const FAQAccordion = dynamic(() => import("@/components/storefront/FAQAccordion"));
-const WhyChooseUs = dynamic(() => import("@/components/storefront/WhyChooseUs"));
+
 const Testimonials = dynamic(() => import("@/components/storefront/Testimonials"));
 
 
@@ -44,7 +44,11 @@ export default async function HomePage() {
   const safeBanners = banners || [];
 
   const safeFlashDeals = flashDeals || [];
-  const safeDeals = (deals as any[]) || [];
+  const safeDeals = ((deals as any[]) || []).filter((d) => {
+    if (d.start_date && new Date(d.start_date) > new Date()) return false;
+    if (d.end_date && new Date(d.end_date) < new Date()) return false;
+    return true;
+  });
   const safeFaqs = faqs || [];
 
   // Load promotional campaigns directly from the database table managed via the admin portal
@@ -81,10 +85,7 @@ export default async function HomePage() {
         <CategorySelector categories={safeCategories} />
       </section>
 
-      {/* Trust & Value Proposition */}
-      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
-        <WhyChooseUs />
-      </section>
+
 
       {/* Flash Sale Carousel */}
       {safeFlashDeals.length > 0 && (
@@ -267,15 +268,15 @@ export default async function HomePage() {
         </React.Fragment>
       ))}
 
-      {/* Testimonials Section */}
-      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
-        <Testimonials />
-      </section>
-
       {/* Personalised sections — only visible to returning visitors */}
       <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
         <RecentlyViewedProducts maxItems={8} />
         <RecommendedProducts maxItems={8} />
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8 mt-4">
+        <Testimonials />
       </section>
 
 

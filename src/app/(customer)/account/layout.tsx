@@ -88,7 +88,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               <Card className="flex flex-col overflow-hidden border-zinc-200">
                 {/* User Identity Section */}
                 <div className="p-5 text-center border-b border-zinc-100 bg-gray-50/50">
-                  <div className="relative w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-semibold mx-auto mb-2">
+                  <div className="relative w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white text-lg font-semibold mx-auto mb-2">
                     {profile ? getInitials(profile.full_name) : <User className="w-6 h-6" />}
                   </div>
                   <h2 className="text-sm font-semibold text-zinc-900 line-clamp-1 px-2">
@@ -107,7 +107,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                             <Link
                               href={link.href}
                               className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${isActive
-                                ? "bg-indigo-600 text-white"
+                                ? "bg-red-600 text-white"
                                 : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                                 }`}
                             >
@@ -146,7 +146,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               <Card className="border-zinc-200">
                 <CardContent className="flex items-center justify-between py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                    <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold shrink-0">
                       {profile ? getInitials(profile.full_name) : <User className="w-5 h-5" />}
                     </div>
                     <div>
@@ -185,7 +185,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                     >
                       <div className="p-5 flex items-center justify-between border-b border-zinc-100">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+                          <div className="w-9 h-9 bg-red-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
                             {profile ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
                           </div>
                           <span className="font-semibold text-zinc-900 text-sm">My Account</span>
@@ -208,7 +208,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                                   href={link.href}
                                   onClick={() => setIsMobileSidebarOpen(false)}
                                   className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium text-sm transition-all ${isActive
-                                    ? "bg-indigo-600 text-white"
+                                    ? "bg-red-600 text-white"
                                     : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                                     }`}
                                 >

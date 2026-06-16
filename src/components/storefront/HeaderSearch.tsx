@@ -170,17 +170,13 @@ function SearchInput() {
   return (
     <div ref={containerRef} className="relative w-full text-left">
       <form onSubmit={handleFormSubmit} className="relative w-full">
-        {loading ? (
-          <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin z-10" />
-        ) : (
-          <button
-            type="submit"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-full cursor-pointer z-10"
-            aria-label="Submit Search"
-          >
-            <Search className="h-4 w-4" />
-          </button>
-        )}
+        <button
+          type="submit"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:rounded-full cursor-pointer z-10"
+          aria-label="Submit Search"
+        >
+          <Search className="h-4 w-4" />
+        </button>
         <input
           type="text"
           value={query}
@@ -197,138 +193,159 @@ function SearchInput() {
       </form>
 
       {/* Auto Suggestions Grouped Dropdown */}
-      {showSuggestions && hasSuggestions && (
+      {showSuggestions && debouncedQuery.length >= 1 && (loading || hasSuggestions || (!loading && !hasSuggestions)) && (
         <div className="absolute top-14 left-0 right-0 z-50 overflow-hidden bg-white border border-zinc-200 shadow-2xl rounded-2xl animate-in fade-in duration-150 divide-y divide-zinc-150 max-h-[450px] overflow-y-auto custom-scrollbar">
           
-          {/* Typo Correction Banner */}
-          {suggestions.did_you_mean && (() => {
-            const index = getItemIndex("did_you_mean", "dym");
-            const isHighlighted = index === activeIndex;
-            return (
-              <Link 
-                href={`/search?q=${encodeURIComponent(suggestions.did_you_mean || "")}`}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => {
-                  setQuery(suggestions.did_you_mean || "");
-                  setShowSuggestions(false);
-                }}
-                className={cn(
-                  "px-5 py-3.5 text-xs flex items-center justify-between cursor-pointer transition-colors border-b border-zinc-100 bg-zinc-50/50 block",
-                  isHighlighted ? "bg-orange-50 border-l-2 border-primary pl-[18px]" : ""
-                )}
-              >
-                <span className="text-zinc-600 font-semibold">
-                  Spelling suggestion: Did you mean <strong className="text-primary font-black">{suggestions.did_you_mean}</strong>?
-                </span>
-                <span className="text-[9px] text-zinc-450 font-bold uppercase tracking-wider">Tab / Enter</span>
-              </Link>
-            );
-          })()}
-
-          {/* Categories Matches */}
-          {suggestions.categories.length > 0 && (
-            <div className="p-3">
-              <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-1">Categories</h4>
-              <div className="space-y-0.5">
-                {suggestions.categories.map((cat) => {
-                  const index = getItemIndex("category", cat.id);
-                  const isHighlighted = index === activeIndex;
-                  return (
-                    <Link
-                      key={cat.id}
-                      href={`/categories/${cat.slug}`}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => setShowSuggestions(false)}
-                      className={cn(
-                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
-                        isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
-                      )}
-                    >
-                      <span className="text-xs font-semibold">{cat.name}</span>
-                      <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Category &rarr;</span>
-                    </Link>
-                  );
-                })}
-              </div>
+          {/* Loading state inside the search results area */}
+          {loading && (
+            <div className="flex items-center justify-center p-6 text-zinc-400 gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-xs font-semibold">Searching...</span>
             </div>
           )}
 
-          {/* Brands Matches */}
-          {suggestions.brands.length > 0 && (
-            <div className="p-3">
-              <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-1">Brands</h4>
-              <div className="space-y-0.5">
-                {suggestions.brands.map((brand) => {
-                  const index = getItemIndex("brand", brand.id);
-                  const isHighlighted = index === activeIndex;
-                  return (
-                    <Link
-                      key={brand.id}
-                      href={`/products?brand=${encodeURIComponent(brand.name)}`}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => setShowSuggestions(false)}
-                      className={cn(
-                        "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
-                        isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
-                      )}
-                    >
-                      <span className="text-xs font-semibold">{brand.name}</span>
-                      <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Brand &rarr;</span>
-                    </Link>
-                  );
-                })}
-              </div>
+          {/* No results state */}
+          {!loading && !hasSuggestions && (
+            <div className="flex flex-col items-center justify-center p-8 text-zinc-500 text-center">
+              <p className="text-xs font-semibold">No results found for &ldquo;{debouncedQuery}&rdquo;</p>
+              <p className="text-[10px] text-zinc-400 mt-1">Try checking your spelling or use more general terms.</p>
             </div>
           )}
 
-          {/* Products Matches */}
-          {suggestions.products.length > 0 && (
-            <div className="p-3">
-              <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-2">Products</h4>
-              <div className="space-y-1">
-                {suggestions.products.map((prod) => {
-                  const index = getItemIndex("product", prod.id);
-                  const isHighlighted = index === activeIndex;
-                  return (
-                    <Link
-                      key={prod.id}
-                      href={`/products/${prod.slug}`}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => setShowSuggestions(false)}
-                      className={cn(
-                        "flex items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition-all flex",
-                        isHighlighted ? "bg-zinc-50 pl-4 border-l-2 border-primary" : "hover:bg-zinc-50/50"
-                      )}
-                    >
-                      <div className="relative w-10 h-10 overflow-hidden bg-zinc-50 rounded-lg shrink-0 border border-zinc-100 flex items-center justify-center">
-                        <Image
-                          src={prod.image_url || "/images/prod_main.png"}
-                          alt={prod.name}
-                          width={40}
-                          height={40}
-                          className="max-h-full max-w-full object-contain p-1"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-xs font-semibold text-zinc-900 truncate">
-                          {highlightMatch(prod.name, query)}
-                        </p>
-                        <p className="text-[10px] text-zinc-500 font-bold mt-0.5">
-                          {prod.sale_price ? (
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-zinc-950 font-black">₹{parseFloat(prod.sale_price).toLocaleString('en-IN')}</span>
-                              <span className="line-through text-zinc-350">₹{parseFloat(prod.price).toLocaleString('en-IN')}</span>
-                            </span>
-                          ) : (
-                            <span className="text-zinc-950 font-black">₹{parseFloat(prod.price).toLocaleString('en-IN')}</span>
+          {/* Grouped Matches */}
+          {!loading && hasSuggestions && (
+            <>
+              {/* Typo Correction Banner */}
+              {suggestions.did_you_mean && (() => {
+                const index = getItemIndex("did_you_mean", "dym");
+                const isHighlighted = index === activeIndex;
+                return (
+                  <Link 
+                    href={`/search?q=${encodeURIComponent(suggestions.did_you_mean || "")}`}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => {
+                      setQuery(suggestions.did_you_mean || "");
+                      setShowSuggestions(false);
+                    }}
+                    className={cn(
+                      "px-5 py-3.5 text-xs flex items-center justify-between cursor-pointer transition-colors border-b border-zinc-100 bg-zinc-50/50 block",
+                      isHighlighted ? "bg-orange-50 border-l-2 border-primary pl-[18px]" : ""
+                    )}
+                  >
+                    <span className="text-zinc-600 font-semibold">
+                      Spelling suggestion: Did you mean <strong className="text-primary font-black">{suggestions.did_you_mean}</strong>?
+                    </span>
+                    <span className="text-[9px] text-zinc-450 font-bold uppercase tracking-wider">Tab / Enter</span>
+                  </Link>
+                );
+              })()}
+
+              {/* Categories Matches */}
+              {suggestions.categories.length > 0 && (
+                <div className="p-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-1">Categories</h4>
+                  <div className="space-y-0.5">
+                    {suggestions.categories.map((cat) => {
+                      const index = getItemIndex("category", cat.id);
+                      const isHighlighted = index === activeIndex;
+                      return (
+                        <Link
+                          key={cat.id}
+                          href={`/categories/${cat.slug}`}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => setShowSuggestions(false)}
+                          className={cn(
+                            "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
+                            isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
                           )}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+                        >
+                          <span className="text-xs font-semibold">{cat.name}</span>
+                          <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Category &rarr;</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Brands Matches */}
+              {suggestions.brands.length > 0 && (
+                <div className="p-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-1">Brands</h4>
+                  <div className="space-y-0.5">
+                    {suggestions.brands.map((brand) => {
+                      const index = getItemIndex("brand", brand.id);
+                      const isHighlighted = index === activeIndex;
+                      return (
+                        <Link
+                          key={brand.id}
+                          href={`/products?brand=${encodeURIComponent(brand.name)}`}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => setShowSuggestions(false)}
+                          className={cn(
+                            "flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all flex",
+                            isHighlighted ? "bg-zinc-50 font-bold text-primary pl-4" : "text-zinc-700 hover:bg-zinc-50/50"
+                          )}
+                        >
+                          <span className="text-xs font-semibold">{brand.name}</span>
+                          <span className="text-[9px] font-bold text-zinc-455 uppercase tracking-widest">Brand &rarr;</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Products Matches */}
+              {suggestions.products.length > 0 && (
+                <div className="p-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 px-3 mb-2">Products</h4>
+                  <div className="space-y-1">
+                    {suggestions.products.map((prod) => {
+                      const index = getItemIndex("product", prod.id);
+                      const isHighlighted = index === activeIndex;
+                      return (
+                        <Link
+                          key={prod.id}
+                          href={`/products/${prod.slug}`}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => setShowSuggestions(false)}
+                          className={cn(
+                            "flex items-center gap-4 px-3 py-2 rounded-xl cursor-pointer transition-all flex",
+                            isHighlighted ? "bg-zinc-50 pl-4 border-l-2 border-primary" : "hover:bg-zinc-50/50"
+                          )}
+                        >
+                          <div className="relative w-10 h-10 overflow-hidden bg-zinc-50 rounded-lg shrink-0 border border-zinc-100 flex items-center justify-center">
+                            <Image
+                              src={prod.image_url || "/images/prod_main.png"}
+                              alt={prod.name}
+                              width={40}
+                              height={40}
+                              className="max-h-full max-w-full object-contain p-1"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-xs font-semibold text-zinc-900 truncate">
+                              {highlightMatch(prod.name, query)}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 font-bold mt-0.5">
+                              {prod.sale_price ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span className="text-zinc-950 font-black">₹{parseFloat(prod.sale_price).toLocaleString('en-IN')}</span>
+                                  <span className="line-through text-zinc-350">₹{parseFloat(prod.price).toLocaleString('en-IN')}</span>
+                                </span>
+                              ) : (
+                                <span className="text-zinc-950 font-black">₹{parseFloat(prod.price).toLocaleString('en-IN')}</span>
+                              )}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

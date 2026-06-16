@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { getDisplayOrderId } from "@/lib/order";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { trackOrder } from "@/app/actions/orders";
 import {
   Dialog, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
@@ -31,11 +32,25 @@ function getStatusStep(status: string) {
   if (s === "processing") return 2;
   if (s === "shipped") return 3;
   if (s === "delivered") return 4;
-  if (s === "return_requested") return 5;
-  if (s === "return_approved") return 6;
-  if (s === "returned") return 7;
-  if (s === "refund_pending") return 8;
-  if (s === "refunded") return 9;
+  if ([
+    "return_requested",
+    "return_approved",
+    "returned",
+    "refund_pending",
+    "refunded"
+  ].includes(s)) {
+    return 5;
+  }
+  return -1;
+}
+
+function getReturnStatusStep(status: string) {
+  const s = status.toLowerCase();
+  if (s === "return_requested") return 0;
+  if (s === "return_approved") return 1;
+  if (s === "returned") return 2;
+  if (s === "refund_pending") return 3;
+  if (s === "refunded") return 4;
   return -1;
 }
 
@@ -143,24 +158,21 @@ function TrackOrderContent() {
     finally { setReviewSubmitting(false); }
   };
 
-  /* tracking */
   const performTracking = async (id: string) => {
     setLoading(true); setError(""); setOrder(null);
     try {
       const trimmedId = id.trim();
-      if (!trimmedId.startsWith("OD")) { setError("Please enter a valid Order ID starting with 'OD'."); return; }
-      const ts = parseInt(trimmedId.substring(2, 15));
-      if (isNaN(ts)) { setError("Invalid Order ID format."); return; }
-      const { data, error: err } = await supabase
-        .from("orders")
-        .select("*, order_items(*, products(id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)), payments(*)")
-        .gte("created_at", new Date(ts - 5000).toISOString())
-        .lte("created_at", new Date(ts + 5000).toISOString());
-      if (err) throw err;
-      const found = data?.find((o: any) => getDisplayOrderId(o.id, o.created_at) === trimmedId);
-      found ? setOrder(found) : setError("We couldn't find an order with that ID.");
-    } catch { setError("An unexpected error occurred. Please try again."); }
-    finally { setLoading(false); }
+      const res = await trackOrder(trimmedId);
+      if (res.success && res.order) {
+        setOrder(res.order);
+      } else {
+        setError(res.error || "We couldn't find an order with that ID.");
+      }
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* realtime */
@@ -205,21 +217,7 @@ function TrackOrderContent() {
     { key: "delivered", label: "Delivered", desc: "Package received successfully.", Icon: ShieldCheck },
   ];
 
-  if ([
-    "return_requested",
-    "return_approved",
-    "returned",
-    "refund_pending",
-    "refunded"
-  ].includes(sl)) {
-    STEPS.push(
-      { key: "return_requested", label: "Return Requested", desc: "Return request received. We'll review it shortly.", Icon: RotateCcw },
-      { key: "return_approved", label: "Return Approved", desc: "Return approved. Please ship the item back.", Icon: RotateCcw },
-      { key: "returned", label: "Returned", desc: "Items returned to our warehouse.", Icon: RotateCcw },
-      { key: "refund_pending", label: "Refund Pending", desc: "Refund is being processed.", Icon: RefreshCcw },
-      { key: "refunded", label: "Refunded", desc: "Refund has been completed.", Icon: RefreshCcw }
-    );
-  }
+
   const step = getStatusStep(sl);
   const isTerminal = step === -1;
   const col = statusColor(sl);
@@ -416,17 +414,17 @@ function TrackOrderContent() {
 
                     {/* carrier */}
                     {order.tracking_id && (
-                      <div className="px-6 py-4 flex items-center justify-between gap-4 bg-indigo-50/50">
+                      <div className="px-6 py-4 flex items-center justify-between gap-4 bg-red-50/50">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                          <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center text-white shrink-0">
                             <Truck className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{order.carrier || "Delivery Partner"}</p>
+                            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{order.carrier || "Delivery Partner"}</p>
                             <p className="text-xs font-bold text-zinc-900 font-mono">{order.tracking_id}</p>
                           </div>
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-full">In Transit</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-red-600 bg-red-100 px-2.5 py-1 rounded-full">In Transit</span>
                       </div>
                     )}
                   </div>
@@ -569,6 +567,135 @@ function TrackOrderContent() {
                       </div>
                     )}
                   </div>
+
+                  {/* ── Return Progress Timeline card ── */}
+                  {order.return_tracking_id && (
+                    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 mt-6 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                          <RotateCcw className="w-4 h-4 text-rose-500" />
+                          <h3 className="text-sm font-bold text-zinc-900">Return Progress</h3>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-rose-600 bg-rose-100 px-2.5 py-1 rounded-full animate-pulse">
+                          Reverse Logistics
+                        </span>
+                      </div>
+
+                      {/* Return Logistics Carrier and Tracking ID */}
+                      <div className="p-4 bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-rose-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                            <Truck className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">
+                              {order.return_carrier || "Reverse Logistics Partner"}
+                            </p>
+                            <p className="text-xs font-bold text-zinc-900 font-mono">
+                              {order.return_tracking_id}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col justify-center sm:text-right">
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Return Status</p>
+                          <p className="text-xs font-black text-rose-600 capitalize">
+                            {STATUS_LABEL[sl] ?? order.status.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Visual Timeline of Return Stages */}
+                      <div className="relative">
+                        {(() => {
+                          const returnStep = getReturnStatusStep(sl);
+                          const RETURN_STEPS = [
+                            { key: "return_requested", label: "Return Requested", desc: "Return request received. We'll review it shortly.", Icon: RotateCcw },
+                            { key: "return_approved", label: "Return Approved", desc: "Return approved. Please ship the item back.", Icon: BadgeCheck },
+                            { key: "returned", label: "Returned", desc: "Items returned to our warehouse.", Icon: Package },
+                            { key: "refund_pending", label: "Refund Pending", desc: "Refund is being processed.", Icon: RefreshCcw },
+                            { key: "refunded", label: "Refunded", desc: "Refund has been completed.", Icon: ShieldCheck },
+                          ];
+
+                          return RETURN_STEPS.map((st, idx) => {
+                            const isDone = returnStep > idx;
+                            const isCurrent = returnStep === idx;
+                            const isPending = returnStep < idx || returnStep === -1;
+                            const { Icon } = st;
+                            const isLast = idx === RETURN_STEPS.length - 1;
+
+                            return (
+                              <div key={st.key} className="flex gap-4">
+                                {/* ─ left column: dot + line ─ */}
+                                <div className="flex flex-col items-center w-10 shrink-0">
+                                  <motion.div
+                                    initial={false}
+                                    animate={isCurrent ? { scale: [1, 1.12, 1] } : {}}
+                                    transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                                    className={cn(
+                                      "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10 shrink-0",
+                                      isDone && "bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-100",
+                                      isCurrent && "text-white shadow-lg ring-4 bg-rose-500 border-rose-500 ring-rose-500/10",
+                                      isPending && "bg-white border-zinc-200 text-zinc-300"
+                                    )}
+                                  >
+                                    {isDone ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      <Icon className="w-4.5 h-4.5" />
+                                    )}
+                                  </motion.div>
+                                  {!isLast && (
+                                    <div className="relative w-0.5 flex-1 my-1 overflow-hidden rounded-full bg-zinc-100" style={{ minHeight: "2.5rem" }}>
+                                      <motion.div
+                                        className="absolute inset-x-0 top-0 bg-rose-400 rounded-full"
+                                        initial={{ height: "0%" }}
+                                        animate={{ height: isDone ? "100%" : "0%" }}
+                                        transition={{ duration: 0.5, delay: idx * 0.1 }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* ─ right column: content ─ */}
+                                <div className={cn("pb-7 pt-1.5 flex-1 min-w-0", isLast && "pb-0")}>
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className={cn(
+                                      "text-sm font-bold",
+                                      isDone && "text-rose-700",
+                                      isCurrent && "text-zinc-950",
+                                      isPending && "text-zinc-300"
+                                    )}>
+                                      {st.label}
+                                    </span>
+                                    {isCurrent && (
+                                      <span className="text-[9px] font-black uppercase tracking-widest bg-zinc-950 text-white px-2 py-0.5 rounded-full animate-pulse">
+                                        Current
+                                      </span>
+                                    )}
+                                    {isDone && (
+                                      <span className="text-[9px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                                        ✓ Done
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className={cn("text-xs leading-relaxed", isPending ? "text-zinc-300" : "text-zinc-500")}>
+                                    {st.desc}
+                                  </p>
+
+                                  {(isDone || isCurrent) && (
+                                    <p className="text-[10px] font-mono text-zinc-400 mt-1.5">
+                                      {fmtDate(order.updated_at || order.created_at)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div key="empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}

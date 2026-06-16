@@ -65,6 +65,7 @@ export async function updateSession(request: NextRequest) {
       await (supabase.auth as any).signOut();
       const url = request.nextUrl.clone();
       url.pathname = "/login";
+      url.searchParams.set("error", "suspended");
       const redirectResponse = NextResponse.redirect(url);
       supabaseResponse.cookies.getAll().forEach(cookie => {
         redirectResponse.cookies.set(cookie.name, cookie.value, cookie);

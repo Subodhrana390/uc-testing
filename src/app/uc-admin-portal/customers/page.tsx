@@ -176,7 +176,7 @@ export default function CustomersPage() {
       setTableCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, status: newStatus } : c));
       toast.success(`Account ${newStatus === 'suspended' ? 'suspended' : 'activated'}`);
     } catch (error: any) {
-      toast.error(`Update failed. The database schema might lack a 'status' column on profiles.`);
+      toast.error(error.message || `Update failed.`);
     }
   };
 

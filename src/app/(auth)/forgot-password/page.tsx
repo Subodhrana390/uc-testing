@@ -19,7 +19,7 @@ function ForgotPasswordContainer() {
     event.preventDefault();
     setLoading(true);
     const formData = new FormData(event.currentTarget);
-    
+
     const result = await requestPasswordReset(formData, window.location.origin);
 
     if (result?.error) {

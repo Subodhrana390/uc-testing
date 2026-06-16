@@ -26,6 +26,33 @@ function AuthContainer() {
     setMode(initialMode);
   }, [initialMode]);
 
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "suspended") {
+      toast.error("Your account has been suspended. Please contact support for assistance.");
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("error");
+      const nextMode = params.get("mode") || "login";
+      const nextReturn = params.get("returnTo") || "/account/profile";
+      router.replace(`/login?mode=${nextMode}&returnTo=${encodeURIComponent(nextReturn)}`, { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  async function handleGoogleSignIn() {
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(returnTo)}`,
+      },
+    });
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+    }
+  }
+
   const changeMode = (newMode: "login" | "register") => {
     setMode(newMode);
     router.replace(`/login?mode=${newMode}&returnTo=${encodeURIComponent(returnTo)}`, { scroll: false });
@@ -62,7 +89,7 @@ function AuthContainer() {
         setLoading(false);
       } else if (profile?.status === "suspended") {
         await supabase.auth.signOut();
-        toast.error("Your account has been suspended. Please contact support.");
+        toast.error("Your account has been suspended. Please contact support for assistance.");
         setLoading(false);
       } else {
         toast.success("Welcome back!");
@@ -215,6 +242,42 @@ function AuthContainer() {
                     <>Sign in <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-zinc-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-zinc-500">Or continue with</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full h-12 bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 font-semibold rounded-lg transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <path
+                      fill="#EA4335"
+                      d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.19 2.709 1.24 6.645l4.026 3.12z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M16.04 15.34C14.95 16.03 13.56 16.45 12 16.45c-2.91 0-5.382-1.973-6.26-4.636L1.71 14.9C3.69 18.96 7.8 21.72 12 21.72c3.07 0 5.86-1.01 7.95-2.73l-3.91-3.65z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M19.95 18.99c2.51-2.07 3.96-5.51 3.96-9.54 0-.64-.06-1.25-.17-1.85H12v4.51h6.63c-.29 1.53-1.15 2.82-2.45 3.68l3.77 3.2z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M5.74 11.814a7.07 7.07 0 0 1 0-2.063l-4.02-3.13A11.932 11.932 0 0 0 0 12c0 2.21.6 4.3 1.72 6.12l4.02-3.126z"
+                    />
+                  </svg>
+                  Continue with Google
+                </button>
               </form>
             </motion.div>
           )}
@@ -295,6 +358,42 @@ function AuthContainer() {
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                     <>Create Account <ArrowRight className="w-4 h-4" /></>
                   )}
+                </button>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-zinc-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-zinc-500">Or continue with</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full h-12 bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 font-semibold rounded-lg transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <path
+                      fill="#EA4335"
+                      d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.19 2.709 1.24 6.645l4.026 3.12z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M16.04 15.34C14.95 16.03 13.56 16.45 12 16.45c-2.91 0-5.382-1.973-6.26-4.636L1.71 14.9C3.69 18.96 7.8 21.72 12 21.72c3.07 0 5.86-1.01 7.95-2.73l-3.91-3.65z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M19.95 18.99c2.51-2.07 3.96-5.51 3.96-9.54 0-.64-.06-1.25-.17-1.85H12v4.51h6.63c-.29 1.53-1.15 2.82-2.45 3.68l3.77 3.2z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M5.74 11.814a7.07 7.07 0 0 1 0-2.063l-4.02-3.13A11.932 11.932 0 0 0 0 12c0 2.21.6 4.3 1.72 6.12l4.02-3.126z"
+                    />
+                  </svg>
+                  Continue with Google
                 </button>
               </form>
             </motion.div>

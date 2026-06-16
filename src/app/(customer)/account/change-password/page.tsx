@@ -130,7 +130,7 @@ export default function ChangePasswordPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm w-full sm:w-auto"
+                className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm w-full sm:w-auto"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />

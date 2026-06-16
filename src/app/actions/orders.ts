@@ -4,6 +4,8 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { getReturnWindowInfo } from '@/lib/order'
+import { createServiceRoleClient } from "@/utils/supabase/service-role";
+
 
 export async function createOrder(orderData: {
   fullName: string
@@ -29,15 +31,12 @@ export async function createOrder(orderData: {
   emiInterestRate?: number
   emiTotalPayable?: number
   emiDetails?: any
+  country?: string
 }) {
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      console.error('Order auth error:', authError)
-      return { success: false, error: 'Unauthorized: Please ensure you are logged in.' }
-    }
+    const { data: { user } } = await supabase.auth.getUser()
 
     // Read attribution cookies
     const cookieStore = cookies()
@@ -55,31 +54,44 @@ export async function createOrder(orderData: {
 
     const attribution = { first_touch, latest_touch }
 
-    // Rate Limiting / Checkout Throttling (Max 1 order per 30 seconds per user)
+    // Rate Limiting / Checkout Throttling (Max 1 order per 30 seconds)
     const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString()
-    const { count, error: countError } = await supabase
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', thirtySecondsAgo)
+    if (user) {
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', thirtySecondsAgo)
 
-    if (count && count > 0) {
-      console.warn(`Checkout throttled for user ${user.id}`)
-      return { success: false, error: 'Please wait a moment before placing another order to prevent duplicates.' }
+      if (count && count > 0) {
+        console.warn(`Checkout throttled for user ${user.id}`)
+        return { success: false, error: 'Please wait a moment before placing another order to prevent duplicates.' }
+      }
+    } else {
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_email', orderData.email)
+        .gte('created_at', thirtySecondsAgo)
+
+      if (count && count > 0) {
+        console.warn(`Checkout throttled for guest ${orderData.email}`)
+        return { success: false, error: 'Please wait a moment before placing another order.' }
+      }
     }
 
     // Call Postgres RPC for transactional atomic order & inventory updates
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
       'place_order_safe',
       {
-        p_user_id: user.id,
+        p_user_id: user ? user.id : null,
         p_customer_name: orderData.fullName,
         p_customer_email: orderData.email,
         p_phone: orderData.phone,
         p_shipping_address: `${orderData.address}, ${orderData.city}, ${orderData.state} - ${orderData.postalCode}`,
         p_payment_method: orderData.paymentMethod,
         p_delivery_estimate: orderData.deliveryEstimate || null,
-        p_idempotency_key: `order_${Date.now()}_${user.id}`, // Idempotency protection
+        p_idempotency_key: `order_${Date.now()}_${user ? user.id : 'guest_' + Math.random().toString(36).substring(2, 9)}`, // Idempotency protection
         p_items: orderData.items.map(item => ({
           id: item.id,
           quantity: item.quantity
@@ -96,7 +108,10 @@ export async function createOrder(orderData: {
         p_emi_total_payable: orderData.emiTotalPayable || null,
         p_emi_details: orderData.emiDetails || null,
         p_tax_amount: orderData.taxAmount || 0,
-        p_shipping_amount: orderData.shippingAmount || 0
+        p_shipping_amount: orderData.shippingAmount || 0,
+        p_city: orderData.city || null,
+        p_state: orderData.state || null,
+        p_country: orderData.country || 'India'
       }
     )
 
@@ -226,7 +241,12 @@ export async function returnOrder(orderId: string, reason: string, bankDetails?:
       return { success: false, error: result.error || 'Failed to return order' }
     }
 
-    const updateData: any = { payment_status: 'Refund Pending' };
+    const returnTrackingId = "RTK" + Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    const updateData: any = { 
+      payment_status: 'Refund Pending',
+      return_tracking_id: returnTrackingId,
+      return_carrier: 'Reverse Logistics Partner'
+    };
     if (bankDetails) {
       updateData.refund_bank_details = bankDetails;
     }
@@ -258,47 +278,52 @@ export async function returnOrder(orderId: string, reason: string, bankDetails?:
  *  2. Order payment_status must still be 'Unpaid' (not Paid / partially processed)
  * This prevents accidental deletion of successfully paid orders.
  */
-export async function deleteFailedOrder(orderId: string) {
+export async function deleteFailedOrder(orderId: string, targetStatus: 'CANCELLED' | 'FAILED' = 'CANCELLED') {
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return { success: false, error: 'Unauthorized' }
-    }
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // First verify the order belongs to this user and is still unpaid
-    const { data: order, error: fetchError } = await supabase
+    // Retrieve order by ID (bypass client-side selector restriction to verify ownership)
+    const serviceRoleSupabase = createServiceRoleClient();
+    const { data: order, error: fetchError } = await serviceRoleSupabase
       .from('orders')
       .select('id, payment_status, user_id')
       .eq('id', orderId)
-      .eq('user_id', user.id)        // ownership check
       .single()
 
     if (fetchError || !order) {
-      console.error('deleteFailedOrder: order not found or unauthorized', fetchError)
-      return { success: false, error: 'Order not found or access denied' }
+      console.error('deleteFailedOrder: order not found', fetchError)
+      return { success: false, error: 'Order not found' }
     }
 
-    // Only delete if payment hasn't been processed
+    // Access control check: if order belongs to a user, that user must match
+    const isGuestOrder = !order.user_id;
+    if (!isGuestOrder && (!user || order.user_id !== user.id)) {
+      return { success: false, error: 'Access denied' }
+    }
+
+    // Only allow transition if payment hasn't been processed
     if (order.payment_status === 'Paid') {
-      console.warn('deleteFailedOrder: attempted to delete a paid order', orderId)
-      return { success: false, error: 'Cannot delete a successfully paid order' }
+      console.warn('deleteFailedOrder: attempted to fail/cancel a paid order', orderId)
+      return { success: false, error: 'Cannot cancel a successfully paid order' }
     }
 
-    // Delete order items first (FK constraint)
-    await supabase.from('order_items').delete().eq('order_id', orderId)
+    // Call PostgreSQL RPC transition_order_status to fail/cancel
+    const { data: rpcResult, error: rpcError } = await serviceRoleSupabase.rpc(
+      'transition_order_status',
+      {
+        p_order_id: orderId,
+        p_new_status: targetStatus,
+        p_actor_type: user ? 'customer' : 'system',
+        p_actor_id: user ? user.id : null,
+        p_remarks: targetStatus === 'CANCELLED' ? 'Cancelled at payment window' : 'Payment failed'
+      }
+    )
 
-    // Delete the order itself
-    const { error: deleteError } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', orderId)
-      .eq('user_id', user.id)
-
-    if (deleteError) {
-      console.error('deleteFailedOrder: delete error', deleteError)
-      return { success: false, error: 'Failed to remove failed order' }
+    if (rpcError) {
+      console.error('Order fail/cancel RPC error:', rpcError)
+      return { success: false, error: 'Failed to update order status' }
     }
 
     revalidatePath('/account/orders')
@@ -308,4 +333,40 @@ export async function deleteFailedOrder(orderId: string) {
     return { success: false, error: error.message || 'Unexpected error' }
   }
 }
+
+export async function trackOrder(displayOrderId: string) {
+  try {
+    const trimmedId = displayOrderId.trim();
+    if (!trimmedId.startsWith("OD")) {
+      return { success: false, error: "Please enter a valid Order ID starting with 'OD'." };
+    }
+    const ts = parseInt(trimmedId.substring(2, 15));
+    if (isNaN(ts)) {
+      return { success: false, error: "Invalid Order ID format." };
+    }
+
+    const supabase = createServiceRoleClient(); // bypass RLS to query by created_at safely
+
+    const { data: orders, error: err } = await supabase
+      .from("orders")
+      .select("*, order_items(*, products(id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)), payments(*)")
+      .gte("created_at", new Date(ts - 5000).toISOString())
+      .lte("created_at", new Date(ts + 5000).toISOString());
+
+    if (err) throw err;
+
+    const { getDisplayOrderId } = await import('@/lib/order');
+    const found = orders?.find((o: any) => getDisplayOrderId(o.id, o.created_at) === trimmedId);
+    
+    if (!found) {
+      return { success: false, error: "We couldn't find an order with that ID." };
+    }
+
+    return { success: true, order: found };
+  } catch (error: any) {
+    console.error("trackOrder action error:", error);
+    return { success: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
 

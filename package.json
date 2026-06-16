@@ -44,8 +44,11 @@
     "react-hot-toast": "^2.6.0",
     "recharts": "^2.12.2",
     "server-only": "^0.0.1",
+    "sharp": "^0.33.2",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "ws": "^8.21.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
