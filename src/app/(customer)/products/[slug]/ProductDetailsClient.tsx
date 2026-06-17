@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FileText, Download, Share2, Star, CreditCard, AlertCircle, Loader2, ShieldCheck, Wallet, Banknote } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
@@ -442,12 +442,15 @@ export default function ProductDetailsClient({
 
           <div className="space-y-4 py-2">
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
-              <span className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
-                {formatCurrency(product.sale_price || product.price)}
-              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
+                  {formatCurrency(getExclusivePrice(product.sale_price || product.price, product.is_tax_inclusive, product.igst_rate))}
+                </span>
+                <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider">+ GST</span>
+              </div>
               {product.sale_price && (
                 <span className="text-lg sm:text-xl font-medium text-zinc-400 line-through">
-                  {formatCurrency(product.price)}
+                  {formatCurrency(getExclusivePrice(product.price, product.is_tax_inclusive, product.igst_rate))}
                 </span>
               )}
               {discount && (
@@ -456,7 +459,7 @@ export default function ProductDetailsClient({
                 </span>
               )}
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
-                Inclusive of all taxes
+                Exclusive of GST
               </span>
             </div>
 
@@ -648,7 +651,7 @@ export default function ProductDetailsClient({
               <span>EMI Payment Plans</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-400 font-medium">
-              Calculated installments for **{product.name}** at {formatCurrency(product.sale_price || product.price)}
+              Calculated installments for **{product.name}** at {formatCurrency(product.sale_price || product.price)} (Incl. GST)
             </DialogDescription>
           </DialogHeader>
 

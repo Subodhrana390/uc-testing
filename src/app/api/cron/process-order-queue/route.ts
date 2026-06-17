@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
+import Razorpay from "razorpay";
 
 export async function GET(req: Request) {
   try {
@@ -96,9 +97,38 @@ export async function GET(req: Request) {
         if (targetPaymentStatus === "Paid" && (statusUpper === "PENDING" || statusUpper === "PENDING_PAYMENT")) {
           shouldTransition = true;
           transitionTo = "PLACED";
+        } else if (targetPaymentStatus === "Paid" && statusUpper === "CANCELLED") {
+          // EDGE CASE 1: Late payment for a cancelled order (Ghost Payment)
+          // Automatically trigger a refund using Razorpay API
+          console.warn(`Late payment received for cancelled order ${order.id}. Auto-refunding.`);
+          const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID!,
+            key_secret: process.env.RAZORPAY_KEY_SECRET!,
+          });
+          try {
+            const refund = await razorpay.payments.refund(razorpayPaymentId, {
+              amount: Math.round(parseFloat(order.total_amount) * 100)
+            });
+            console.log(`Auto-refunded ghost payment: ${refund.id}`);
+            // Force the target state to Refunded to record the refund properly in our DB
+            targetPaymentStatus = "Refunded";
+            targetTransactionStatus = "refunded";
+            refundAmount = parseFloat(order.total_amount);
+            shouldTransition = true;
+            transitionTo = "REFUNDED";
+            
+            // Store the refund ID
+            updatePayload.razorpay_refund_id = refund.id;
+          } catch (refundError) {
+            console.error("Failed to auto-refund ghost payment:", refundError);
+          }
         } else if (targetPaymentStatus === "Failed") {
           shouldTransition = true;
           transitionTo = "CANCELLED";
+        } else if (targetPaymentStatus === "Refunded") {
+          // EDGE CASE 2: External dashboard refund (refund.processed webhook)
+          shouldTransition = true;
+          transitionTo = "REFUNDED";
         }
 
         const { data: updatedOrder, error: updateError } = await supabase

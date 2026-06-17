@@ -24,3 +24,9 @@ export function formatDate(value: string | null | undefined) {
     year: "numeric",
   }).format(new Date(value));
 }
+
+export function getExclusivePrice(price: number, isTaxInclusive?: boolean, taxRate?: number) {
+  if (isTaxInclusive === false) return price;
+  const rate = taxRate || 18; // Defaulting to 18% if not explicitly set
+  return price / (1 + rate / 100);
+}

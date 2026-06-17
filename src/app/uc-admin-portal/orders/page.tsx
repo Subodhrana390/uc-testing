@@ -495,7 +495,12 @@ export default function OrdersPage() {
           order_items (
             quantity,
             products (
-              name
+              name,
+              hsn_code,
+              is_tax_inclusive,
+              igst_rate,
+              cgst_rate,
+              sgst_rate
             )
           )
         `)
@@ -520,7 +525,14 @@ export default function OrdersPage() {
           *,
           items:order_items (
             *,
-            products (name)
+            products (
+              name,
+              hsn_code,
+              is_tax_inclusive,
+              igst_rate,
+              cgst_rate,
+              sgst_rate
+            )
           )
         `, { count: "exact" });
 
@@ -1767,14 +1779,14 @@ export default function OrdersPage() {
                               <div className="flex flex-col items-start gap-1.5">
                                 <div>{getStatusBadge(order.status)}</div>
                                 {['RETURNED', 'RETURN_REQUESTED', 'RETURN_APPROVED', 'REFUND_PENDING', 'REFUNDED'].includes(order.status?.toUpperCase() || '') &&
-                                 order.payment_method?.toUpperCase() === 'COD' &&
-                                 order.refund_bank_details && (
-                                  <div className="text-[10px] text-orange-700 bg-orange-50 border border-orange-100 rounded-md px-2 py-1 font-semibold max-w-[150px]">
-                                    <span className="font-bold block uppercase tracking-wider text-[8px] text-orange-850 mb-0.5">Refund Account</span>
-                                    <div className="font-mono font-bold text-zinc-900 leading-tight select-all">{order.refund_bank_details.accountNumber}</div>
-                                    <div className="text-zinc-500 font-semibold leading-tight text-[9px] mt-0.5 truncate">{order.refund_bank_details.bankName}</div>
-                                  </div>
-                                )}
+                                  order.payment_method?.toUpperCase() === 'COD' &&
+                                  order.refund_bank_details && (
+                                    <div className="text-[10px] text-orange-700 bg-orange-50 border border-orange-100 rounded-md px-2 py-1 font-semibold max-w-[150px]">
+                                      <span className="font-bold block uppercase tracking-wider text-[8px] text-orange-850 mb-0.5">Refund Account</span>
+                                      <div className="font-mono font-bold text-zinc-900 leading-tight select-all">{order.refund_bank_details.accountNumber}</div>
+                                      <div className="text-zinc-500 font-semibold leading-tight text-[9px] mt-0.5 truncate">{order.refund_bank_details.bankName}</div>
+                                    </div>
+                                  )}
                               </div>
                             </TableCell>
                           )}
@@ -1846,8 +1858,8 @@ export default function OrdersPage() {
                                       View Details
                                     </DropdownMenuItem>
 
-                                    <DropdownMenuItem 
-                                      onClick={() => handleGenerateInvoice(order.id)} 
+                                    <DropdownMenuItem
+                                      onClick={() => handleGenerateInvoice(order.id)}
                                       disabled={generatingInvoiceId === order.id}
                                     >
                                       {generatingInvoiceId === order.id ? (
@@ -1935,7 +1947,7 @@ export default function OrdersPage() {
 
       {/* Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px] gap-0 p-0 bg-white border border-zinc-200 shadow-xl rounded-2xl overflow-hidden">
+        <DialogContent className="sm:max-w-[850px] gap-0 p-0 bg-white border border-zinc-200 shadow-xl rounded-2xl overflow-hidden">
           <DialogHeader className="p-6 pb-4 border-b border-zinc-150">
             <DialogTitle className="text-zinc-900 font-bold">
               Order Details - {selectedOrder ? getDisplayOrderId(selectedOrder.id, selectedOrder.created_at) : ""}
@@ -1994,9 +2006,17 @@ export default function OrdersPage() {
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Shipping Address</h4>
+                    <p className="text-zinc-800 font-semibold text-xs">
+                      {selectedOrder.customer_name}
+                    </p>
                     <p className="text-zinc-600 text-xs leading-relaxed whitespace-pre-wrap">
                       {selectedOrder.shipping_address || "No shipping record details"}
                     </p>
+                    {selectedOrder.phone && (
+                      <p className="text-zinc-600 text-xs font-medium pt-1">
+                        Mobile: {selectedOrder.phone}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Payment Details</h4>
@@ -2098,18 +2118,58 @@ export default function OrdersPage() {
                       <TableHeader className="bg-zinc-50">
                         <TableRow className="border-b border-zinc-200">
                           <TableHead className="font-bold text-zinc-600">Product Name</TableHead>
-                          <TableHead className="text-center w-16 font-bold text-zinc-600">Qty</TableHead>
+                          <TableHead className="text-center w-12 font-bold text-zinc-600">Qty</TableHead>
+                          <TableHead className="text-right font-bold text-zinc-600">Rate</TableHead>
+                          <TableHead className="text-right font-bold text-zinc-600">Taxable</TableHead>
+                          <TableHead className="text-right font-bold text-zinc-600">GST %</TableHead>
+                          <TableHead className="text-right font-bold text-zinc-600">GST Amt</TableHead>
                           <TableHead className="text-right font-bold text-zinc-600">Total</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-zinc-100">
-                        {selectedOrder.items?.map((item: any, i: number) => (
-                          <TableRow key={i} className="hover:bg-zinc-50 border-b border-zinc-100">
-                            <TableCell className="font-medium text-[#18181b]">{item.products?.name}</TableCell>
-                            <TableCell className="text-center text-zinc-600">x{item.quantity}</TableCell>
-                            <TableCell className="text-right font-bold text-[#18181b]">₹{parseFloat(item.unit_price).toLocaleString('en-IN')}</TableCell>
-                          </TableRow>
-                        ))}
+                        {selectedOrder.items?.map((item: any, i: number) => {
+                          const quantity = item.quantity;
+                          const unitPrice = parseFloat(item.unit_price);
+                          const itemTotal = quantity * unitPrice;
+                          const igst = item.products?.igst_rate || 0;
+                          const cgst = item.products?.cgst_rate || 0;
+                          const sgst = item.products?.sgst_rate || 0;
+                          const rate = igst > 0 ? igst : (cgst + sgst);
+                          const isTaxInclusive = item.products?.is_tax_inclusive || false;
+
+                          let baseTotal = itemTotal;
+                          let taxAmount = 0;
+                          let lineTotal = itemTotal;
+
+                          if (rate > 0) {
+                            if (isTaxInclusive) {
+                              baseTotal = itemTotal / (1 + rate / 100);
+                              taxAmount = itemTotal - baseTotal;
+                            } else {
+                              taxAmount = itemTotal * (rate / 100);
+                              lineTotal = itemTotal + taxAmount;
+                            }
+                          }
+
+                          const baseUnitPrice = baseTotal / quantity;
+
+                          return (
+                            <TableRow key={i} className="hover:bg-zinc-50 border-b border-zinc-100">
+                              <TableCell className="font-medium text-[#18181b]">
+                                {item.products?.name}
+                                {item.products?.hsn_code && (
+                                  <div className="text-[10px] text-zinc-500 font-normal mt-0.5">HSN: {item.products.hsn_code}</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center text-zinc-600">x{quantity}</TableCell>
+                              <TableCell className="text-right text-zinc-600 font-medium">₹{baseUnitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell className="text-right text-zinc-600 font-medium">₹{baseTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell className="text-right text-zinc-600 font-medium">{rate > 0 ? `${rate}%` : "-"}</TableCell>
+                              <TableCell className="text-right text-zinc-600 font-medium">{taxAmount > 0 ? `₹${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}</TableCell>
+                              <TableCell className="text-right font-bold text-[#18181b]">₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -2117,24 +2177,118 @@ export default function OrdersPage() {
 
                 {/* Pricing Summary Breakdown */}
                 {(() => {
-                  const subtotal = selectedOrder.items?.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
+                  const totalAmt = parseFloat(selectedOrder.total_amount || 0);
+                  const shipAmt = parseFloat(selectedOrder.shipping_amount || 0);
+                  const discAmt = parseFloat(selectedOrder.discount_amount || 0);
+
+                  let cgstAmt = 0;
+                  let sgstAmt = 0;
+                  let igstAmt = 0;
+                  let subtotalExclGst = 0;
+
+                  let orderCgstRate = 0;
+                  let orderSgstRate = 0;
+                  let orderIgstRate = 0;
+
+                  selectedOrder.items?.forEach((item: any) => {
+                    const quantity = item.quantity;
+                    const unitPrice = parseFloat(item.unit_price);
+                    const itemTotal = quantity * unitPrice;
+                    const igstRate = item.products?.igst_rate || 0;
+                    const cgstRate = item.products?.cgst_rate || 0;
+                    const sgstRate = item.products?.sgst_rate || 0;
+                    const rate = igstRate > 0 ? igstRate : (cgstRate + sgstRate);
+                    const isTaxInclusive = item.products?.is_tax_inclusive || false;
+
+                    if (igstRate > 0) orderIgstRate = igstRate;
+                    if (cgstRate > 0) orderCgstRate = cgstRate;
+                    if (sgstRate > 0) orderSgstRate = sgstRate;
+
+                    let itemTax = 0;
+                    let itemBase = itemTotal;
+
+                    if (rate > 0) {
+                      if (isTaxInclusive) {
+                        itemBase = itemTotal / (1 + rate / 100);
+                        itemTax = itemTotal - itemBase;
+                      } else {
+                        itemTax = itemTotal * (rate / 100);
+                      }
+
+                      if (igstRate > 0) {
+                        igstAmt += itemTax;
+                      } else {
+                        const totalCgstSgst = cgstRate + sgstRate;
+                        if (totalCgstSgst > 0) {
+                          cgstAmt += itemTax * (cgstRate / totalCgstSgst);
+                          sgstAmt += itemTax * (sgstRate / totalCgstSgst);
+                        }
+                      }
+                    }
+                    subtotalExclGst += itemBase;
+                  });
+
+                  const actualTax = cgstAmt + sgstAmt + igstAmt;
+
+                  if (subtotalExclGst === 0 && totalAmt > 0) {
+                    const rawTaxAmt = parseFloat(selectedOrder.tax_amount || 0);
+                    subtotalExclGst = totalAmt - rawTaxAmt - shipAmt + discAmt;
+                  }
+
+                  const expectedTotal = subtotalExclGst + actualTax + shipAmt - discAmt;
+                  const diff = totalAmt - expectedTotal;
+                  const isShippingGst = diff > 0 && Math.abs(diff - (shipAmt * 0.18)) < 0.1;
+                  const shippingGst = isShippingGst ? diff : 0;
+                  const roundOff = isShippingGst ? 0 : diff;
+
                   return (
                     <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5">
-                      <div className="flex justify-between text-xs font-bold text-zinc-500">
-                        <span>SUBTOTAL</span>
-                        <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <div className="flex justify-between text-xs font-bold text-zinc-500 pb-1 border-b border-zinc-200/60 mb-2">
+                        <span>SUBTOTAL (EXCL. GST)</span>
+                        <span>₹{subtotalExclGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
-                      {parseFloat(selectedOrder.tax_amount || 0) > 0 && (
-                        <div className="flex justify-between text-xs font-bold text-zinc-500">
-                          <span>GST</span>
-                          <span>₹{parseFloat(selectedOrder.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                      {parseFloat(selectedOrder.shipping_amount || 0) > 0 && (
-                        <div className="flex justify-between text-xs font-bold text-zinc-500">
-                          <span>DELIVERY CHARGE</span>
-                          <span>₹{parseFloat(selectedOrder.shipping_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
+                      {(actualTax > 0 || shipAmt > 0 || Math.abs(roundOff) > 0.01) && (
+                        <details className="group">
+                          <summary className="flex justify-between text-xs font-bold text-zinc-500 cursor-pointer list-none appearance-none outline-none">
+                            <span className="flex items-center gap-1">
+                              <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
+                              TOTAL FEE
+                            </span>
+                            <span>₹{(actualTax + shipAmt + shippingGst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </summary>
+                          <div className="pt-2 pb-1 space-y-1.5 ml-3">
+                            {cgstAmt > 0 && (
+                              <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                                <span>CGST {orderCgstRate > 0 ? `(${orderCgstRate}%)` : ''}</span>
+                                <span>₹{cgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+                            {sgstAmt > 0 && (
+                              <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                                <span>SGST {orderSgstRate > 0 ? `(${orderSgstRate}%)` : ''}</span>
+                                <span>₹{sgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+                            {igstAmt > 0 && (
+                              <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                                <span>IGST {orderIgstRate > 0 ? `(${orderIgstRate}%)` : ''}</span>
+                                <span>₹{igstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+                            {shipAmt > 0 && (
+                              <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                                <span>DELIVERY CHARGE</span>
+                                <span>₹{shipAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+                            {shippingGst > 0 && (
+                              <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                                <span>SHIPPING GST (18%)</span>
+                                <span>+₹{shippingGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            )}
+                          </div>
+                        </details>
                       )}
                       {parseFloat(selectedOrder.discount_amount || 0) > 0 && (
                         <div className="flex justify-between text-xs font-bold text-rose-600">
@@ -2142,6 +2296,10 @@ export default function OrdersPage() {
                           <span>-₹{parseFloat(selectedOrder.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
+                      <div className="flex justify-between text-sm font-black text-zinc-900 border-t border-zinc-200 pt-2.5">
+                        <span>TOTAL AMOUNT</span>
+                        <span>₹{parseFloat(selectedOrder.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
                     </div>
                   );
                 })()}
@@ -2169,7 +2327,7 @@ export default function OrdersPage() {
           <div className="p-6 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between mt-auto">
             <span className="text-sm font-bold text-zinc-600">Total Invoice Amount</span>
             <span className="text-xl font-extrabold text-[#18181b]">
-              ₹{selectedOrder ? parseFloat(selectedOrder.total_amount).toLocaleString('en-IN') : 0}
+              ₹{selectedOrder ? parseFloat(selectedOrder.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
             </span>
           </div>
         </DialogContent>

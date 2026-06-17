@@ -40,7 +40,9 @@ export default function AddProductPage() {
     manufacturing_info: "",
     warranty_info: "",
     images: [] as string[],
-    tax_rate: "0",
+    igst_rate: "0",
+    cgst_rate: "0",
+    sgst_rate: "0",
     is_industrial_grade: false,
     is_ready_stock: false,
     is_tax_inclusive: false,
@@ -54,20 +56,16 @@ export default function AddProductPage() {
   const [brands, setBrands] = useState<any[]>([]);
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  const [relationType, setRelationType] = useState("related");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
 
-  const taxRateVal = parseFloat(formData.tax_rate) || 0;
+  const igstRateVal = parseFloat(formData.igst_rate) || 0;
   const priceVal = parseFloat(formData.price) || 0;
-  const salePriceVal = parseFloat(formData.sale_price) || 0;
-
-  const finalPrice = priceVal + (priceVal * taxRateVal) / 100;
-  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * taxRateVal) / 100) : 0;
+  const costPriceVal = parseFloat(formData.cost_price) || 0;
+  const salePriceVal = formData.sale_price ? parseFloat(formData.sale_price) : null;
+  const finalPrice = priceVal + (priceVal * igstRateVal) / 100;
+  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * igstRateVal) / 100) : 0;
 
   // Map main category name keywords → brand category text values
   const getBrandCategoryKeywords = (mainCatName: string): string[] => {
@@ -129,27 +127,6 @@ export default function AddProductPage() {
     fetchAttributes();
   }, [formData.category_id, supabase]);
 
-  const searchProducts = async (term: string) => {
-    setSearchTerm(term);
-    if (term.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const { data } = await supabase
-      .from("products")
-      .select("id, name, sku, price")
-      .ilike("name", `%${term}%`)
-      .limit(5);
-    setSearchResults(data || []);
-  };
-
-  const addRelatedProduct = (product: any) => {
-    if (relatedProducts.find(p => p.id === product.id && p.relation_type === relationType)) return;
-    setRelatedProducts([...relatedProducts, { ...product, relation_type: relationType }]);
-    setSearchTerm("");
-    setSearchResults([]);
-  };
-
   const handleEditorChange = (field: string, content: string) => {
     setFormData((prev) => ({ ...prev, [field]: content }));
   };
@@ -168,6 +145,14 @@ export default function AddProductPage() {
       return;
     }
 
+    if (formData.hsn_code) {
+      const hsnClean = formData.hsn_code.trim();
+      if (!/^\d{4,8}$/.test(hsnClean)) {
+        toast.error("HSN Code must be between 4 and 8 digits.");
+        return;
+      }
+    }
+
     const priceExclusive = parseFloat(formData.price);
     const salePriceExclusive = formData.sale_price ? parseFloat(formData.sale_price) : null;
 
@@ -176,9 +161,9 @@ export default function AddProductPage() {
       return;
     }
 
-    const taxRate = parseFloat(formData.tax_rate || "0");
-    const priceInclusive = priceExclusive * (1 + taxRate / 100);
-    const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + taxRate / 100) : null;
+    const igstRate = parseFloat(formData.igst_rate || "0");
+    const priceInclusive = priceExclusive * (1 + igstRate / 100);
+    const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + igstRate / 100) : null;
 
     setLoading(true);
     try {
@@ -206,7 +191,9 @@ export default function AddProductPage() {
           images: formData.images,
           datasheet_url: formData.datasheet_url || null,
           status: formData.visibility ? "Active" : "Draft",
-          tax_rate: taxRate,
+          igst_rate: igstRate,
+          cgst_rate: parseFloat(formData.cgst_rate || "0"),
+          sgst_rate: parseFloat(formData.sgst_rate || "0"),
           is_tax_inclusive: true,
           visibility: formData.visibility,
           is_industrial_grade: formData.is_industrial_grade,
@@ -229,24 +216,6 @@ export default function AddProductPage() {
       if (attrInserts.length > 0) {
         const { error: attrError } = await supabase.from("product_attributes").insert(attrInserts);
         if (attrError) throw attrError;
-      }
-
-      // Insert related products
-      const relationInserts = relatedProducts.map(rp => ({
-        product_id: product.id,
-        related_id: rp.id,
-        relation_type: 'related'
-      }));
-
-      if (relationInserts.length > 0) {
-        const { error: relError } = await supabase.from("related_products").insert(
-          relatedProducts.map(rp => ({
-            product_id: product.id,
-            related_id: rp.id,
-            relation_type: rp.relation_type
-          }))
-        );
-        if (relError) throw relError;
       }
 
       toast.success("Product created successfully!");
@@ -365,16 +334,19 @@ export default function AddProductPage() {
                     className={inputClass}
                     value={selectedMainCategoryId}
                     onChange={(e) => {
-                      const mainId = e.target.value;
-                      setSelectedMainCategoryId(mainId);
-                      const mainCat = categories.find(c => c.id === mainId);
-                      const taxRate = mainCat ? mainCat.tax_rate : 0;
+                      const catId = e.target.value;
+                      setSelectedMainCategoryId(catId);
+                      const mainCat = categories.find((c: any) => c.id === catId);
+                      const igstRate = mainCat ? mainCat.igst_rate : 0;
+                      const cgstRate = mainCat ? mainCat.cgst_rate : 0;
+                      const sgstRate = mainCat ? mainCat.sgst_rate : 0;
                       setFormData({
                         ...formData,
-                        category_id: mainId,
-                        brand_id: "",
-                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                        is_tax_inclusive: taxRate > 0
+                        category_id: catId,
+                        igst_rate: mainCat ? igstRate.toString() : formData.igst_rate,
+                        cgst_rate: mainCat ? cgstRate.toString() : formData.cgst_rate,
+                        sgst_rate: mainCat ? sgstRate.toString() : formData.sgst_rate,
+                        is_tax_inclusive: igstRate > 0
                       });
                     }}
                     required
@@ -395,23 +367,16 @@ export default function AddProductPage() {
                       className={inputClass}
                       value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
                       onChange={(e) => {
-                        const subId = e.target.value;
-                        const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
-                        const taxRate = mainCat ? mainCat.tax_rate : 0;
-                        if (!subId) {
+                        const catId = e.target.value;
+                        if (!catId) {
+                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
                           setFormData({
                             ...formData,
                             category_id: selectedMainCategoryId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
-                          });
-                        } else {
-                          // Always pull tax_rate from Main Category
-                          setFormData({
-                            ...formData,
-                            category_id: subId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
+                            igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
+                            cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
+                            sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
+                            is_tax_inclusive: igstRateVal > 0
                           });
                         }
                       }}
@@ -431,10 +396,10 @@ export default function AddProductPage() {
                       Auto-applied Tax Rate: {(() => {
                         const cat = categories.find((c: any) => c.id === formData.category_id);
                         if (!cat) return 0;
-                        if (cat.tax_rate !== null && cat.tax_rate !== undefined && cat.tax_rate !== 0) return cat.tax_rate;
+                        if (cat.igst_rate !== null && cat.igst_rate !== undefined && cat.igst_rate !== 0) return cat.igst_rate;
                         if (cat.parent_id) {
                           const parentCat = categories.find((c: any) => c.id === cat.parent_id);
-                          return parentCat?.tax_rate || 0;
+                          return parentCat?.igst_rate || 0;
                         }
                         return 0;
                       })()}%
@@ -517,7 +482,7 @@ export default function AddProductPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
-                  {formData.price && taxRateVal > 0 && (
+                  {formData.price && igstRateVal > 0 && (
                     <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
                       Final Price: <span className="text-zinc-900 font-extrabold">₹{finalPrice.toFixed(2)}</span> (GST Included)
                     </p>
@@ -590,7 +555,7 @@ export default function AddProductPage() {
                       {discountType === "fixed" && discountValue && (
                         <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">₹{parseFloat(discountValue).toLocaleString("en-IN")} OFF</span>
                       )}
-                      {formData.sale_price && taxRateVal > 0 && (
+                      {formData.sale_price && igstRateVal > 0 && (
                         <span className="text-zinc-500 font-semibold">
                           Final: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (incl. GST)
                         </span>
@@ -598,30 +563,30 @@ export default function AddProductPage() {
                     </div>
                   )}
                 </div>
+                {/* GST */}
                 <div>
-                  <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
-                  <select
-                    id="tax_rate"
-                    className={inputClass}
-                    value={formData.tax_rate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData({
-                        ...formData,
-                        tax_rate: val,
-                        is_tax_inclusive: true
-                      });
-                    }}
-                  >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="12">12%</option>
-                    <option value="18">18%</option>
-                    <option value="28">28%</option>
-                    {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
-                      <option value={formData.tax_rate}>{formData.tax_rate}%</option>
-                    )}
-                  </select>
+                  <label className={labelClass}>GST Configuration</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">IGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.igst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">CGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.cgst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">SGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.sgst_rate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1">Rates are inherited from the Main Category</p>
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="tax_inclusive">Tax Type</label>
@@ -812,95 +777,6 @@ export default function AddProductPage() {
                 </button>
               </div>
               </div>
-          </section>
-
-          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Related Products</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Relation Type</label>
-                <select 
-                  className={inputClass}
-                  value={relationType}
-                  onChange={(e) => setRelationType(e.target.value)}
-                >
-                  <option value="related">Related Products</option>
-                  <option value="similar">Similar Products</option>
-                  <option value="frequently_bought">Frequently Bought Together</option>
-                  <option value="cross_sell">Cross Sell Products</option>
-                  <option value="alternative">Alternative Products</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Search Product to Add</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    className={`${inputClass} pl-10`}
-                    placeholder="Type product name..."
-                    value={searchTerm}
-                    onChange={(e) => searchProducts(e.target.value)}
-                  />
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
-                      {searchResults.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => addRelatedProduct(p)}
-                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center justify-between border-b last:border-0 transition-colors"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{p.sku || "NO-SKU"}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 rounded-full">Add</span>
-                            <Plus className="w-4 h-4 text-primary" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-2 border-t">
-                {['related', 'similar', 'frequently_bought', 'cross_sell', 'alternative'].map((type) => {
-                  const typedProducts = relatedProducts.filter(p => p.relation_type === type);
-                  if (typedProducts.length === 0) return null;
-
-                  return (
-                    <div key={type} className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                        <div className="h-1 w-1 rounded-full bg-primary" />
-                        {type.replace('_', ' ')}
-                      </h4>
-                      <div className="space-y-1.5">
-                        {typedProducts.map((rp) => (
-                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group text-xs">
-                            <div className="truncate pr-2">
-                              <p className="font-bold text-zinc-900 truncate text-[13px]">{rp.name}</p>
-                              <p className="text-[10px] text-zinc-400 font-mono truncate">{rp.sku || "N/A"} • ₹{rp.price}</p>
-                            </div>
-                            <button
-                              onClick={() => setRelatedProducts(relatedProducts.filter(p => !(p.id === rp.id && p.relation_type === type)))}
-                              className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {relatedProducts.length === 0 && (
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic text-center py-2">No connections established yet.</p>
-                )}
-              </div>
-            </div>
           </section>
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">

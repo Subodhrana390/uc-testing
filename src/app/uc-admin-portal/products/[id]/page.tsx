@@ -55,7 +55,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     manufacturing_info: "",
     warranty_info: "",
     images: [] as string[],
-    tax_rate: "0",
+    igst_rate: "0",
+    cgst_rate: "0",
+    sgst_rate: "0",
     is_industrial_grade: false,
     is_ready_stock: false,
     is_tax_inclusive: false,
@@ -72,12 +74,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
 
-  const taxRateVal = parseFloat(formData.tax_rate) || 0;
+  const igstRateVal = parseFloat(formData.igst_rate) || 0;
   const priceVal = parseFloat(formData.price) || 0;
   const salePriceVal = parseFloat(formData.sale_price) || 0;
 
-  const finalPrice = priceVal + (priceVal * taxRateVal) / 100;
-  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * taxRateVal) / 100) : 0;
+  const finalPrice = priceVal + (priceVal * igstRateVal) / 100;
+  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * igstRateVal) / 100) : 0;
 
   const { data: initialData, isLoading: loading } = useQuery({
     queryKey: ["admin-product-edit", productId],
@@ -137,7 +139,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         setSelectedMainCategoryId(productCatId);
       }
 
-      const rate = product.tax_rate || 0;
+      const rate = product.igst_rate || 0;
       const isInclusive = product.is_tax_inclusive || false;
       const roundPrice = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100;
       const basePrice = isInclusive ? roundPrice(product.price / (1 + rate / 100)) : product.price;
@@ -163,7 +165,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         manufacturing_info: product.manufacturing_info || "",
         warranty_info: product.warranty_info || "",
         images: product.images || [],
-        tax_rate: (product.tax_rate || 0).toString(),
+        igst_rate: (product.igst_rate || 0).toString(),
+        cgst_rate: (product.cgst_rate || 0).toString(),
+        sgst_rate: (product.sgst_rate || 0).toString(),
         is_industrial_grade: product.is_industrial_grade || false,
         is_ready_stock: product.is_ready_stock || false,
         is_tax_inclusive: product.is_tax_inclusive || false,
@@ -219,12 +223,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const updateProductMutation = useMutation({
     mutationFn: async () => {
-      const taxRate = parseFloat(formData.tax_rate) || 0;
       const priceExclusive = parseFloat(formData.price) || 0;
       const salePriceExclusive = formData.sale_price ? parseFloat(formData.sale_price) : null;
-
-      const priceInclusive = priceExclusive * (1 + taxRate / 100);
-      const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + taxRate / 100) : null;
+      const igstRate = parseFloat(formData.igst_rate) || 0;
+      const cgstRate = parseFloat(formData.cgst_rate) || 0;
+      const sgstRate = parseFloat(formData.sgst_rate) || 0;
+      const priceInclusive = priceExclusive * (1 + igstRate / 100);
+      const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + igstRate / 100) : null;
 
       const { error } = await supabase
         .from("products")
@@ -247,7 +252,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           warranty_info: formData.warranty_info.trim(),
           image_url: formData.images[0] || null,
           images: formData.images,
-          tax_rate: taxRate,
+          status: formData.visibility ? "Active" : "Draft",
+          igst_rate: igstRate,
+          cgst_rate: cgstRate,
+          sgst_rate: sgstRate,
           is_tax_inclusive: true,
           datasheet_url: formData.datasheet_url,
           visibility: formData.visibility,
@@ -315,6 +323,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     if (!formData.name.trim() || !formData.price || !formData.category_id) {
       toast.error("Please fill in all required fields (Name, Price, Category)");
       return;
+    }
+    if (formData.hsn_code) {
+      const hsnClean = formData.hsn_code.trim();
+      if (!/^\d{4,8}$/.test(hsnClean)) {
+        toast.error("HSN Code must be between 4 and 8 digits.");
+        return;
+      }
     }
     setSaving(true);
     updateProductMutation.mutate();
@@ -441,13 +456,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       setSelectedMainCategoryId(mainId);
                       // Reset sub-category when main changes
                       const mainCat = categories.find((c: any) => c.id === mainId);
-                      const taxRate = mainCat ? mainCat.tax_rate : 0;
+                      const igstRate = mainCat ? mainCat.igst_rate : 0;
+                      const cgstRate = mainCat ? mainCat.cgst_rate : 0;
+                      const sgstRate = mainCat ? mainCat.sgst_rate : 0;
                       setFormData({
                         ...formData,
                         category_id: mainId,
                         brand_id: "",
-                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                        is_tax_inclusive: taxRate > 0
+                        igst_rate: mainCat ? igstRate.toString() : formData.igst_rate,
+                        cgst_rate: mainCat ? cgstRate.toString() : formData.cgst_rate,
+                        sgst_rate: mainCat ? sgstRate.toString() : formData.sgst_rate,
+                        is_tax_inclusive: igstRate > 0
                       });
                     }}
                     required
@@ -468,26 +487,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       className={inputClass}
                       value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
                       onChange={(e) => {
-                        const subId = e.target.value;
-                        const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
-                        const taxRate = mainCat ? mainCat.tax_rate : 0;
-                        if (!subId) {
-                          // Revert to main category
-                          setFormData({
-                            ...formData,
-                            category_id: selectedMainCategoryId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
-                          });
-                        } else {
-                          // Always pull tax_rate from Main Category
-                          setFormData({
-                            ...formData,
-                            category_id: subId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
-                          });
-                        }
+                        const catId = e.target.value;
+                        const subCat = categories.find((c: any) => c.id === catId);
+                        const mainCat = subCat ? categories.find((c: any) => c.id === subCat.parent_id) : null;
+                        const igstRate = mainCat ? mainCat.igst_rate : 0;
+                        const cgstRate = mainCat ? mainCat.cgst_rate : 0;
+                        const sgstRate = mainCat ? mainCat.sgst_rate : 0;
+                        setFormData({
+                          ...formData,
+                          category_id: catId,
+                          igst_rate: igstRate.toString(),
+                          cgst_rate: cgstRate.toString(),
+                          sgst_rate: sgstRate.toString(),
+                          is_tax_inclusive: igstRate > 0
+                        });
                       }}
                     >
                       <option value="">(All of {categories.find((c: any) => c.id === selectedMainCategoryId)?.name})</option>
@@ -503,13 +516,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <div className="md:col-span-2 flex items-center gap-1.5 px-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.15em]">
-                      Auto-applied Tax Rate: {(() => {
+                      Auto-applied IGST Rate: {(() => {
+                        if (!formData.category_id) return 0;
                         const cat = categories.find((c: any) => c.id === formData.category_id);
                         if (!cat) return 0;
-                        if (cat.tax_rate !== null && cat.tax_rate !== undefined && cat.tax_rate !== 0) return cat.tax_rate;
+                        if (cat.igst_rate !== null && cat.igst_rate !== undefined && cat.igst_rate !== 0) return cat.igst_rate;
                         if (cat.parent_id) {
                           const parentCat = categories.find((c: any) => c.id === cat.parent_id);
-                          return parentCat?.tax_rate || 0;
+                          return parentCat?.igst_rate || 0;
                         }
                         return 0;
                       })()}%
@@ -598,7 +612,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                         required
                       />
-                      {formData.price && taxRateVal > 0 && (
+                      {formData.price && igstRateVal > 0 && (
                         <p className="text-[11px] text-zinc-500 font-medium px-0.5">
                           Final Price: <span className="text-zinc-900 font-bold">₹{finalPrice.toFixed(2)}</span> <span className="text-zinc-400 font-normal">(GST Incl.)</span>
                         </p>
@@ -606,30 +620,30 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </div>
                   </div>
 
-                  <div >
-                    <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
-                    <select
-                      id="tax_rate"
-                      className={inputClass}
-                      value={formData.tax_rate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData({
-                          ...formData,
-                          tax_rate: val,
-                          is_tax_inclusive: true
-                        });
-                      }}
-                    >
-                      <option value="0">0%</option>
-                      <option value="5">5%</option>
-                      <option value="12">12%</option>
-                      <option value="18">18%</option>
-                      <option value="28">28%</option>
-                      {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
-                        <option value={formData.tax_rate}>{formData.tax_rate}%</option>
-                      )}
-                    </select>
+                  {/* GST */}
+                  <div>
+                    <label className={labelClass}>GST Configuration</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-zinc-500">IGST</span>
+                        <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                          <span className="text-sm font-semibold">{formData.igst_rate}%</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-zinc-500">CGST</span>
+                        <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                          <span className="text-sm font-semibold">{formData.cgst_rate}%</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-zinc-500">SGST</span>
+                        <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                          <span className="text-sm font-semibold">{formData.sgst_rate}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">Rates are inherited from the Main Category</p>
                   </div>
 
                   <div>
@@ -715,8 +729,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         <span className="font-semibold text-zinc-700 text-sm">Sale Price:</span>
                         <div className="text-right">
                           <span className="font-bold text-emerald-600 text-base">₹{parseFloat(formData.sale_price).toLocaleString("en-IN")}</span>
-                          {taxRateVal > 0 && (
-                            <p className="text-[10px] text-zinc-400 font-normal">Final: ₹{finalSalePrice.toFixed(2)}</p>
+                          {parseFloat(formData.igst_rate) > 0 && (
+                            <p className="text-[10px] text-zinc-400 font-normal">Final: ₹{((parseFloat(formData.sale_price) || 0) * (1 + (parseFloat(formData.igst_rate) || 0) / 100)).toFixed(2)}</p>
                           )}
                         </div>
                       </div>

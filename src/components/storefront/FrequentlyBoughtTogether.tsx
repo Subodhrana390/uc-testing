@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Check, ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Plus } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
 import ProductCard from "@/components/storefront/ProductCard";
@@ -19,6 +19,9 @@ interface Product {
   status: string | null;
   stock_quantity: number;
   images: string[];
+  hsn_code?: string | null;
+  is_tax_inclusive?: boolean;
+  igst_rate?: number;
   categories?: {
     name: string;
     slug: string;
@@ -95,7 +98,7 @@ export default function FrequentlyBoughtTogether({
 
   allProducts.forEach((p) => {
     if (selectedIds.has(p.id)) {
-      baseTotalPrice += Number(p.sale_price || p.price);
+      baseTotalPrice += getExclusivePrice(Number(p.sale_price || p.price), p.is_tax_inclusive, p.igst_rate);
       selectedProducts.push(p);
     }
   });
@@ -116,6 +119,9 @@ export default function FrequentlyBoughtTogether({
         name: p.name,
         price: finalPrice,
         image_url: p.image_url || (p.images && p.images[0]) || "",
+        hsn_code: p.hsn_code || undefined,
+        is_tax_inclusive: p.is_tax_inclusive,
+        igst_rate: p.igst_rate,
       }, 1);
     });
     
@@ -220,7 +226,8 @@ export default function FrequentlyBoughtTogether({
                         </span>
                       </label>
                       <span className={`font-bold shrink-0 transition-colors ${isSelected ? 'text-zinc-900' : 'text-zinc-400'}`}>
-                        {formatCurrency(p.sale_price || p.price)}
+                        {formatCurrency(getExclusivePrice(p.sale_price || p.price, p.is_tax_inclusive, p.igst_rate))}
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase ml-1">+ GST</span>
                       </span>
                       {/* Invisible input to make the label click area work cleanly for accessibility/forms if needed, but onClick on label handles it via bubbling if we use standard inputs. We will just use an onChange input */}
                       <input 
@@ -245,7 +252,10 @@ export default function FrequentlyBoughtTogether({
                 )}
               </div>
               <div className="flex items-end gap-3 mt-1">
-                <h3 className="text-3xl font-black tracking-tight text-zinc-900">{formatCurrency(totalPrice)}</h3>
+                <div className="flex items-baseline gap-1.5">
+                  <h3 className="text-3xl font-black tracking-tight text-zinc-900">{formatCurrency(totalPrice)}</h3>
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">+ GST</span>
+                </div>
                 {isBundleEligible && (
                   <span className="text-sm text-zinc-400 line-through font-bold mb-1">{formatCurrency(baseTotalPrice)}</span>
                 )}

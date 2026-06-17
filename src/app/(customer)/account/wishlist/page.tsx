@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Heart, ShoppingCart, Trash2, ArrowRight, Star, AlertCircle, Package, Bookmark, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -90,6 +90,9 @@ export default function WishlistPage() {
         name: item.products.name,
         price: Number(item.products.price),
         image_url: item.products.image_url || "",
+        hsn_code: item.products.hsn_code || undefined,
+        is_tax_inclusive: item.products.is_tax_inclusive,
+        igst_rate: item.products.igst_rate,
       });
       await removeFromWishlist(item.id, true);
     } catch (error) {
@@ -157,8 +160,9 @@ export default function WishlistPage() {
                 </h3>
 
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2">
-                  <span className="text-base sm:text-lg font-bold text-zinc-900">
-                    {formatCurrency(item.products?.price)}
+                  <span className="text-base sm:text-lg font-bold text-zinc-900 flex items-baseline gap-1">
+                    {formatCurrency(getExclusivePrice(item.products?.price, item.products?.is_tax_inclusive, item.products?.igst_rate))}
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase">+ GST</span>
                   </span>
                   {item.products?.stock_quantity === 0 ? (
                     <Badge variant="outline" className="text-[10px] uppercase text-zinc-500 bg-zinc-100 border-zinc-200">

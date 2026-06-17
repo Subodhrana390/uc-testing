@@ -18,7 +18,7 @@ import CartRecommendations from "@/components/storefront/CartRecommendations";
 import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 import { useCartStore } from "@/store/useCartStore";
 
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 
 export default function CartPage() {
   const { items, updateQuantity: updateCartItemQuantity, removeItem: removeCartItem, getCartTotal, getCartCount } = useCartStore();
@@ -27,6 +27,8 @@ export default function CartPage() {
   useEffect(() => setIsMounted(true), []);
 
   if (!isMounted) return null;
+
+  const exclusiveTotal = items.reduce((total, item) => total + getExclusivePrice(item.price * item.quantity, item.is_tax_inclusive, item.igst_rate), 0);
 
   return (
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)]">
@@ -97,12 +99,14 @@ export default function CartPage() {
                         >
                           {item.name}
                         </Link>
+                        {item.hsn_code && (
+                          <div className="text-xs text-zinc-500 font-medium">HSN: {item.hsn_code}</div>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm sm:text-base font-black text-zinc-950">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatCurrency(getExclusivePrice(item.price * item.quantity, item.is_tax_inclusive, item.igst_rate))}
                         </p>
-
                       </div>
                     </div>
 
@@ -164,22 +168,32 @@ export default function CartPage() {
                     <div key={`summary-${item.id}`} className="flex justify-between text-xs">
                       <div className="flex gap-2 min-w-0 pr-4">
                         <span className="font-bold text-zinc-950">{item.quantity} ×</span>
-                        <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
+                          {item.hsn_code && <span className="text-[10px] text-zinc-400">HSN: {item.hsn_code}</span>}
+                        </div>
                       </div>
-                      <span className="font-bold text-zinc-950 shrink-0">{formatCurrency(item.price * item.quantity)}</span>
+                      <span className="font-bold text-zinc-950 shrink-0">{formatCurrency(getExclusivePrice(item.price * item.quantity, item.is_tax_inclusive, item.igst_rate))}</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
-                  <span>Subtotal ({getCartCount()} items)</span>
-                  <span className="font-bold text-zinc-950">{formatCurrency(getCartTotal())}</span>
+                  <span>Subtotal (Excl. GST)</span>
+                  <span className="font-bold text-zinc-950">{formatCurrency(exclusiveTotal)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
+                  <span>Estimated GST</span>
+                  <span className="font-bold text-zinc-950">{formatCurrency(getCartTotal() - exclusiveTotal)}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs font-medium text-zinc-600">
                   <span>Estimated Shipping</span>
                   <span className="font-bold text-zinc-950">Calculated at checkout</span>
                 </div>
+
+
 
 
                 <div className="flex items-center justify-between text-base pt-2">
