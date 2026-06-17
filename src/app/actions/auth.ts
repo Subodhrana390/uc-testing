@@ -212,15 +212,40 @@ export async function requestPasswordReset(formData: FormData, origin: string) {
     return { error: "Email is required." }
   }
 
-  const supabase = await createClient()
+  try {
+    const supabaseAdmin = await createServiceRoleClient()
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/api/auth/callback?next=/reset-password`
-  })
+    // 1. Generate the recovery link using the admin client
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: `${origin}/api/auth/callback?next=/reset-password`
+      }
+    })
 
-  if (error) {
-    return { error: error.message }
+    if (linkError) {
+      return { error: linkError.message }
+    }
+
+    const resetLink = linkData.properties.action_link;
+
+    // 2. Fetch the customer's name for personalization
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name')
+      .eq('email', email)
+      .single()
+
+    const customerName = profile?.full_name || email.split('@')[0];
+
+    // 3. Send the email using our Brevo SDK implementation natively
+    const { sendResetPasswordEmail } = await import('@/lib/email');
+    await sendResetPasswordEmail(email, customerName, resetLink);
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("Error in requestPasswordReset:", err);
+    return { error: "An unexpected error occurred while sending the reset email." }
   }
-
-  return { success: true }
 }
