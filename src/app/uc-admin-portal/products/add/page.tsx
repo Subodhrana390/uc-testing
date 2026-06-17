@@ -56,10 +56,6 @@ export default function AddProductPage() {
   const [brands, setBrands] = useState<any[]>([]);
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, any>>({});
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  const [relationType, setRelationType] = useState("related");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedMainCategoryId, setSelectedMainCategoryId] = useState("");
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
@@ -130,27 +126,6 @@ export default function AddProductPage() {
     }
     fetchAttributes();
   }, [formData.category_id, supabase]);
-
-  const searchProducts = async (term: string) => {
-    setSearchTerm(term);
-    if (term.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const { data } = await supabase
-      .from("products")
-      .select("id, name, sku, price")
-      .ilike("name", `%${term}%`)
-      .limit(5);
-    setSearchResults(data || []);
-  };
-
-  const addRelatedProduct = (product: any) => {
-    if (relatedProducts.find(p => p.id === product.id && p.relation_type === relationType)) return;
-    setRelatedProducts([...relatedProducts, { ...product, relation_type: relationType }]);
-    setSearchTerm("");
-    setSearchResults([]);
-  };
 
   const handleEditorChange = (field: string, content: string) => {
     setFormData((prev) => ({ ...prev, [field]: content }));
@@ -241,24 +216,6 @@ export default function AddProductPage() {
       if (attrInserts.length > 0) {
         const { error: attrError } = await supabase.from("product_attributes").insert(attrInserts);
         if (attrError) throw attrError;
-      }
-
-      // Insert related products
-      const relationInserts = relatedProducts.map(rp => ({
-        product_id: product.id,
-        related_id: rp.id,
-        relation_type: 'related'
-      }));
-
-      if (relationInserts.length > 0) {
-        const { error: relError } = await supabase.from("related_products").insert(
-          relatedProducts.map(rp => ({
-            product_id: product.id,
-            related_id: rp.id,
-            relation_type: rp.relation_type
-          }))
-        );
-        if (relError) throw relError;
       }
 
       toast.success("Product created successfully!");
@@ -820,95 +777,6 @@ export default function AddProductPage() {
                 </button>
               </div>
               </div>
-          </section>
-
-          <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b bg-gray-50/50">
-              <h2 className="text-lg font-semibold">Related Products</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Relation Type</label>
-                <select 
-                  className={inputClass}
-                  value={relationType}
-                  onChange={(e) => setRelationType(e.target.value)}
-                >
-                  <option value="related">Related Products</option>
-                  <option value="similar">Similar Products</option>
-                  <option value="frequently_bought">Frequently Bought Together</option>
-                  <option value="cross_sell">Cross Sell Products</option>
-                  <option value="alternative">Alternative Products</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-600">Search Product to Add</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    className={`${inputClass} pl-10`}
-                    placeholder="Type product name..."
-                    value={searchTerm}
-                    onChange={(e) => searchProducts(e.target.value)}
-                  />
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
-                      {searchResults.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => addRelatedProduct(p)}
-                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center justify-between border-b last:border-0 transition-colors"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{p.sku || "NO-SKU"}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 rounded-full">Add</span>
-                            <Plus className="w-4 h-4 text-primary" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-2 border-t">
-                {['related', 'similar', 'frequently_bought', 'cross_sell', 'alternative'].map((type) => {
-                  const typedProducts = relatedProducts.filter(p => p.relation_type === type);
-                  if (typedProducts.length === 0) return null;
-
-                  return (
-                    <div key={type} className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                        <div className="h-1 w-1 rounded-full bg-primary" />
-                        {type.replace('_', ' ')}
-                      </h4>
-                      <div className="space-y-1.5">
-                        {typedProducts.map((rp) => (
-                          <div key={`${rp.id}-${type}`} className="flex items-center justify-between p-2 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow group text-xs">
-                            <div className="truncate pr-2">
-                              <p className="font-bold text-zinc-900 truncate text-[13px]">{rp.name}</p>
-                              <p className="text-[10px] text-zinc-400 font-mono truncate">{rp.sku || "N/A"} • ₹{rp.price}</p>
-                            </div>
-                            <button
-                              onClick={() => setRelatedProducts(relatedProducts.filter(p => !(p.id === rp.id && p.relation_type === type)))}
-                              className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {relatedProducts.length === 0 && (
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic text-center py-2">No connections established yet.</p>
-                )}
-              </div>
-            </div>
           </section>
 
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
