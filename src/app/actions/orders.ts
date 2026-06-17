@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { getReturnWindowInfo } from '@/lib/order'
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
+import { number } from 'zod'
 
 
 export async function createOrder(orderData: {
@@ -80,7 +81,92 @@ export async function createOrder(orderData: {
       }
     }
 
+
+    // Secure Server-Side Math Calculation (GST & Shipping)
+    const originState = "Punjab";
+    const destState = orderData.state || "";
+    const isIntraState = originState.toLowerCase() === destState.toLowerCase();
+
+    let serverSubtotal = 0;
+    let serverTaxExclusive = 0;
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    let igstAmount = 0;
+
+    const productIds = orderData.items.map(i => i.id);
+    const { data: products } = await supabase.from('products').select('id, price, sale_price, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive').in('id', productIds);
+
+    const variantIds = orderData.items.filter(i => i.variant_id).map(i => i.variant_id);
+    let variants: any[] = [];
+    if (variantIds.length > 0) {
+      const { data } = await supabase.from('product_variants').select('id, price, sale_price').in('id', variantIds);
+      variants = data || [];
+    }
+
+    for (const item of orderData.items) {
+      const prod = products?.find(p => p.id === item.id);
+      let price = prod ? (Number(prod.sale_price || prod.price) || 0) : 0;
+
+      if (item.variant_id) {
+        const variant = variants.find(v => v.id === item.variant_id);
+        if (variant) price = Number(variant.sale_price || variant.price) || 0;
+      }
+
+      const qty = item.quantity || 1;
+      const itemTotal = price * qty;
+      const igstRate = prod?.igst_rate || 0;
+      const cgstRate = prod?.cgst_rate || 0;
+      const sgstRate = prod?.sgst_rate || 0;
+
+      serverSubtotal += itemTotal;
+      let taxAmount = 0;
+      let baseTotal = itemTotal;
+
+      if (igstRate > 0) {
+        if (prod?.is_tax_inclusive) {
+          baseTotal = itemTotal / (1 + igstRate / 100);
+          taxAmount = itemTotal - baseTotal;
+        } else {
+          taxAmount = itemTotal * (igstRate / 100);
+          serverTaxExclusive += taxAmount;
+        }
+      }
+
+      if (isIntraState) {
+        cgstAmount += baseTotal * (cgstRate / 100);
+        sgstAmount += baseTotal * (sgstRate / 100);
+      } else {
+        igstAmount += baseTotal * (igstRate / 100);
+      }
+    }
+
+    // Resolve Shipping securely
+    let serverShipping = 50;
+    if (orderData.postalCode?.length === 6) {
+      const { data: pinData } = await supabase.from('delivery_pincodes').select('*, delivery_zones(*)').eq('pincode', orderData.postalCode).eq('active', true).maybeSingle();
+      if (pinData) {
+        serverShipping = pinData.delivery_zones?.base_charge || 50;
+      } else {
+        const { data: zones } = await supabase.from('delivery_zones').select('*').eq('active', true);
+        const prefix = orderData.postalCode.substring(0, 2);
+        let matchedZone = zones?.find(z => z.coverage.split(',').map((p: string) => p.trim()).includes(prefix));
+        if (!matchedZone) matchedZone = zones?.find(z => z.coverage.toLowerCase().includes('pan india') || z.name.toLowerCase().includes('rest of india'));
+        serverShipping = matchedZone?.base_charge || 50;
+      }
+    }
+
+    // Apply GST on Shipping (18%)
+    const shippingGst = serverShipping * 0.18;
+    serverTaxExclusive += shippingGst;
+    if (isIntraState) {
+      cgstAmount += shippingGst / 2;
+      sgstAmount += shippingGst / 2;
+    } else {
+      igstAmount += shippingGst;
+    }
+
     // Call Postgres RPC for transactional atomic order & inventory updates
+
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
       'place_order_safe',
       {
@@ -242,7 +328,7 @@ export async function returnOrder(orderId: string, reason: string, bankDetails?:
     }
 
     const returnTrackingId = "RTK" + Math.floor(1000000000 + Math.random() * 9000000000).toString();
-    const updateData: any = { 
+    const updateData: any = {
       payment_status: 'Refund Pending',
       return_tracking_id: returnTrackingId,
       return_carrier: 'Reverse Logistics Partner'
@@ -349,7 +435,7 @@ export async function trackOrder(displayOrderId: string) {
 
     const { data: orders, error: err } = await supabase
       .from("orders")
-      .select("*, order_items(*, products(id, name, slug, image_url, tax_rate, is_tax_inclusive, hsn_code)), payments(*)")
+      .select("*, order_items(*, products(id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code)), payments(*)")
       .gte("created_at", new Date(ts - 5000).toISOString())
       .lte("created_at", new Date(ts + 5000).toISOString());
 
@@ -357,7 +443,7 @@ export async function trackOrder(displayOrderId: string) {
 
     const { getDisplayOrderId } = await import('@/lib/order');
     const found = orders?.find((o: any) => getDisplayOrderId(o.id, o.created_at) === trimmedId);
-    
+
     if (!found) {
       return { success: false, error: "We couldn't find an order with that ID." };
     }

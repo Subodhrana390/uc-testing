@@ -95,7 +95,10 @@ export default function CategoryList({ type }: CategoryListProps) {
     is_active: true,
     display_order: 0,
     parent_id: null as string | null,
-    tax_rate: 0
+    cgst_rate: 0,
+    sgst_rate: 0,
+    igst_rate: 0,
+    hsn_code: ""
   });
 
   const supabase = useMemo(() => createClient(), []);
@@ -104,7 +107,7 @@ export default function CategoryList({ type }: CategoryListProps) {
     try {
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, parent_id, status, tax_rate")
+        .select("id, name, parent_id, status, cgst_rate, sgst_rate, igst_rate, hsn_code")
         .order("display_order", { ascending: true });
 
       if (error) throw error;
@@ -207,25 +210,30 @@ export default function CategoryList({ type }: CategoryListProps) {
         is_active: category.is_active,
         display_order: category.display_order,
         parent_id: category.parent_id,
-        tax_rate: category.tax_rate || 0
+        cgst_rate: category.cgst_rate || 0,
+        sgst_rate: category.sgst_rate || 0,
+        igst_rate: category.igst_rate || 0,
+        hsn_code: category.hsn_code || ""
       });
-      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(category.tax_rate || 0));
+      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(category.igst_rate || 0));
     } else {
       setEditingCategory(null);
       const defaultParent = type === "main" ? null : (allCategories.find(c => !c.parent_id)?.id || null);
       const parentCat = allCategories.find(c => c.id === defaultParent);
-      const inheritedTax = parentCat ? parentCat.tax_rate : 0;
       setFormData({
         name: "",
         slug: "",
         description: "",
         image_url: "",
         is_active: true,
-        display_order: totalItems,
+        display_order: 0,
         parent_id: defaultParent,
-        tax_rate: inheritedTax || 0
+        cgst_rate: parentCat ? parentCat.cgst_rate : 0,
+        sgst_rate: parentCat ? parentCat.sgst_rate : 0,
+        igst_rate: parentCat ? parentCat.igst_rate : 0,
+        hsn_code: parentCat ? (parentCat.hsn_code || "") : ""
       });
-      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(inheritedTax || 0));
+      setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(parentCat ? parentCat.igst_rate : 0));
     }
     setIsDrawerOpen(true);
   };
@@ -265,13 +273,39 @@ export default function CategoryList({ type }: CategoryListProps) {
         const { error } = await supabase.from("categories").update(submitData).eq("id", editingCategory.id);
         if (error) throw error;
 
-        // Cascade tax_rate update to subcategories if editing a main category
+        // Cascade tax_rate update to subcategories and their products if editing a main category
         if (type === "main" || !editingCategory.parent_id) {
+          const cascadeData = {
+            cgst_rate: submitData.cgst_rate,
+            sgst_rate: submitData.sgst_rate,
+            igst_rate: submitData.igst_rate,
+            hsn_code: submitData.hsn_code
+          };
           const { error: subError } = await supabase
             .from("categories")
-            .update({ tax_rate: submitData.tax_rate })
+            .update(cascadeData)
             .eq("parent_id", editingCategory.id);
           if (subError) throw subError;
+
+          // Update products directly under the main category
+          await supabase.from("products").update({
+            cgst_rate: submitData.cgst_rate,
+            sgst_rate: submitData.sgst_rate,
+            igst_rate: submitData.igst_rate,
+            is_tax_inclusive: submitData.igst_rate > 0
+          }).eq("category_id", editingCategory.id);
+          
+          // And products under subcategories
+          const { data: subCats } = await supabase.from("categories").select("id").eq("parent_id", editingCategory.id);
+          if (subCats && subCats.length > 0) {
+            const subCatIds = subCats.map((c: any) => c.id);
+            await supabase.from("products").update({
+              cgst_rate: submitData.cgst_rate,
+              sgst_rate: submitData.sgst_rate,
+              igst_rate: submitData.igst_rate,
+              is_tax_inclusive: submitData.igst_rate > 0
+            }).in("category_id", subCatIds);
+          }
         }
 
         toast.success("Category updated successfully");
@@ -454,7 +488,8 @@ export default function CategoryList({ type }: CategoryListProps) {
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category Info</th>
                 {type === "sub" && <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Parent</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">URL Slug</th>
-                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">GST Rate</th>
+                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">HSN Code</th>
+                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">IGST Rate</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
                 <th className="w-14 pr-8 text-right"></th>
               </tr>
@@ -462,7 +497,7 @@ export default function CategoryList({ type }: CategoryListProps) {
             <tbody className="divide-y divide-zinc-100">
               {tableLoading ? (
                 <tr>
-                  <td colSpan={type === "sub" ? 7 : 6} className="py-12 text-center">
+                  <td colSpan={type === "sub" ? 8 : 7} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-zinc-500">
                       <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
                       <p className="text-xs font-semibold">Loading categories...</p>
@@ -471,7 +506,7 @@ export default function CategoryList({ type }: CategoryListProps) {
                 </tr>
               ) : tableCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={type === "sub" ? 7 : 6} className="p-16 text-center text-zinc-500 bg-white">
+                  <td colSpan={type === "sub" ? 8 : 7} className="p-16 text-center text-zinc-500 bg-white">
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <div className="w-16 h-16 bg-zinc-50 flex items-center justify-center rounded-2xl border border-zinc-100 text-zinc-300">
                         <FolderTree className="w-8 h-8" />
@@ -514,8 +549,13 @@ export default function CategoryList({ type }: CategoryListProps) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg inline-block font-mono">
+                        {category.hsn_code || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg inline-block font-mono">
-                        {category.tax_rate !== null && category.tax_rate !== undefined ? `${category.tax_rate}%` : "0%"}
+                        {category.igst_rate !== null && category.igst_rate !== undefined ? `${category.igst_rate}%` : "0%"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -668,38 +708,97 @@ export default function CategoryList({ type }: CategoryListProps) {
                 Settings & Taxation
               </h3>
 
-              {/* GST */}
+              {/* HSN Code */}
               <div className="space-y-2">
-                <Label>GST Rate (%)</Label>
+                <Label>HSN Code</Label>
+                {type === "sub" ? (
+                  <div className="flex items-center gap-2 h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                    <span className="text-sm font-semibold">{formData.hsn_code || "N/A"} (Inherited)</span>
+                  </div>
+                ) : (
+                  <Input
+                    value={formData.hsn_code}
+                    onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                    className="h-11"
+                    placeholder="e.g. 8544"
+                  />
+                )}
+              </div>
 
-                <Select
-                  value={isCustomTax ? "custom" : formData.tax_rate.toString()}
-                  onValueChange={(val) => {
-                    if (val === "custom") {
-                      setIsCustomTax(true);
-                    } else {
-                      setIsCustomTax(false);
-                      setFormData({
-                        ...formData,
-                        tax_rate: parseFloat(val || "0"),
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select GST Rate" />
-                  </SelectTrigger>
+              {/* GST */}
+              <div className="space-y-4">
+                <Label>GST Configuration</Label>
 
-                  <SelectContent>
-                    <SelectItem value="0">0%</SelectItem>
-                    <SelectItem value="3">3%</SelectItem>
-                    <SelectItem value="5">5%</SelectItem>
-                    <SelectItem value="12">12%</SelectItem>
-                    <SelectItem value="18">18%</SelectItem>
-                    <SelectItem value="28">28%</SelectItem>
-                    <SelectItem value="custom">Custom Rate</SelectItem>
-                  </SelectContent>
-                </Select>
+                {type === "sub" ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">IGST</span>
+                      <div className="flex items-center h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.igst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">CGST</span>
+                      <div className="flex items-center h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.cgst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">SGST</span>
+                      <div className="flex items-center h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.sgst_rate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">IGST Rate (%)</span>
+                      <Select
+                        value={isCustomTax ? "custom" : formData.igst_rate.toString()}
+                        onValueChange={(val) => {
+                          if (val === "custom") {
+                            setIsCustomTax(true);
+                          } else {
+                            setIsCustomTax(false);
+                            const igst = parseFloat(val || "0");
+                            setFormData({
+                              ...formData,
+                              igst_rate: igst,
+                              cgst_rate: igst / 2,
+                              sgst_rate: igst / 2
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="IGST" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0%</SelectItem>
+                          <SelectItem value="3">3%</SelectItem>
+                          <SelectItem value="5">5%</SelectItem>
+                          <SelectItem value="12">12%</SelectItem>
+                          <SelectItem value="18">18%</SelectItem>
+                          <SelectItem value="28">28%</SelectItem>
+                          <SelectItem value="custom">Custom Rate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">CGST Rate (%)</span>
+                      <div className="flex items-center h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.cgst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">SGST Rate (%)</span>
+                      <div className="flex items-center h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.sgst_rate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Display Order */}

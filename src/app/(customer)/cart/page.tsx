@@ -97,6 +97,9 @@ export default function CartPage() {
                         >
                           {item.name}
                         </Link>
+                        {item.hsn_code && (
+                          <div className="text-xs text-zinc-500 font-medium">HSN: {item.hsn_code}</div>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm sm:text-base font-black text-zinc-950">
@@ -164,7 +167,10 @@ export default function CartPage() {
                     <div key={`summary-${item.id}`} className="flex justify-between text-xs">
                       <div className="flex gap-2 min-w-0 pr-4">
                         <span className="font-bold text-zinc-950">{item.quantity} ×</span>
-                        <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
+                          {item.hsn_code && <span className="text-[10px] text-zinc-400">HSN: {item.hsn_code}</span>}
+                        </div>
                       </div>
                       <span className="font-bold text-zinc-950 shrink-0">{formatCurrency(item.price * item.quantity)}</span>
                     </div>

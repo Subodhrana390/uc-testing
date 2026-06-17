@@ -627,7 +627,7 @@ export default function OrderDetailsPage() {
                     const quantity = item.quantity;
                     const unitPrice = parseFloat(item.unit_price);
                     const itemTotal = quantity * unitPrice;
-                    const rate = item.products?.tax_rate || 0;
+                    const rate = (item.products?.igst_rate || 0) + (item.products?.cgst_rate || 0) + (item.products?.sgst_rate || 0);
                     const isTaxInclusive = item.products?.is_tax_inclusive || false;
 
                     let baseTotal = itemTotal;
@@ -708,7 +708,7 @@ export default function OrderDetailsPage() {
                 const quantity = item.quantity;
                 const unitPrice = parseFloat(item.unit_price);
                 const itemTotal = quantity * unitPrice;
-                const rate = item.products?.tax_rate || 0;
+                const rate = (item.products?.igst_rate || 0) + (item.products?.cgst_rate || 0) + (item.products?.sgst_rate || 0);
                 const isTaxInclusive = item.products?.is_tax_inclusive || false;
 
                 let baseTotal = itemTotal;
@@ -802,7 +802,7 @@ export default function OrderDetailsPage() {
 
               order.order_items?.forEach((item: any) => {
                 const itemTotal = item.quantity * parseFloat(item.unit_price);
-                const rate = item.products?.tax_rate || 0;
+                const rate = (item.products?.igst_rate || 0) + (item.products?.cgst_rate || 0) + (item.products?.sgst_rate || 0);
 
                 if (rate > 0) {
                   let taxAmount = 0;

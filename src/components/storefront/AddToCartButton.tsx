@@ -13,6 +13,7 @@ type Props = {
     sale_price?: number | string | null;
     image_url?: string | null;
     stock_quantity?: number;
+    hsn_code?: string | null;
   };
   quantity?: number;
   className?: string;
@@ -54,6 +55,7 @@ export default function AddToCartButton({
             name: product.name,
             price,
             image_url: product.image_url || "",
+            hsn_code: product.hsn_code || undefined,
           },
           quantity
         );

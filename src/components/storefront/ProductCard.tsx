@@ -21,6 +21,7 @@ interface ProductCardProps {
     image_url: string | null;
     status: string | null;
     stock_quantity: number;
+    hsn_code?: string | null;
     categories?: {
       name: string;
       slug: string;
@@ -99,7 +100,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         slug: product.slug,
         name: product.name,
         price: product.sale_price || product.price,
-        image_url: product.image_url || ""
+        image_url: product.image_url || "",
+        hsn_code: product.hsn_code || undefined,
       });
     }
   };

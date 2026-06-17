@@ -122,7 +122,9 @@ export async function getOrCreateInvoiceForOrder(orderId: string) {
             id,
             name,
             hsn_code,
-            tax_rate,
+            igst_rate,
+            cgst_rate,
+            sgst_rate,
             is_tax_inclusive
           ),
           product_variants (

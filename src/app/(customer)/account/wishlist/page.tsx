@@ -90,6 +90,7 @@ export default function WishlistPage() {
         name: item.products.name,
         price: Number(item.products.price),
         image_url: item.products.image_url || "",
+        hsn_code: item.products.hsn_code || undefined,
       });
       await removeFromWishlist(item.id, true);
     } catch (error) {

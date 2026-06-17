@@ -1994,9 +1994,17 @@ export default function OrdersPage() {
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Shipping Address</h4>
+                    <p className="text-zinc-800 font-semibold text-xs">
+                      {selectedOrder.customer_name}
+                    </p>
                     <p className="text-zinc-600 text-xs leading-relaxed whitespace-pre-wrap">
                       {selectedOrder.shipping_address || "No shipping record details"}
                     </p>
+                    {selectedOrder.phone && (
+                      <p className="text-zinc-600 text-xs font-medium pt-1">
+                        Mobile: {selectedOrder.phone}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Payment Details</h4>

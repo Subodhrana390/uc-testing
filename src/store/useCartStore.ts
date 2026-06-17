@@ -9,6 +9,7 @@ export interface CartItem {
   price: number;
   image_url: string;
   quantity: number;
+  hsn_code?: string;
 }
 
 interface CartState {

@@ -1,5 +1,32 @@
-// No top-level imports for jspdf to avoid bloating the bundle
 import { getDisplayOrderId } from "./order";
+import { numberToWords } from "./numberToWords";
+
+const getLogoBase64 = async () => {
+  if (typeof window === "undefined") {
+    const fs = await import("fs");
+    const path = await import("path");
+    const filePath = path.join(process.cwd(), "public", "logo.png");
+    try {
+      const bitmap = fs.readFileSync(filePath);
+      return `data:image/png;base64,${bitmap.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  } else {
+    try {
+      const response = await fetch("/logo.png");
+      const blob = await response.blob();
+      return new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+};
 
 export interface InvoiceData {
   orderId: string;
@@ -13,40 +40,17 @@ export interface InvoiceData {
   taxAmount?: number;
   shippingAmount?: number;
   discountAmount?: number;
+  paymentMethod?: string;
+  carrier?: string;
 }
-
-const getLogoBase64 = async () => {
-  if (typeof window === "undefined") {
-    const fs = await import("fs");
-    const path = await import("path");
-    const filePath = path.join(process.cwd(), "public", "logo.png");
-    const buffer = fs.readFileSync(filePath);
-    return `data:image/png;base64,${buffer.toString("base64")}`;
-  } else {
-    const response = await fetch("/logo.png");
-    const blob = await response.blob();
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-};
 
 export const generateInvoicePDF = async (data: InvoiceData) => {
   const { jsPDF } = await import("jspdf");
   await import("jspdf-autotable");
   
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
   
-  let logoBase64 = "";
-  try {
-    logoBase64 = await getLogoBase64();
-  } catch (err) {
-    console.error("Failed to load logo for invoice:", err);
-  }
-
   const businessInfo = {
     name: "UC ENTERPRISES",
     address: "Hadhbast no-44, Ambala Delhi National Highway, Bisanpur, Zirakpur, Punjab, 140603, India.",
@@ -56,64 +60,116 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     phone: "9888863377"
   };
 
-  // Set Header
-  doc.setFontSize(22);
-  doc.setTextColor(249, 115, 22); // Primary orange color
-  doc.text(businessInfo.name, 14, 20);
+  // Outer borders
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.3);
+  
+  // Top text: "Tax Invoice"
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Tax Invoice", pageWidth / 2, 12, { align: "center" });
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("Original / Duplicate Bill", 200, 12, { align: "right" });
 
+  // Top Box (Company Info) - Starts at y=14
+  doc.rect(10, 14, 190, 24);
+  
+  const logoBase64 = await getLogoBase64();
   if (logoBase64) {
-    try {
-      doc.addImage(logoBase64, "PNG", 171, 12, 25, 25);
-    } catch (err) {
-      console.error("Failed to add logo to PDF:", err);
-    }
+    doc.addImage(logoBase64, "PNG", 12, 16, 20, 20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(businessInfo.name, 35, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(businessInfo.address, 35, 24);
+    doc.text(`GSTIN: ${businessInfo.gstin} | UDYAM: ${businessInfo.udyam}`, 35, 29);
+    doc.text(`Contact No. : +91 ${businessInfo.phone} | Email: ${businessInfo.email}`, 35, 34);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(businessInfo.name, 40, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(businessInfo.address, 40, 24);
+    doc.text(`GSTIN: ${businessInfo.gstin} | UDYAM: ${businessInfo.udyam}`, 40, 29);
+    doc.text(`Contact No. : +91 ${businessInfo.phone} | Email: ${businessInfo.email}`, 40, 34);
   }
-  
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  
-  // Wrap business address text dynamically (width 150 to avoid logo overlap)
-  const businessAddressLines = doc.splitTextToSize(businessInfo.address, 150);
-  doc.text(businessAddressLines, 14, 28);
-  
-  const nextY = 28 + (businessAddressLines.length * 5);
-  doc.text(`GSTIN: ${businessInfo.gstin} | UDYAM: ${businessInfo.udyam}`, 14, nextY);
-  doc.text(`Email: ${businessInfo.email} | Phone: ${businessInfo.phone}`, 14, nextY + 5);
 
-  // Line
-  const lineY = nextY + 10;
-  doc.setDrawColor(249, 115, 22);
-  doc.line(14, lineY, 196, lineY);
+  // Bill To & Invoice Info Box (y=38 to 78, height 40)
+  doc.rect(10, 38, 190, 40);
+  doc.line(105, 38, 105, 78); // vertical split
 
-  // Invoice Details
-  doc.setFontSize(12);
-  doc.setTextColor(0);
+  // Left Column: Bill To (y=38 to 58), Ship To (y=58 to 78)
+  doc.line(10, 58, 105, 58); // horizontal split for left column
+  
+  // Bill To Header
+  doc.setFillColor(220, 235, 245);
+  doc.rect(10, 38, 95, 5, "F");
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("TAX INVOICE", 14, 55);
+  doc.text("Bill To", 12, 42);
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`Order ID: ${getDisplayOrderId(data.orderId, data.date)}`, 14, 62);
-  doc.text(`Date: ${new Date(data.date).toLocaleDateString()}`, 14, 67);
+  doc.text(`Name : ${data.customerName || "Customer"}`, 12, 47);
+  const billAddress = doc.splitTextToSize(data.address || "", 80);
+  doc.text(`Address :`, 12, 51);
+  doc.text(billAddress, 25, 51);
 
-  // Billing Details
+  // Shipp To Header
+  doc.setFillColor(220, 235, 245);
+  doc.rect(10, 58, 95, 5, "F");
   doc.setFont("helvetica", "bold");
-  doc.text("Bill To:", 120, 55);
-  doc.setFont("helvetica", "normal");
-  doc.text(data.customerName, 120, 62);
-  doc.text(data.customerEmail, 120, 67);
-  if (data.customerPhone) doc.text(data.customerPhone, 120, 72);
+  doc.text("Shipp To", 12, 62);
   
-  // Wrap address text
-  const splitAddress = doc.splitTextToSize(data.address, 70);
-  doc.text(splitAddress, 120, 77);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Name : ${data.customerName || "Customer"}`, 12, 67);
+  doc.text(`Address :`, 12, 71);
+  doc.text(billAddress, 25, 71);
 
-  // Table
-  const tableData = data.items.map((item, index) => {
+  // Right Column
+  doc.line(105, 58, 200, 58); // horizontal split
+  
+  doc.text(`# Inv. No. :`, 107, 42);
+  doc.text(getDisplayOrderId(data.orderId, data.date), 140, 42);
+  
+  doc.text(`Inv. Date :`, 107, 46);
+  doc.text(new Date(data.date).toLocaleDateString('en-GB'), 140, 46);
+  
+  doc.text(`Payment Mode :`, 107, 50);
+  doc.text(data.paymentMethod || "Online", 140, 50);
+  
+  doc.text(`Reverse Charge :`, 107, 54);
+  doc.text("NO", 140, 54);
+
+  doc.text(`Buyer's Order No :`, 107, 62);
+  doc.text(data.orderId.split('-')[0].toUpperCase(), 140, 62);
+  
+  doc.text(`Delivery Date :`, 107, 66);
+  doc.text("-", 140, 66);
+  
+  doc.text(`Transport Details :`, 107, 70);
+  doc.text(data.carrier || "-", 140, 70);
+
+  let totalIgst = 0;
+  let totalCgst = 0;
+  let totalSgst = 0;
+  let subtotalTaxable = 0;
+  let totalQuantity = 0;
+
+  // Table Data
+  const tableData = data.items.map((item: any, index: number) => {
     const qty = item.quantity;
     const unitPrice = parseFloat(item.unit_price);
     const itemTotal = unitPrice * qty;
-    const rate = item.products?.tax_rate || 0;
+    const igst = item.products?.igst_rate || 0;
+    const cgst = item.products?.cgst_rate || 0;
+    const sgst = item.products?.sgst_rate || 0;
+    const rate = igst + cgst + sgst;
+    
     const isTaxInclusive = item.products?.is_tax_inclusive || false;
     
     let baseTotal = itemTotal;
@@ -131,111 +187,197 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     }
     
     const baseUnitPrice = baseTotal / qty;
+    const hsn = item.products?.hsn_code || item.hsn_code || "-";
+
+    subtotalTaxable += baseTotal;
+    totalQuantity += qty;
+    
+    // Breakdown tax amounts based on rates
+    if (igst > 0) totalIgst += taxAmount * (igst / rate);
+    if (cgst > 0) totalCgst += taxAmount * (cgst / rate);
+    if (sgst > 0) totalSgst += taxAmount * (sgst / rate);
 
     return [
       index + 1,
-      item.products?.name || "Product",
-      item.products?.hsn_code || "-",
-      baseUnitPrice.toFixed(2),
+      item.products?.name || item.product_name || "Product",
+      hsn,
       qty,
-      rate > 0 ? `${rate}% (${taxAmount.toFixed(2)})` : "0%",
+      baseUnitPrice.toFixed(2),
+      baseTotal.toFixed(2),
+      rate > 0 ? `${rate}%` : "-",
+      taxAmount > 0 ? taxAmount.toFixed(2) : "-",
       lineTotal.toFixed(2)
     ];
   });
 
   (doc as any).autoTable({
-    startY: 100,
-    head: [['#', 'Description', 'HSN', 'Price (Excl. GST)', 'Qty', 'GST', 'Amount']],
+    startY: 78,
+    head: [
+      [
+        { content: 'Sr', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Goods & Service Discription', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
+        { content: 'HSN', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Quantity', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Rate', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } },
+        { content: 'Taxable', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } },
+        { content: 'GST', colSpan: 2, styles: { halign: 'center' } },
+        { content: 'Total', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } }
+      ],
+      [
+        { content: '%', styles: { halign: 'center' } },
+        { content: 'Amt.', styles: { halign: 'right' } }
+      ]
+    ],
     body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [249, 115, 22], textColor: 255 },
+    theme: 'grid',
+    headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0 },
+    bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0 },
     columnStyles: {
-      0: { cellWidth: 10 },
+      0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 'auto' },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 15, halign: 'center' },
-      5: { cellWidth: 30, halign: 'right' },
-      6: { cellWidth: 30, halign: 'right' },
+      2: { cellWidth: 15, halign: 'center' },
+      3: { cellWidth: 15, halign: 'center' },
+      4: { cellWidth: 20, halign: 'right' },
+      5: { cellWidth: 22, halign: 'right' },
+      6: { cellWidth: 12, halign: 'center' },
+      7: { cellWidth: 18, halign: 'right' },
+      8: { cellWidth: 25, halign: 'right' }
     },
-    foot: (() => {
-      let subtotalExcl = 0;
-      let calculatedTax = 0;
-
-      data.items.forEach((item) => {
-        const qty = item.quantity;
-        const unitPrice = parseFloat(item.unit_price);
-        const itemTotal = unitPrice * qty;
-        const rate = item.products?.tax_rate || 0;
-        const isTaxInclusive = item.products?.is_tax_inclusive || false;
-        
-        let baseTotal = itemTotal;
-        let taxAmount = 0;
-        
-        if (rate > 0) {
-          if (isTaxInclusive) {
-            baseTotal = itemTotal / (1 + rate / 100);
-            taxAmount = itemTotal - baseTotal;
-          } else {
-            taxAmount = itemTotal * (rate / 100);
-          }
-        }
-        subtotalExcl += baseTotal;
-        calculatedTax += taxAmount;
-      });
-
-      const shipping = data.shippingAmount || 0;
-      const discount = data.discountAmount || 0;
-
-      const rows: any[] = [
-        [
-          { content: 'Subtotal (Excl. GST)', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${subtotalExcl.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
-        ]
-      ];
-
-      if (calculatedTax > 0) {
-        rows.push([
-          { content: 'GST', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${calculatedTax.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
-        ]);
-      } else if (data.taxAmount && data.taxAmount > 0) {
-        rows.push([
-          { content: 'GST', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${data.taxAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
-        ]);
-      }
-
-      if (shipping > 0) {
-        rows.push([
-          { content: 'Delivery Charge', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal' } },
-          { content: `INR ${shipping.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal' } }
-        ]);
-      }
-
-      if (discount > 0) {
-        rows.push([
-          { content: 'Coupon Discount', colSpan: 6, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } },
-          { content: `-INR ${discount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'normal', textColor: [220, 38, 38] } }
-        ]);
-      }
-
-      rows.push([
-        { content: 'Total (Incl. Taxes & Delivery)', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } },
-        { content: `INR ${data.totalAmount.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
-      ]);
-
-      return rows;
-    })()
+    margin: { left: 10, right: 10 },
+    foot: [
+      [
+        { content: 'Sub-Total:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: totalQuantity.toString(), styles: { halign: 'center', fontStyle: 'bold' } },
+        { content: '', styles: { halign: 'right' } },
+        { content: subtotalTaxable.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: '', styles: { halign: 'center' } },
+        { content: (totalIgst + totalCgst + totalSgst).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: data.totalAmount.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }
+      ]
+    ],
+    footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0 }
   });
 
-  // Footer notes
-  const finalY = (doc as any).lastAutoTable.finalY + 20;
+  let finalY = (doc as any).lastAutoTable.finalY;
+  
+  if (finalY + 70 > doc.internal.pageSize.getHeight() - 10) {
+    doc.addPage();
+    finalY = 10;
+  }
+
+  // Draw Footer Outer Box
+  doc.setLineWidth(0.3);
+  doc.rect(10, finalY, 190, 65);
+  
+  // Left side: Bank Details
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text("1. This is a computer generated invoice and does not require a physical signature.", 14, finalY);
-  doc.text("2. Please quote invoice number for all future correspondence.", 14, finalY + 5);
-  doc.text("3. Terms & Conditions apply. Thank you for your business!", 14, finalY + 10);
+  doc.setFillColor(220, 235, 245);
+  doc.rect(10, finalY, 120, 5, "F");
+  doc.text("Our Bank Details", 12, finalY + 4);
+  
+  doc.text("Bank Name :", 12, finalY + 10);
+  doc.setFont("helvetica", "normal");
+  doc.text("STATE BANK OF INDIA", 35, finalY + 10);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Branch :", 12, finalY + 14);
+  doc.setFont("helvetica", "normal");
+  doc.text("Delhi", 35, finalY + 14);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Account No :", 12, finalY + 18);
+  doc.setFont("helvetica", "normal");
+  doc.text("20412XXXX05", 35, finalY + 18);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("IFSC Code :", 12, finalY + 22);
+  doc.setFont("helvetica", "normal");
+  doc.text("SBIN003XXXX", 35, finalY + 22);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("UPI ID :", 12, finalY + 26);
+  doc.setFont("helvetica", "normal");
+  doc.text("ucenterprises@upi", 35, finalY + 26);
+  
+  // Horizontal line under bank details
+  doc.line(10, finalY + 30, 130, finalY + 30);
+  
+  // Invoice Total in Words
+  doc.setFillColor(220, 235, 245);
+  doc.rect(10, finalY + 30, 120, 5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.text("Invoice Total in Word", 12, finalY + 34);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Rupees ${numberToWords(Math.round(data.totalAmount))} Only`, 12, finalY + 40);
+
+  // Line below words
+  doc.line(10, finalY + 44, 200, finalY + 44);
+
+  // Declaration
+  doc.setFontSize(7);
+  doc.text("Declaration", 12, finalY + 48);
+  doc.text("1. Subject to jurisdiction.", 12, finalY + 52);
+  doc.text("2. Terms & conditions are subject to our trade policy.", 12, finalY + 55);
+  doc.text("3. Our risk & responsibility ceases after the delivery of goods.", 12, finalY + 58);
+  doc.text("E. & O.E.", 12, finalY + 62);
+
+  // Right Side: Summary Table
+  doc.line(130, finalY, 130, finalY + 65); // vertical line for summary
+  
+  doc.setFillColor(220, 235, 245);
+  doc.rect(130, finalY, 70, 5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("SUMMARY", 145, finalY + 4);
+  doc.text("AMOUNT", 198, finalY + 4, { align: "right" });
+  
+  doc.line(130, finalY + 5, 200, finalY + 5);
+
+  doc.setFont("helvetica", "normal");
+  doc.text("CGST Amt :", 175, finalY + 9, { align: "right" });
+  doc.text(totalCgst.toFixed(2), 198, finalY + 9, { align: "right" });
+  doc.line(130, finalY + 10, 200, finalY + 10);
+
+  doc.text("SGST Amt :", 175, finalY + 14, { align: "right" });
+  doc.text(totalSgst.toFixed(2), 198, finalY + 14, { align: "right" });
+  doc.line(130, finalY + 15, 200, finalY + 15);
+
+  doc.text("IGST Amt :", 175, finalY + 19, { align: "right" });
+  doc.text(totalIgst.toFixed(2), 198, finalY + 19, { align: "right" });
+  doc.line(130, finalY + 20, 200, finalY + 20);
+
+  doc.text("Freight Packing Charges :", 175, finalY + 24, { align: "right" });
+  const shippingAmount = data.shippingAmount || 0;
+  doc.text(shippingAmount.toFixed(2), 198, finalY + 24, { align: "right" });
+  doc.line(130, finalY + 25, 200, finalY + 25);
+
+  const discountAmount = data.discountAmount || 0;
+  doc.text("Discount :", 175, finalY + 29, { align: "right" });
+  doc.text(discountAmount > 0 ? `-${discountAmount.toFixed(2)}` : "0.00", 198, finalY + 29, { align: "right" });
+  doc.line(130, finalY + 30, 200, finalY + 30);
+  
+  const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + shippingAmount - discountAmount;
+  const finalRoundedTotal = data.totalAmount;
+  const roundOff = finalRoundedTotal - rawTotal;
+
+  doc.text("Round off :", 175, finalY + 34, { align: "right" });
+  doc.text(roundOff.toFixed(2), 198, finalY + 34, { align: "right" });
+  doc.line(130, finalY + 35, 200, finalY + 35);
+
+  doc.setFillColor(220, 235, 245);
+  doc.rect(130, finalY + 35, 70, 9, "F");
+  doc.setFont("helvetica", "bold");
+  doc.text("Total Amount :", 175, finalY + 41, { align: "right" });
+  doc.text(finalRoundedTotal.toFixed(2), 198, finalY + 41, { align: "right" });
+  
+  // Signature
+  doc.setFont("helvetica", "normal");
+  doc.text("For, UC ENTERPRISES", 165, finalY + 50, { align: "center" });
+  doc.text("Authorised Signatory", 165, finalY + 63, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Thank You For Business With US!", 105, finalY + 70, { align: "center" });
 
   return doc;
 };

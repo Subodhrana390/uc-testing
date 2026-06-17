@@ -25,6 +25,14 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **Inquiry System**: "Bulk Enquiry / Get Quote" functionality for bulk/B2B industrial orders.
 - **User Accounts & Billing**: Profile management, order tracking, dynamic wishlists, and a secure portal to download GST tax invoices.
 - **Payment Gateway**: Secure online checkout integrated with Razorpay (payment creation, client verification, and secure webhooks).
+  - **Reservation Pattern**: Inventory is placed on hold the moment checkout begins.
+  - **Optimistic Cleanup**: Orders are instantly cancelled and stock is released if the user closes the payment window.
+  - **Timeout Safety Net**: A background PostgreSQL cron job cleans up abandoned orders after 30 minutes, automatically releasing reserved stock.
+  - **Edge-case Handling**: Automatically processes "Ghost/Late Payments" (auto-refunds payments that arrive after order expiration) and securely syncs external Razorpay Dashboard refunds with the internal Credit Note system.
+- **Proper Indian GST Architecture**: 
+  - **Hierarchical Inheritance**: Subcategories and products automatically inherit HSN codes and exact IGST/CGST/SGST rates from the Main Category, preventing manual data-entry errors.
+  - **Inter-state vs Intra-state**: Dynamically calculates split tax rates based on the origin state (Punjab) vs destination state.
+  - **Zero-Trust Order Math**: Recalculates all subtotal, discount, shipping, and tax permutations securely on the server-side, ignoring client payload tampering.
 - **Responsive Design**: Optimized for Desktop, Tablet, and Mobile devices with a premium glassmorphic aesthetic.
 
 ### 🛠 Admin Console

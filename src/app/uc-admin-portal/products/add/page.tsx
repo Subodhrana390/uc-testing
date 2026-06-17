@@ -40,7 +40,9 @@ export default function AddProductPage() {
     manufacturing_info: "",
     warranty_info: "",
     images: [] as string[],
-    tax_rate: "0",
+    igst_rate: "0",
+    cgst_rate: "0",
+    sgst_rate: "0",
     is_industrial_grade: false,
     is_ready_stock: false,
     is_tax_inclusive: false,
@@ -62,12 +64,12 @@ export default function AddProductPage() {
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
 
-  const taxRateVal = parseFloat(formData.tax_rate) || 0;
+  const igstRateVal = parseFloat(formData.igst_rate) || 0;
   const priceVal = parseFloat(formData.price) || 0;
-  const salePriceVal = parseFloat(formData.sale_price) || 0;
-
-  const finalPrice = priceVal + (priceVal * taxRateVal) / 100;
-  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * taxRateVal) / 100) : 0;
+  const costPriceVal = parseFloat(formData.cost_price) || 0;
+  const salePriceVal = formData.sale_price ? parseFloat(formData.sale_price) : null;
+  const finalPrice = priceVal + (priceVal * igstRateVal) / 100;
+  const finalSalePrice = salePriceVal ? (salePriceVal + (salePriceVal * igstRateVal) / 100) : 0;
 
   // Map main category name keywords → brand category text values
   const getBrandCategoryKeywords = (mainCatName: string): string[] => {
@@ -168,6 +170,14 @@ export default function AddProductPage() {
       return;
     }
 
+    if (formData.hsn_code) {
+      const hsnClean = formData.hsn_code.trim();
+      if (!/^\d{4,8}$/.test(hsnClean)) {
+        toast.error("HSN Code must be between 4 and 8 digits.");
+        return;
+      }
+    }
+
     const priceExclusive = parseFloat(formData.price);
     const salePriceExclusive = formData.sale_price ? parseFloat(formData.sale_price) : null;
 
@@ -176,9 +186,9 @@ export default function AddProductPage() {
       return;
     }
 
-    const taxRate = parseFloat(formData.tax_rate || "0");
-    const priceInclusive = priceExclusive * (1 + taxRate / 100);
-    const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + taxRate / 100) : null;
+    const igstRate = parseFloat(formData.igst_rate || "0");
+    const priceInclusive = priceExclusive * (1 + igstRate / 100);
+    const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + igstRate / 100) : null;
 
     setLoading(true);
     try {
@@ -206,7 +216,9 @@ export default function AddProductPage() {
           images: formData.images,
           datasheet_url: formData.datasheet_url || null,
           status: formData.visibility ? "Active" : "Draft",
-          tax_rate: taxRate,
+          igst_rate: igstRate,
+          cgst_rate: parseFloat(formData.cgst_rate || "0"),
+          sgst_rate: parseFloat(formData.sgst_rate || "0"),
           is_tax_inclusive: true,
           visibility: formData.visibility,
           is_industrial_grade: formData.is_industrial_grade,
@@ -365,16 +377,19 @@ export default function AddProductPage() {
                     className={inputClass}
                     value={selectedMainCategoryId}
                     onChange={(e) => {
-                      const mainId = e.target.value;
-                      setSelectedMainCategoryId(mainId);
-                      const mainCat = categories.find(c => c.id === mainId);
-                      const taxRate = mainCat ? mainCat.tax_rate : 0;
+                      const catId = e.target.value;
+                      setSelectedMainCategoryId(catId);
+                      const mainCat = categories.find((c: any) => c.id === catId);
+                      const igstRate = mainCat ? mainCat.igst_rate : 0;
+                      const cgstRate = mainCat ? mainCat.cgst_rate : 0;
+                      const sgstRate = mainCat ? mainCat.sgst_rate : 0;
                       setFormData({
                         ...formData,
-                        category_id: mainId,
-                        brand_id: "",
-                        tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                        is_tax_inclusive: taxRate > 0
+                        category_id: catId,
+                        igst_rate: mainCat ? igstRate.toString() : formData.igst_rate,
+                        cgst_rate: mainCat ? cgstRate.toString() : formData.cgst_rate,
+                        sgst_rate: mainCat ? sgstRate.toString() : formData.sgst_rate,
+                        is_tax_inclusive: igstRate > 0
                       });
                     }}
                     required
@@ -395,23 +410,16 @@ export default function AddProductPage() {
                       className={inputClass}
                       value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
                       onChange={(e) => {
-                        const subId = e.target.value;
-                        const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
-                        const taxRate = mainCat ? mainCat.tax_rate : 0;
-                        if (!subId) {
+                        const catId = e.target.value;
+                        if (!catId) {
+                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
                           setFormData({
                             ...formData,
                             category_id: selectedMainCategoryId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
-                          });
-                        } else {
-                          // Always pull tax_rate from Main Category
-                          setFormData({
-                            ...formData,
-                            category_id: subId,
-                            tax_rate: mainCat ? mainCat.tax_rate.toString() : formData.tax_rate,
-                            is_tax_inclusive: taxRate > 0
+                            igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
+                            cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
+                            sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
+                            is_tax_inclusive: igstRateVal > 0
                           });
                         }
                       }}
@@ -431,10 +439,10 @@ export default function AddProductPage() {
                       Auto-applied Tax Rate: {(() => {
                         const cat = categories.find((c: any) => c.id === formData.category_id);
                         if (!cat) return 0;
-                        if (cat.tax_rate !== null && cat.tax_rate !== undefined && cat.tax_rate !== 0) return cat.tax_rate;
+                        if (cat.igst_rate !== null && cat.igst_rate !== undefined && cat.igst_rate !== 0) return cat.igst_rate;
                         if (cat.parent_id) {
                           const parentCat = categories.find((c: any) => c.id === cat.parent_id);
-                          return parentCat?.tax_rate || 0;
+                          return parentCat?.igst_rate || 0;
                         }
                         return 0;
                       })()}%
@@ -517,7 +525,7 @@ export default function AddProductPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
-                  {formData.price && taxRateVal > 0 && (
+                  {formData.price && igstRateVal > 0 && (
                     <p className="text-[10px] text-zinc-500 mt-1.5 font-semibold">
                       Final Price: <span className="text-zinc-900 font-extrabold">₹{finalPrice.toFixed(2)}</span> (GST Included)
                     </p>
@@ -590,7 +598,7 @@ export default function AddProductPage() {
                       {discountType === "fixed" && discountValue && (
                         <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-bold">₹{parseFloat(discountValue).toLocaleString("en-IN")} OFF</span>
                       )}
-                      {formData.sale_price && taxRateVal > 0 && (
+                      {formData.sale_price && igstRateVal > 0 && (
                         <span className="text-zinc-500 font-semibold">
                           Final: <span className="text-zinc-900 font-extrabold">₹{finalSalePrice.toFixed(2)}</span> (incl. GST)
                         </span>
@@ -598,30 +606,30 @@ export default function AddProductPage() {
                     </div>
                   )}
                 </div>
+                {/* GST */}
                 <div>
-                  <label className={labelClass} htmlFor="tax_rate">GST Rate (%)</label>
-                  <select
-                    id="tax_rate"
-                    className={inputClass}
-                    value={formData.tax_rate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData({
-                        ...formData,
-                        tax_rate: val,
-                        is_tax_inclusive: true
-                      });
-                    }}
-                  >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="12">12%</option>
-                    <option value="18">18%</option>
-                    <option value="28">28%</option>
-                    {!["0", "5", "12", "18", "28"].includes(formData.tax_rate) && formData.tax_rate !== "" && (
-                      <option value={formData.tax_rate}>{formData.tax_rate}%</option>
-                    )}
-                  </select>
+                  <label className={labelClass}>GST Configuration</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">IGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.igst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">CGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.cgst_rate}%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-zinc-500">SGST</span>
+                      <div className="flex items-center h-[42px] px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
+                        <span className="text-sm font-semibold">{formData.sgst_rate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1">Rates are inherited from the Main Category</p>
                 </div>
                 <div>
                   <label className={labelClass} htmlFor="tax_inclusive">Tax Type</label>

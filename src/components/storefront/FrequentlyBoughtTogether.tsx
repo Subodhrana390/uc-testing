@@ -19,6 +19,7 @@ interface Product {
   status: string | null;
   stock_quantity: number;
   images: string[];
+  hsn_code?: string | null;
   categories?: {
     name: string;
     slug: string;
@@ -116,6 +117,7 @@ export default function FrequentlyBoughtTogether({
         name: p.name,
         price: finalPrice,
         image_url: p.image_url || (p.images && p.images[0]) || "",
+        hsn_code: p.hsn_code || undefined,
       }, 1);
     });
     

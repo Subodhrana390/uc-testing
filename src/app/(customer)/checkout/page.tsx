@@ -44,7 +44,9 @@ declare global {
 }
 
 interface CartItemWithTax extends CartItem {
-  tax_rate?: number;
+  igst_rate?: number;
+  cgst_rate?: number;
+  sgst_rate?: number;
   is_tax_inclusive?: boolean;
   stock_quantity?: number;
 }
@@ -112,7 +114,7 @@ export default function CheckoutPage() {
 
   const totals = items.reduce(
     (acc, item) => {
-      const rate = item.tax_rate || 0;
+      const rate = (item.igst_rate || 0) + (item.cgst_rate || 0) + (item.sgst_rate || 0);
       const itemTotal = item.price * item.quantity;
       acc.subtotal += itemTotal;
       
@@ -251,7 +253,7 @@ export default function CheckoutPage() {
 
       const { data: products } = await supabase
         .from("products")
-        .select("id, price, sale_price, tax_rate, is_tax_inclusive, stock_quantity")
+        .select("id, price, sale_price, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, stock_quantity")
         .in(
           "id",
           checkoutItems.map((i) => i.id)
@@ -266,7 +268,9 @@ export default function CheckoutPage() {
         return {
           ...item,
           price: currentPrice,
-          tax_rate: prod?.tax_rate || 0,
+          igst_rate: prod?.igst_rate || 0,
+          cgst_rate: prod?.cgst_rate || 0,
+          sgst_rate: prod?.sgst_rate || 0,
           is_tax_inclusive: prod?.is_tax_inclusive || false,
           stock_quantity: prod?.stock_quantity || 0,
         };
@@ -1382,9 +1386,12 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
-                        <p className="text-xs sm:text-sm font-bold text-zinc-950 truncate">
-                          {item.name}
-                        </p>
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-xs sm:text-sm font-bold text-zinc-950 truncate">
+                            {item.name}
+                          </p>
+                          {item.hsn_code && <span className="text-[10px] text-zinc-500 font-medium mt-0.5">HSN: {item.hsn_code}</span>}
+                        </div>
                         <div className="flex justify-between items-center text-xs font-bold text-zinc-500">
                           <span>{item.quantity} × {formatCurrency(item.price)}</span>
                           <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
@@ -1538,7 +1545,10 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <p className="text-xs font-bold text-zinc-950 truncate">{item.name}</p>
+                          <div className="flex flex-col min-w-0">
+                            <p className="text-xs font-bold text-zinc-950 truncate">{item.name}</p>
+                            {item.hsn_code && <span className="text-[10px] text-zinc-500 font-medium">HSN: {item.hsn_code}</span>}
+                          </div>
                           <div className="flex justify-between items-center text-[11px] font-bold text-zinc-500">
                             <span>{item.quantity} × {formatCurrency(item.price)}</span>
                             <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
