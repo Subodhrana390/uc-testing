@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Heart, ShoppingCart, Check, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createClient } from "@/utils/supabase/client";
@@ -18,6 +18,8 @@ interface ProductCardProps {
     slug: string;
     price: number;
     sale_price: number | null;
+    is_tax_inclusive?: boolean;
+    igst_rate?: number;
     image_url: string | null;
     status: string | null;
     stock_quantity: number;
@@ -102,6 +104,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         price: product.sale_price || product.price,
         image_url: product.image_url || "",
         hsn_code: product.hsn_code || undefined,
+        is_tax_inclusive: product.is_tax_inclusive,
+        igst_rate: product.igst_rate,
       });
     }
   };
@@ -227,12 +231,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Price */}
         <div className="flex items-center justify-between pt-1 mt-auto">
           <div className="flex flex-col">
-            <span className="text-sm font-black text-zinc-950 leading-none">
-              {formatCurrency(product.sale_price || product.price)}
-            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-zinc-950 leading-none">
+                {formatCurrency(getExclusivePrice(product.sale_price || product.price, product.is_tax_inclusive, product.igst_rate))}
+              </span>
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">+ GST</span>
+            </div>
             {product.sale_price && (
               <span className="text-[10px] text-zinc-400 line-through mt-0.5 font-bold">
-                {formatCurrency(product.price)}
+                {formatCurrency(getExclusivePrice(product.price, product.is_tax_inclusive, product.igst_rate))}
               </span>
             )}
           </div>

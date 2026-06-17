@@ -2,6 +2,7 @@ import { createServiceRoleClient } from "@/utils/supabase/service-role";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { numberToWords } from "@/lib/numberToWords";
+import { getDisplayOrderId } from "@/lib/order";
 import fs from "fs";
 import path from "path";
 
@@ -141,8 +142,8 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text(`Reverse Charge :`, 107, 54);
     doc.text("NO", 140, 54);
 
-    doc.text(`Buyer's Order No :`, 107, 62);
-    doc.text(invoice.orders.id.split('-')[0].toUpperCase(), 140, 62);
+    doc.text(`Order No :`, 107, 62);
+    doc.text(getDisplayOrderId(invoice.orders.id, invoice.orders.created_at), 140, 62);
     
     doc.text(`Delivery Date :`, 107, 66);
     doc.text(invoice.orders.delivery_estimate || "-", 140, 66);
@@ -164,7 +165,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       const igst = item.products?.igst_rate || 0;
       const cgst = item.products?.cgst_rate || 0;
       const sgst = item.products?.sgst_rate || 0;
-      const rate = igst + cgst + sgst;
+      const rate = igst > 0 ? igst : (cgst + sgst);
       
       const isTaxInclusive = item.products?.is_tax_inclusive || false;
       
@@ -189,9 +190,15 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       totalQuantity += qty;
       
       // Breakdown tax amounts based on rates
-      if (igst > 0) totalIgst += taxAmount * (igst / rate);
-      if (cgst > 0) totalCgst += taxAmount * (cgst / rate);
-      if (sgst > 0) totalSgst += taxAmount * (sgst / rate);
+      if (igst > 0) {
+        totalIgst += taxAmount;
+      } else {
+        const totalCgstSgst = cgst + sgst;
+        if (totalCgstSgst > 0) {
+          totalCgst += taxAmount * (cgst / totalCgstSgst);
+          totalSgst += taxAmount * (sgst / totalCgstSgst);
+        }
+      }
 
       return [
         index + 1,
@@ -226,8 +233,8 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       ],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0 },
-      bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0 },
+      headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
+      bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
         1: { cellWidth: 'auto' },
@@ -251,20 +258,20 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
           { content: parseFloat(invoice.total_amount).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }
         ]
       ],
-      footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0 }
+      footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 }
     });
 
     let finalY = (doc as any).lastAutoTable.finalY;
     
     // Check if footer fits, otherwise add page
-    if (finalY + 70 > doc.internal.pageSize.getHeight() - 10) {
+    if (finalY + 75 > doc.internal.pageSize.getHeight() - 10) {
       doc.addPage();
       finalY = 10;
     }
 
     // Draw Footer Outer Box
     doc.setLineWidth(0.3);
-    doc.rect(10, finalY, 190, 65); // height 65
+    doc.rect(10, finalY, 190, 70); // height 70
     
     // Left side: Bank Details
     doc.setFont("helvetica", "bold");
@@ -320,7 +327,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text("E. & O.E.", 12, finalY + 62);
 
     // Right Side: Summary Table
-    doc.line(130, finalY, 130, finalY + 65); // vertical line for summary
+    doc.line(130, finalY, 130, finalY + 70); // vertical line for summary
     
     doc.setFillColor(220, 235, 245);
     doc.rect(130, finalY, 70, 5, "F");
@@ -353,14 +360,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text(discountAmount > 0 ? `-${discountAmount.toFixed(2)}` : "0.00", 198, finalY + 29, { align: "right" });
     doc.line(130, finalY + 30, 200, finalY + 30);
     
-    // Calculate precise sum vs rounded total for roundoff
-    const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + parseFloat(invoice.shipping_amount) - discountAmount;
-    const finalRoundedTotal = parseFloat(invoice.total_amount);
-    const roundOff = finalRoundedTotal - rawTotal;
-
-    doc.text("Round off :", 175, finalY + 34, { align: "right" });
-    doc.text(roundOff.toFixed(2), 198, finalY + 34, { align: "right" });
+    const shippingGst = Math.round(parseFloat(invoice.shipping_amount) * 0.18 * 100) / 100;
+    doc.text("Shipping GST (18%) :", 175, finalY + 34, { align: "right" });
+    doc.text(shippingGst.toFixed(2), 198, finalY + 34, { align: "right" });
     doc.line(130, finalY + 35, 200, finalY + 35);
+    
+    // Calculate precise sum vs rounded total for actual roundoff
+    const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + parseFloat(invoice.shipping_amount) + shippingGst - discountAmount;
+    const finalRoundedTotal = parseFloat(invoice.total_amount);
 
     doc.setFillColor(220, 235, 245);
     doc.rect(130, finalY + 35, 70, 9, "F");

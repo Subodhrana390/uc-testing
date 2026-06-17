@@ -1,0 +1,28 @@
+-- Drop the old function signature to fix PGRST203 function overloading error
+DROP FUNCTION IF EXISTS public.place_order_safe(
+    uuid,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    jsonb,
+    jsonb,
+    text,
+    text,
+    boolean,
+    uuid,
+    uuid,
+    integer,
+    numeric,
+    numeric,
+    numeric,
+    jsonb,
+    numeric,
+    numeric,
+    text,
+    text,
+    text
+);

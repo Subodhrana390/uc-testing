@@ -47,10 +47,10 @@ export interface InvoiceData {
 export const generateInvoicePDF = async (data: InvoiceData) => {
   const { jsPDF } = await import("jspdf");
   await import("jspdf-autotable");
-  
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  
+
   const businessInfo = {
     name: "UC ENTERPRISES",
     address: "Hadhbast no-44, Ambala Delhi National Highway, Bisanpur, Zirakpur, Punjab, 140603, India.",
@@ -63,7 +63,7 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   // Outer borders
   doc.setDrawColor(0);
   doc.setLineWidth(0.3);
-  
+
   // Top text: "Tax Invoice"
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -74,14 +74,14 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
 
   // Top Box (Company Info) - Starts at y=14
   doc.rect(10, 14, 190, 24);
-  
+
   const logoBase64 = await getLogoBase64();
   if (logoBase64) {
     doc.addImage(logoBase64, "PNG", 12, 16, 20, 20);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text(businessInfo.name, 35, 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.text(businessInfo.address, 35, 24);
@@ -91,7 +91,7 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text(businessInfo.name, 40, 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.text(businessInfo.address, 40, 24);
@@ -105,14 +105,14 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
 
   // Left Column: Bill To (y=38 to 58), Ship To (y=58 to 78)
   doc.line(10, 58, 105, 58); // horizontal split for left column
-  
+
   // Bill To Header
   doc.setFillColor(220, 235, 245);
   doc.rect(10, 38, 95, 5, "F");
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.text("Bill To", 12, 42);
-  
+
   doc.setFont("helvetica", "normal");
   doc.text(`Name : ${data.customerName || "Customer"}`, 12, 47);
   const billAddress = doc.splitTextToSize(data.address || "", 80);
@@ -124,7 +124,7 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.rect(10, 58, 95, 5, "F");
   doc.setFont("helvetica", "bold");
   doc.text("Shipp To", 12, 62);
-  
+
   doc.setFont("helvetica", "normal");
   doc.text(`Name : ${data.customerName || "Customer"}`, 12, 67);
   doc.text(`Address :`, 12, 71);
@@ -132,25 +132,25 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
 
   // Right Column
   doc.line(105, 58, 200, 58); // horizontal split
-  
+
   doc.text(`# Inv. No. :`, 107, 42);
   doc.text(getDisplayOrderId(data.orderId, data.date), 140, 42);
-  
+
   doc.text(`Inv. Date :`, 107, 46);
   doc.text(new Date(data.date).toLocaleDateString('en-GB'), 140, 46);
-  
+
   doc.text(`Payment Mode :`, 107, 50);
   doc.text(data.paymentMethod || "Online", 140, 50);
-  
+
   doc.text(`Reverse Charge :`, 107, 54);
   doc.text("NO", 140, 54);
 
-  doc.text(`Buyer's Order No :`, 107, 62);
-  doc.text(data.orderId.split('-')[0].toUpperCase(), 140, 62);
-  
+  doc.text(`Order No :`, 107, 62);
+  doc.text(getDisplayOrderId(data.orderId, data.date), 140, 62);
+
   doc.text(`Delivery Date :`, 107, 66);
   doc.text("-", 140, 66);
-  
+
   doc.text(`Transport Details :`, 107, 70);
   doc.text(data.carrier || "-", 140, 70);
 
@@ -168,14 +168,14 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     const igst = item.products?.igst_rate || 0;
     const cgst = item.products?.cgst_rate || 0;
     const sgst = item.products?.sgst_rate || 0;
-    const rate = igst + cgst + sgst;
-    
+    const rate = igst > 0 ? igst : (cgst + sgst);
+
     const isTaxInclusive = item.products?.is_tax_inclusive || false;
-    
+
     let baseTotal = itemTotal;
     let taxAmount = 0;
     let lineTotal = itemTotal;
-    
+
     if (rate > 0) {
       if (isTaxInclusive) {
         baseTotal = itemTotal / (1 + rate / 100);
@@ -185,17 +185,23 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
         lineTotal = itemTotal + taxAmount;
       }
     }
-    
+
     const baseUnitPrice = baseTotal / qty;
     const hsn = item.products?.hsn_code || item.hsn_code || "-";
 
     subtotalTaxable += baseTotal;
     totalQuantity += qty;
-    
+
     // Breakdown tax amounts based on rates
-    if (igst > 0) totalIgst += taxAmount * (igst / rate);
-    if (cgst > 0) totalCgst += taxAmount * (cgst / rate);
-    if (sgst > 0) totalSgst += taxAmount * (sgst / rate);
+    if (igst > 0) {
+      totalIgst += taxAmount;
+    } else {
+      const totalCgstSgst = cgst + sgst;
+      if (totalCgstSgst > 0) {
+        totalCgst += taxAmount * (cgst / totalCgstSgst);
+        totalSgst += taxAmount * (sgst / totalCgstSgst);
+      }
+    }
 
     return [
       index + 1,
@@ -214,8 +220,8 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     startY: 78,
     head: [
       [
-        { content: 'Sr', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-        { content: 'Goods & Service Discription', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
+        { content: 'Sr.No.', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+        { content: 'Goods & Service Description', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
         { content: 'HSN', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         { content: 'Quantity', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
         { content: 'Rate', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } },
@@ -230,8 +236,8 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
     ],
     body: tableData,
     theme: 'grid',
-    headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0 },
-    bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0 },
+    headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
+    bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 'auto' },
@@ -255,27 +261,27 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
         { content: data.totalAmount.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }
       ]
     ],
-    footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0 }
+    footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 }
   });
 
   let finalY = (doc as any).lastAutoTable.finalY;
-  
-  if (finalY + 70 > doc.internal.pageSize.getHeight() - 10) {
+
+  if (finalY + 75 > doc.internal.pageSize.getHeight() - 10) {
     doc.addPage();
     finalY = 10;
   }
 
   // Draw Footer Outer Box
   doc.setLineWidth(0.3);
-  doc.rect(10, finalY, 190, 65);
-  
+  doc.rect(10, finalY, 190, 70);
+
   // Left side: Bank Details
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setFillColor(220, 235, 245);
   doc.rect(10, finalY, 120, 5, "F");
   doc.text("Our Bank Details", 12, finalY + 4);
-  
+
   doc.text("Bank Name :", 12, finalY + 10);
   doc.setFont("helvetica", "normal");
   doc.text("STATE BANK OF INDIA", 35, finalY + 10);
@@ -299,10 +305,10 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.text("UPI ID :", 12, finalY + 26);
   doc.setFont("helvetica", "normal");
   doc.text("ucenterprises@upi", 35, finalY + 26);
-  
+
   // Horizontal line under bank details
   doc.line(10, finalY + 30, 130, finalY + 30);
-  
+
   // Invoice Total in Words
   doc.setFillColor(220, 235, 245);
   doc.rect(10, finalY + 30, 120, 5, "F");
@@ -323,15 +329,15 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.text("E. & O.E.", 12, finalY + 62);
 
   // Right Side: Summary Table
-  doc.line(130, finalY, 130, finalY + 65); // vertical line for summary
-  
+  doc.line(130, finalY, 130, finalY + 70); // vertical line for summary
+
   doc.setFillColor(220, 235, 245);
   doc.rect(130, finalY, 70, 5, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.text("SUMMARY", 145, finalY + 4);
   doc.text("AMOUNT", 198, finalY + 4, { align: "right" });
-  
+
   doc.line(130, finalY + 5, 200, finalY + 5);
 
   doc.setFont("helvetica", "normal");
@@ -356,21 +362,21 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.text("Discount :", 175, finalY + 29, { align: "right" });
   doc.text(discountAmount > 0 ? `-${discountAmount.toFixed(2)}` : "0.00", 198, finalY + 29, { align: "right" });
   doc.line(130, finalY + 30, 200, finalY + 30);
-  
-  const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + shippingAmount - discountAmount;
-  const finalRoundedTotal = data.totalAmount;
-  const roundOff = finalRoundedTotal - rawTotal;
 
-  doc.text("Round off :", 175, finalY + 34, { align: "right" });
-  doc.text(roundOff.toFixed(2), 198, finalY + 34, { align: "right" });
+  const shippingGst = Math.round((data.shippingAmount || 0) * 0.18 * 100) / 100;
+  doc.text("Shipping GST (18%) :", 175, finalY + 34, { align: "right" });
+  doc.text(shippingGst.toFixed(2), 198, finalY + 34, { align: "right" });
   doc.line(130, finalY + 35, 200, finalY + 35);
+
+  const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + shippingAmount + shippingGst - discountAmount;
+  const finalRoundedTotal = data.totalAmount;
 
   doc.setFillColor(220, 235, 245);
   doc.rect(130, finalY + 35, 70, 9, "F");
   doc.setFont("helvetica", "bold");
   doc.text("Total Amount :", 175, finalY + 41, { align: "right" });
   doc.text(finalRoundedTotal.toFixed(2), 198, finalY + 41, { align: "right" });
-  
+
   // Signature
   doc.setFont("helvetica", "normal");
   doc.text("For, UC ENTERPRISES", 165, finalY + 50, { align: "center" });

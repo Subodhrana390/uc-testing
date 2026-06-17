@@ -28,7 +28,7 @@ import { type CartItem } from "@/store/useCartStore";
 import { useCartStore } from "@/store/useCartStore";
 import RecommendedProducts from "@/components/storefront/RecommendedProducts";
 
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getExclusivePrice } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ export default function CheckoutPage() {
   const clearCart = useCartStore((state) => state.clearCart);
   const user = useAuthStore((state) => state.user);
   const isAuthInitialized = useAuthStore((state) => state.isInitialized);
-  
+
   const { data: siteSettings } = useSiteSettings();
   const emiEnabledSetting = siteSettings?.emi_enabled ?? true;
   const couponsEnabledSetting = siteSettings?.coupons_enabled ?? true;
@@ -114,30 +114,53 @@ export default function CheckoutPage() {
 
   const totals = items.reduce(
     (acc, item) => {
-      const rate = (item.igst_rate || 0) + (item.cgst_rate || 0) + (item.sgst_rate || 0);
+      const igstRate = item.igst_rate || 0;
+      const cgstRate = item.cgst_rate || 0;
+      const sgstRate = item.sgst_rate || 0;
+      const rate = igstRate > 0 ? igstRate : (cgstRate + sgstRate);
+      const isTaxInclusive = item.is_tax_inclusive || false;
       const itemTotal = item.price * item.quantity;
-      acc.subtotal += itemTotal;
-      
-      if (item.is_tax_inclusive) {
-        const basePrice = itemTotal / (1 + rate / 100);
-        const taxAmount = itemTotal - basePrice;
-        acc.taxTotal += taxAmount;
-      } else {
-        const taxAmount = itemTotal * (rate / 100);
-        acc.taxTotal += taxAmount;
-        acc.taxExclusiveTotal += taxAmount;
+
+      let itemTax = 0;
+      let itemBase = itemTotal;
+
+      if (rate > 0) {
+        if (isTaxInclusive) {
+          itemBase = itemTotal / (1 + rate / 100);
+          itemTax = itemTotal - itemBase;
+        } else {
+          itemTax = itemTotal * (rate / 100);
+        }
+
+        if (igstRate > 0) {
+          acc.igstAmt += itemTax;
+          acc.orderIgstRate = igstRate;
+        } else {
+          const totalCgstSgst = cgstRate + sgstRate;
+          if (totalCgstSgst > 0) {
+            acc.cgstAmt += itemTax * (cgstRate / totalCgstSgst);
+            acc.sgstAmt += itemTax * (sgstRate / totalCgstSgst);
+            acc.orderCgstRate = cgstRate;
+            acc.orderSgstRate = sgstRate;
+          }
+        }
       }
+
+      acc.subtotalExclGst += itemBase;
+      acc.subtotal += itemTotal; // For backward compatibility with existing coupons logic
       return acc;
     },
-    { subtotal: 0, taxTotal: 0, taxExclusiveTotal: 0 }
+    { subtotalExclGst: 0, subtotal: 0, cgstAmt: 0, sgstAmt: 0, igstAmt: 0, orderCgstRate: 0, orderSgstRate: 0, orderIgstRate: 0 }
   );
 
   const subtotal = items.length > 0 ? totals.subtotal : getCartTotal();
-  const taxTotal = totals.taxTotal;
-
   const [deliveryCharge, setDeliveryCharge] = useState<number>(50);
+  const shippingGst = deliveryCharge * 0.18;
 
-  const grandTotal = Math.max(0, subtotal + totals.taxExclusiveTotal + deliveryCharge - discountAmount);
+  const expectedTotal = totals.subtotalExclGst + totals.cgstAmt + totals.sgstAmt + totals.igstAmt + deliveryCharge + shippingGst - discountAmount;
+  const grandTotal = Math.max(0, expectedTotal);
+
+  const actualTax = totals.cgstAmt + totals.sgstAmt + totals.igstAmt;
 
   useEffect(() => {
     if (appliedCoupon) {
@@ -287,7 +310,7 @@ export default function CheckoutPage() {
           }));
 
           const { error } = await supabase.from('wishlist').upsert(wishlistInserts, { onConflict: 'user_id,product_id' });
-          
+
           if (!error) {
             if (!buyNowActive) {
               outOfStockItems.forEach(item => useCartStore.getState().removeItem(item.id));
@@ -553,7 +576,7 @@ export default function CheckoutPage() {
           address: shippingAddressString,
           items,
           total: grandTotal,
-          taxAmount: taxTotal,
+          taxAmount: actualTax,
           shippingAmount: deliveryCharge,
           paymentMethod: "ONLINE",
           deliveryEstimate: deliveryEstimate?.date,
@@ -612,7 +635,7 @@ export default function CheckoutPage() {
             try {
               setVerifyingPayment(true);
               setVerificationData({ orderId: supabaseOrderId, total: grandTotal });
-              
+
               const confirmRes = await fetch("/api/orders/status", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -709,7 +732,7 @@ export default function CheckoutPage() {
           address: shippingAddressString,
           items,
           total: grandTotal,
-          taxAmount: taxTotal,
+          taxAmount: actualTax,
           shippingAmount: deliveryCharge,
           paymentMethod: "COD",
           deliveryEstimate: deliveryEstimate?.date,
@@ -753,78 +776,78 @@ export default function CheckoutPage() {
   // Verifying Payment Screen
   if (verifyingPayment && verificationData) {
     return (
-    <div className="flex flex-col items-center pt-12 sm:pt-20 p-6 antialiased">
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
-        
-        {/* Main Card */}
-        <div className="rounded-3xl p-8 text-center space-y-8">
-          
-          {/* Animated Verification Icon Container */}
-          <div className="flex justify-center pt-2">
-            <div className="relative w-28 h-28 flex items-center justify-center">
-              
-              {/* Outer soft pulsing background glow */}
-              <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-75" style={{ animationDuration: '3s' }} />
-              
-              {/* Spinning background layer using gradients instead of borders */}
-              <div 
-                className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-primary/10 to-primary animate-spin"
-                style={{ animationDuration: '1.5s' }}
-              />
-              
-              {/* Solid inner core mask that creates a clean gap without using lines */}
-              <div className="absolute inset-1.5 bg-zinc-50 rounded-full" />
-              
-              {/* Floating Center Icon Wrapper */}
-              <div className="absolute inset-3 bg-white rounded-full shadow-lg shadow-zinc-200 flex items-center justify-center">
-                <CreditCard className="w-9 h-9 text-primary animate-pulse" style={{ animationDuration: '2s' }} />
+      <div className="flex flex-col items-center pt-12 sm:pt-20 p-6 antialiased">
+        <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+
+          {/* Main Card */}
+          <div className="rounded-3xl p-8 text-center space-y-8">
+
+            {/* Animated Verification Icon Container */}
+            <div className="flex justify-center pt-2">
+              <div className="relative w-28 h-28 flex items-center justify-center">
+
+                {/* Outer soft pulsing background glow */}
+                <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-75" style={{ animationDuration: '3s' }} />
+
+                {/* Spinning background layer using gradients instead of borders */}
+                <div
+                  className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-primary/10 to-primary animate-spin"
+                  style={{ animationDuration: '1.5s' }}
+                />
+
+                {/* Solid inner core mask that creates a clean gap without using lines */}
+                <div className="absolute inset-1.5 bg-zinc-50 rounded-full" />
+
+                {/* Floating Center Icon Wrapper */}
+                <div className="absolute inset-3 bg-white rounded-full shadow-lg shadow-zinc-200 flex items-center justify-center">
+                  <CreditCard className="w-9 h-9 text-primary animate-pulse" style={{ animationDuration: '2s' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Text Content */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Verifying Payment</h2>
+              <p className="text-sm text-zinc-500 max-w-[280px] mx-auto leading-relaxed">
+                Please hold tight while we securely process your transaction...
+              </p>
+            </div>
+
+            {/* Order Details Panel - Uses a solid light background for separation */}
+            <div className="bg-zinc-50 rounded-2xl p-5 text-left space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Order ID</span>
+                <span className="text-sm font-semibold text-zinc-700 font-mono bg-zinc-200/60 px-3 py-1 rounded-lg">
+                  {getDisplayOrderId(verificationData.orderId, new Date().toISOString())}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount Paid</span>
+                <span className="text-xl font-extrabold text-zinc-900 tracking-tight">
+                {verificationData.total.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              </div>
+            </div>
+
+            {/* Status Message - Uses color contrast to stand out safely */}
+            <div className="flex items-start gap-3 bg-amber-50 rounded-2xl p-4 text-left">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-amber-900">Don't refresh or close this tab</p>
+                <p className="text-xs text-amber-700/90 leading-relaxed">To prevent double charges, leave this window open until confirmation completes.</p>
               </div>
             </div>
           </div>
 
-          {/* Text Content */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Verifying Payment</h2>
-            <p className="text-sm text-zinc-500 max-w-[280px] mx-auto leading-relaxed">
-              Please hold tight while we securely process your transaction...
-            </p>
+          {/* Bottom Trust Badge */}
+          <div className="flex items-center justify-center gap-1.5 mt-6 text-zinc-400">
+            <ShieldCheck className="w-4 h-4 text-zinc-400" />
+            <span className="text-xs font-semibold tracking-wide uppercase">Secured End-to-End Encryption</span>
           </div>
-
-          {/* Order Details Panel - Uses a solid light background for separation */}
-          <div className="bg-zinc-50 rounded-2xl p-5 text-left space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Order ID</span>
-              <span className="text-sm font-semibold text-zinc-700 font-mono bg-zinc-200/60 px-3 py-1 rounded-lg">
-                {getDisplayOrderId(verificationData.orderId, new Date().toISOString())}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount Paid</span>
-              <span className="text-xl font-extrabold text-zinc-900 tracking-tight">
-                {formatCurrency(verificationData.total)}
-              </span>
-            </div>
-          </div>
-
-          {/* Status Message - Uses color contrast to stand out safely */}
-          <div className="flex items-start gap-3 bg-amber-50 rounded-2xl p-4 text-left">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-amber-900">Don't refresh or close this tab</p>
-              <p className="text-xs text-amber-700/90 leading-relaxed">To prevent double charges, leave this window open until confirmation completes.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Trust Badge */}
-        <div className="flex items-center justify-center gap-1.5 mt-6 text-zinc-400">
-          <ShieldCheck className="w-4 h-4 text-zinc-400" />
-          <span className="text-xs font-semibold tracking-wide uppercase">Secured End-to-End Encryption</span>
         </div>
       </div>
-    </div>
-  );
+    );
   }
 
   return (
@@ -1288,7 +1311,7 @@ export default function CheckoutPage() {
                       <p className="text-xs font-semibold text-zinc-700 mt-1">{form.address}</p>
                       <p className="text-xs text-zinc-500 font-medium">{form.city}, {form.state} — {form.postalCode}</p>
                       <p className="text-xs text-zinc-400 font-medium mt-0.5">{form.country}</p>
-                      
+
                       <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Recipient Phone</span>
@@ -1305,7 +1328,7 @@ export default function CheckoutPage() {
                         <button onClick={() => setCurrentStep(1)} className="text-xs font-bold text-primary hover:underline">Edit</button>
                       </div>
                       <p className="font-bold text-sm text-zinc-950">{form.fullName}</p>
-                      
+
                       <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="font-bold block text-zinc-400 uppercase tracking-wider text-[10px]">Phone</span>
@@ -1326,11 +1349,11 @@ export default function CheckoutPage() {
                         <button onClick={() => setCurrentStep(2)} className="text-xs font-bold text-primary hover:underline">Edit</button>
                       </div>
                       <p className="font-bold text-sm text-zinc-950">
-                        {paymentMethod === "COD" 
-                          ? "Cash on Delivery" 
-                          : paymentMethod === "ONLINE" 
-                          ? "Online Payment (Razorpay)" 
-                          : `Pay in Installments (EMI)`}
+                        {paymentMethod === "COD"
+                          ? "Cash on Delivery"
+                          : paymentMethod === "ONLINE"
+                            ? "Online Payment (Razorpay)"
+                            : `Pay in Installments (EMI)`}
                       </p>
                       {paymentMethod === "EMI" && selectedProviderId && selectedPlanId && (() => {
                         const provider = emiProviders.find(p => p.id === selectedProviderId);
@@ -1357,8 +1380,8 @@ export default function CheckoutPage() {
                     {submitting || isPlacingOrder
                       ? "Processing..."
                       : paymentMethod === "ONLINE"
-                      ? "Proceed to Payment"
-                      : "Place Order (COD)"}
+                        ? "Proceed to Payment"
+                        : "Place Order (COD)"}
                   </button>
                 </div>
               </>
@@ -1393,8 +1416,8 @@ export default function CheckoutPage() {
                           {item.hsn_code && <span className="text-[10px] text-zinc-500 font-medium mt-0.5">HSN: {item.hsn_code}</span>}
                         </div>
                         <div className="flex justify-between items-center text-xs font-bold text-zinc-500">
-                          <span>{item.quantity} × {formatCurrency(item.price)}</span>
-                          <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
+                          <span>{item.quantity} × {formatCurrency(getExclusivePrice(item.price, item.is_tax_inclusive, item.igst_rate))}</span>
+                          <span className="text-zinc-950">{formatCurrency(getExclusivePrice(item.price * item.quantity, item.is_tax_inclusive, item.igst_rate))}</span>
                         </div>
                       </div>
                     </div>
@@ -1403,14 +1426,54 @@ export default function CheckoutPage() {
 
                 <div className="space-y-3 pt-2 pb-6 border-b border-zinc-100">
                   <div className="flex justify-between text-sm font-medium text-zinc-600">
-                    <span>Subtotal</span>
-                    <span className="font-bold text-zinc-950">{formatCurrency(subtotal)}</span>
+                    <span>SUBTOTAL (EXCL. GST)</span>
+                    <span className="font-bold text-zinc-950">₹{totals.subtotalExclGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
 
-                  <div className="flex justify-between text-sm font-medium text-zinc-600">
-                    <span>Estimated Shipping</span>
-                    <span className="font-bold text-zinc-950">{formatCurrency(deliveryCharge)}</span>
-                  </div>
+                  {(actualTax > 0 || deliveryCharge > 0 || shippingGst > 0) && (
+                    <details className="group">
+                      <summary className="flex justify-between text-xs font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors">
+                        <span className="flex items-center gap-1">
+                          <span className="text-[10px] transition-transform duration-200 group-open:rotate-90">▶</span>
+                          TOTAL FEE
+                        </span>
+                        <span className="text-zinc-700">₹{(actualTax + deliveryCharge + shippingGst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </summary>
+
+                      <div className="pt-2 pb-1 space-y-1.5 ml-3">
+                        {totals.cgstAmt > 0 && (
+                          <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                            <span>CGST {totals.orderCgstRate > 0 ? `(${totals.orderCgstRate}%)` : ''}</span>
+                            <span>₹{totals.cgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                        {totals.sgstAmt > 0 && (
+                          <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                            <span>SGST {totals.orderSgstRate > 0 ? `(${totals.orderSgstRate}%)` : ''}</span>
+                            <span>₹{totals.sgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                        {totals.igstAmt > 0 && (
+                          <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                            <span>IGST {totals.orderIgstRate > 0 ? `(${totals.orderIgstRate}%)` : ''}</span>
+                            <span>₹{totals.igstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                        {deliveryCharge > 0 && (
+                          <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                            <span>DELIVERY CHARGE</span>
+                            <span>₹{deliveryCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                        {shippingGst > 0 && (
+                          <div className="flex justify-between text-[11px] font-medium text-zinc-400 pl-2">
+                            <span>SHIPPING GST (18%)</span>
+                            <span>+₹{shippingGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
 
 
                   {deliveryEstimate && (
@@ -1485,7 +1548,7 @@ export default function CheckoutPage() {
 
                 <div className="flex items-center justify-between text-lg pt-2">
                   <span className="font-black text-zinc-950">Total</span>
-                  <span className="font-black text-primary text-xl">{formatCurrency(grandTotal)}</span>
+                  <span className="font-black text-primary text-xl">{grandTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
 
                 <div className="pt-6 space-y-4">
@@ -1525,7 +1588,7 @@ export default function CheckoutPage() {
                   <span className="text-xs font-bold text-zinc-400">({items.length} {items.length === 1 ? "item" : "items"})</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-primary">{formatCurrency(grandTotal)}</span>
+                  <span className="text-sm font-black text-primary">{grandTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform duration-300", mobileOrderSummaryOpen && "rotate-180")} />
                 </div>
               </button>
@@ -1550,8 +1613,8 @@ export default function CheckoutPage() {
                             {item.hsn_code && <span className="text-[10px] text-zinc-500 font-medium">HSN: {item.hsn_code}</span>}
                           </div>
                           <div className="flex justify-between items-center text-[11px] font-bold text-zinc-500">
-                            <span>{item.quantity} × {formatCurrency(item.price)}</span>
-                            <span className="text-zinc-950">{formatCurrency(item.price * item.quantity)}</span>
+                            <span>{item.quantity} × {formatCurrency(getExclusivePrice(item.price, item.is_tax_inclusive, item.igst_rate))}</span>
+                            <span className="text-zinc-950">{formatCurrency(getExclusivePrice(item.price * item.quantity, item.is_tax_inclusive, item.igst_rate))}</span>
                           </div>
                         </div>
                       </div>
@@ -1560,13 +1623,54 @@ export default function CheckoutPage() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-medium text-zinc-600">
-                      <span>Subtotal</span>
-                      <span className="font-bold text-zinc-950">{formatCurrency(subtotal)}</span>
+                      <span>SUBTOTAL (EXCL. GST)</span>
+                      <span className="font-bold text-zinc-950">₹{totals.subtotalExclGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="flex justify-between text-xs font-medium text-zinc-600">
-                      <span>Shipping</span>
-                      <span className="font-bold text-zinc-950">{formatCurrency(deliveryCharge)}</span>
-                    </div>
+
+                    {(actualTax > 0 || deliveryCharge > 0 || shippingGst > 0) && (
+                      <details className="group">
+                        <summary className="flex justify-between text-[11px] font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors">
+                          <span className="flex items-center gap-1">
+                            <span className="text-[9px] transition-transform duration-200 group-open:rotate-90">▶</span>
+                            TOTAL FEE
+                          </span>
+                          <span className="text-zinc-700">₹{(actualTax + deliveryCharge + shippingGst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </summary>
+
+                        <div className="pt-2 pb-1 space-y-1.5 ml-3">
+                          {totals.cgstAmt > 0 && (
+                            <div className="flex justify-between text-[10px] font-medium text-zinc-400 pl-2">
+                              <span>CGST {totals.orderCgstRate > 0 ? `(${totals.orderCgstRate}%)` : ''}</span>
+                              <span>₹{totals.cgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                          {totals.sgstAmt > 0 && (
+                            <div className="flex justify-between text-[10px] font-medium text-zinc-400 pl-2">
+                              <span>SGST {totals.orderSgstRate > 0 ? `(${totals.orderSgstRate}%)` : ''}</span>
+                              <span>₹{totals.sgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                          {totals.igstAmt > 0 && (
+                            <div className="flex justify-between text-[10px] font-medium text-zinc-400 pl-2">
+                              <span>IGST {totals.orderIgstRate > 0 ? `(${totals.orderIgstRate}%)` : ''}</span>
+                              <span>₹{totals.igstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                          {deliveryCharge > 0 && (
+                            <div className="flex justify-between text-[10px] font-medium text-zinc-400 pl-2">
+                              <span>DELIVERY CHARGE</span>
+                              <span>₹{deliveryCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                          {shippingGst > 0 && (
+                            <div className="flex justify-between text-[10px] font-medium text-zinc-400 pl-2">
+                              <span>SHIPPING GST (18%)</span>
+                              <span>+₹{shippingGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    )}
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-xs font-bold text-emerald-600">
                         <span>Coupon Discount</span>
@@ -1622,7 +1726,7 @@ export default function CheckoutPage() {
 
                   <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
                     <span className="font-black text-zinc-950 text-sm">Total</span>
-                    <span className="font-black text-primary text-base">{formatCurrency(grandTotal)}</span>
+                    <span className="font-black text-primary text-base">{grandTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}
@@ -1640,7 +1744,7 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between max-w-5xl mx-auto">
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total</span>
-              <span className="text-lg font-black text-primary leading-tight">{formatCurrency(grandTotal)}</span>
+              <span className="text-lg font-black text-primary leading-tight">{grandTotal.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               {items.length > 0 && (
                 <span className="text-[10px] text-zinc-500 font-medium">{items.length} {items.length === 1 ? "item" : "items"}</span>
               )}
@@ -1661,8 +1765,8 @@ export default function CheckoutPage() {
                 {submitting || isPlacingOrder
                   ? "Processing..."
                   : paymentMethod === "ONLINE"
-                  ? "Pay Now"
-                  : "Place Order"}
+                    ? "Pay Now"
+                    : "Place Order"}
               </button>
             )}
           </div>
