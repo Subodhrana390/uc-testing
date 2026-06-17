@@ -28,8 +28,14 @@ function AuthContainer() {
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
-    if (errorParam === "suspended") {
-      toast.error("Your account has been suspended. Please contact support for assistance.");
+    if (errorParam) {
+      if (errorParam === "suspended") {
+        toast.error("Your account has been suspended. Please contact support for assistance.");
+      } else if (errorParam.toLowerCase().includes("expired") || errorParam.toLowerCase().includes("invalid")) {
+        toast.error("The link you clicked is invalid or has expired. Please request a new one.");
+      } else {
+        toast.error(errorParam.replace(/\+/g, ' '));
+      }
       const params = new URLSearchParams(searchParams.toString());
       params.delete("error");
       const nextMode = params.get("mode") || "login";

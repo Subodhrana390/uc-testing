@@ -228,7 +228,7 @@ export async function requestPasswordReset(formData: FormData, origin: string) {
       return { error: linkError.message }
     }
 
-    const resetLink = linkData.properties.action_link;
+    const resetLink = `${origin}/api/auth/callback?token_hash=${linkData.properties.hashed_token}&type=recovery&next=/reset-password`;
 
     // 2. Fetch the customer's name for personalization
     const { data: profile } = await supabaseAdmin
