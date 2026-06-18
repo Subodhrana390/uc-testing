@@ -42,6 +42,7 @@ export interface InvoiceData {
   discountAmount?: number;
   paymentMethod?: string;
   carrier?: string;
+  paymentStatus?: string;
 }
 
 export const generateInvoicePDF = async (data: InvoiceData) => {
@@ -142,8 +143,11 @@ export const generateInvoicePDF = async (data: InvoiceData) => {
   doc.text(`Payment Mode :`, 107, 50);
   doc.text(data.paymentMethod || "Online", 140, 50);
 
-  doc.text(`Reverse Charge :`, 107, 54);
-  doc.text("NO", 140, 54);
+  doc.text(`Payment Status :`, 107, 54);
+  doc.text(data.paymentStatus === "PAID" || data.paymentStatus === "Paid" ? "Paid" : "Pending", 140, 54);
+
+  doc.text(`Reverse Charge :`, 107, 58);
+  doc.text("NO", 140, 58);
 
   doc.text(`Order No :`, 107, 62);
   doc.text(getDisplayOrderId(data.orderId, data.date), 140, 62);
