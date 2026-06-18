@@ -47,7 +47,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     // 3. Generate PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    
+
     const businessInfo = {
       name: "UC ENTERPRISES",
       address: "Hadhbast no-44, Ambala Delhi National Highway, Bisanpur, Zirakpur, Punjab, 140603, India.",
@@ -60,7 +60,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     // Outer borders
     doc.setDrawColor(0);
     doc.setLineWidth(0.3);
-    
+
     // Top text: "Tax Invoice"
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
@@ -71,14 +71,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     // Top Box (Company Info) - Starts at y=14
     doc.rect(10, 14, 190, 24);
-    
+
     const logoBase64 = getLogoBase64();
     if (logoBase64) {
       doc.addImage(logoBase64, "PNG", 12, 16, 20, 20);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text(businessInfo.name, 35, 20);
-      
+
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.text(businessInfo.address, 35, 24);
@@ -88,7 +88,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text(businessInfo.name, 40, 20);
-      
+
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.text(businessInfo.address, 40, 24);
@@ -102,14 +102,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     // Left Column: Bill To (y=38 to 58), Ship To (y=58 to 78)
     doc.line(10, 58, 105, 58); // horizontal split for left column
-    
+
     // Bill To Header
     doc.setFillColor(220, 235, 245);
     doc.rect(10, 38, 95, 5, "F");
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Bill To", 12, 42);
-    
+
     doc.setFont("helvetica", "normal");
     doc.text(`Name : ${invoice.orders.customer_name || "Customer"}`, 12, 47);
     const billAddress = doc.splitTextToSize(invoice.orders.shipping_address || "", 80);
@@ -121,7 +121,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.rect(10, 58, 95, 5, "F");
     doc.setFont("helvetica", "bold");
     doc.text("Shipp To", 12, 62);
-    
+
     doc.setFont("helvetica", "normal");
     doc.text(`Name : ${invoice.orders.customer_name || "Customer"}`, 12, 67);
     doc.text(`Address :`, 12, 71);
@@ -129,25 +129,28 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     // Right Column
     doc.line(105, 58, 200, 58); // horizontal split
-    
+
     doc.text(`# Inv. No. :`, 107, 42);
     doc.text(invoice.invoice_number, 140, 42);
-    
+
     doc.text(`Inv. Date :`, 107, 46);
     doc.text(new Date(invoice.issued_at).toLocaleDateString('en-GB'), 140, 46);
-    
+
     doc.text(`Payment Mode :`, 107, 50);
     doc.text(invoice.orders.payment_method || "Online", 140, 50);
-    
-    doc.text(`Reverse Charge :`, 107, 54);
-    doc.text("NO", 140, 54);
+
+    doc.text(`Payment Status :`, 107, 54);
+    doc.text(invoice.status === "PAID" ? "Paid" : "Pending", 140, 54);
+
+    doc.text(`Reverse Charge :`, 107, 58);
+    doc.text("NO", 140, 58);
 
     doc.text(`Order No :`, 107, 62);
     doc.text(getDisplayOrderId(invoice.orders.id, invoice.orders.created_at), 140, 62);
-    
+
     doc.text(`Delivery Date :`, 107, 66);
     doc.text(invoice.orders.delivery_estimate || "-", 140, 66);
-    
+
     doc.text(`Transport Details :`, 107, 70);
     doc.text(invoice.orders.carrier || "-", 140, 70);
 
@@ -166,13 +169,13 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       const cgst = item.products?.cgst_rate || 0;
       const sgst = item.products?.sgst_rate || 0;
       const rate = igst > 0 ? igst : (cgst + sgst);
-      
+
       const isTaxInclusive = item.products?.is_tax_inclusive || false;
-      
+
       let baseTotal = itemTotal;
       let taxAmount = 0;
       let lineTotal = itemTotal;
-      
+
       if (rate > 0) {
         if (isTaxInclusive) {
           baseTotal = itemTotal / (1 + rate / 100);
@@ -182,13 +185,13 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
           lineTotal = itemTotal + taxAmount;
         }
       }
-      
+
       const baseUnitPrice = baseTotal / qty;
       const hsn = item.products?.hsn_code || item.hsn_code || "-";
 
       subtotalTaxable += baseTotal;
       totalQuantity += qty;
-      
+
       // Breakdown tax amounts based on rates
       if (igst > 0) {
         totalIgst += taxAmount;
@@ -262,7 +265,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     });
 
     let finalY = (doc as any).lastAutoTable.finalY;
-    
+
     // Check if footer fits, otherwise add page
     if (finalY + 75 > doc.internal.pageSize.getHeight() - 10) {
       doc.addPage();
@@ -272,14 +275,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     // Draw Footer Outer Box
     doc.setLineWidth(0.3);
     doc.rect(10, finalY, 190, 70); // height 70
-    
+
     // Left side: Bank Details
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setFillColor(220, 235, 245);
     doc.rect(10, finalY, 120, 5, "F");
     doc.text("Our Bank Details", 12, finalY + 4);
-    
+
     doc.text("Bank Name :", 12, finalY + 10);
     doc.setFont("helvetica", "normal");
     doc.text("STATE BANK OF INDIA", 35, finalY + 10);
@@ -303,10 +306,10 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text("UPI ID :", 12, finalY + 26);
     doc.setFont("helvetica", "normal");
     doc.text("ucenterprises@upi", 35, finalY + 26);
-    
+
     // Horizontal line under bank details
     doc.line(10, finalY + 30, 130, finalY + 30);
-    
+
     // Invoice Total in Words
     doc.setFillColor(220, 235, 245);
     doc.rect(10, finalY + 30, 120, 5, "F");
@@ -328,14 +331,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     // Right Side: Summary Table
     doc.line(130, finalY, 130, finalY + 70); // vertical line for summary
-    
+
     doc.setFillColor(220, 235, 245);
     doc.rect(130, finalY, 70, 5, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text("SUMMARY", 145, finalY + 4);
     doc.text("AMOUNT", 198, finalY + 4, { align: "right" });
-    
+
     doc.line(130, finalY + 5, 200, finalY + 5);
 
     doc.setFont("helvetica", "normal");
@@ -359,12 +362,12 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text("Discount :", 175, finalY + 29, { align: "right" });
     doc.text(discountAmount > 0 ? `-${discountAmount.toFixed(2)}` : "0.00", 198, finalY + 29, { align: "right" });
     doc.line(130, finalY + 30, 200, finalY + 30);
-    
+
     const shippingGst = Math.round(parseFloat(invoice.shipping_amount) * 0.18 * 100) / 100;
     doc.text("Shipping GST (18%) :", 175, finalY + 34, { align: "right" });
     doc.text(shippingGst.toFixed(2), 198, finalY + 34, { align: "right" });
     doc.line(130, finalY + 35, 200, finalY + 35);
-    
+
     // Calculate precise sum vs rounded total for actual roundoff
     const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + parseFloat(invoice.shipping_amount) + shippingGst - discountAmount;
     const finalRoundedTotal = parseFloat(invoice.total_amount);
@@ -374,14 +377,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.setFont("helvetica", "bold");
     doc.text("Total Amount :", 175, finalY + 41, { align: "right" });
     doc.text(finalRoundedTotal.toFixed(2), 198, finalY + 41, { align: "right" });
-    
+
     // Signature
     doc.setFont("helvetica", "normal");
     doc.text("For, UC ENTERPRISES", 165, finalY + 50, { align: "center" });
     doc.text("Authorised Signatory", 165, finalY + 63, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.text("Thank You For Business With US!", 105, finalY + 70, { align: "center" });
+    doc.text("Thank You For Business With US!", 130, finalY + 70, { align: "center" });
 
     // 4. Save to buffer and upload to Supabase Storage
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

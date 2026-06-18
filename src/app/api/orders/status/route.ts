@@ -267,6 +267,15 @@ export async function POST(req: Request) {
           .eq("order_id", orderId);
       }
 
+      // Update invoice payment status when order payment is marked as Paid (e.g. for COD)
+      if (paymentStatus === "Paid" && order.payment_method === "COD") {
+        await serviceRoleSupabase
+          .from("invoices")
+          .update({ status: "PAID", paid_at: new Date().toISOString() })
+          .eq("order_id", orderId)
+          .neq("status", "PAID");
+      }
+
       // If customer successfully paid online, transition order status to CONFIRMED
       if (!isAdmin && paymentStatus === "Paid" && paymentMethod === "ONLINE" &&
           ["PENDING", "PLACED"].includes(existingOrder.status.toUpperCase())) {
