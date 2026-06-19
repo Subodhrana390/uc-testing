@@ -24,6 +24,10 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 - **Advanced Search**: Instant product discovery via `HeaderSearch` component.
 - **Inquiry System**: "Bulk Enquiry / Get Quote" functionality for bulk/B2B industrial orders.
 - **User Accounts & Billing**: Profile management, order tracking, dynamic wishlists, and a secure portal to download GST tax invoices.
+- **Flipkart-Style Returns & Replacements**: Guided 3-step returns/replacements wizard requesting reasons, comments, and mandatory damage photo uploads (linked with Supabase Storage). Supports bank details input for COD refunds, and free replacements with automated reverse logistics.
+- **Cancellation Reason Modal**: Customer cancellation workflows are restricted through structured reason dropdowns and logged remarks.
+- **Granular Shipment Tracking**: Interactive vertical timeline showing logistics status for outbound (Label Created -> In Transit -> Out for Delivery -> Delivered) and inbound (Pickup Scheduled -> Picked Up -> In Transit -> Returned to Warehouse) shipments.
+- **Logistics Partner Integration**: Clickable shipment tracking cards supporting direct external navigation to real delivery partners (**Delhivery**, **Blue Dart**, **FedEx**, **DHL**, **DTDC**, **Ekart**) with dynamic, real-time shipment status badges.
 - **Payment Gateway**: Secure online checkout integrated with Razorpay (payment creation, client verification, and secure webhooks).
   - **Reservation Pattern**: Inventory is placed on hold the moment checkout begins.
   - **Optimistic Cleanup**: Orders are instantly cancelled and stock is released if the user closes the payment window.
@@ -43,10 +47,12 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
   - Inventory tracking and status management.
 - **Category Management**: Customizable category metadata and department mapping.
 - **Order Operations**: 
-  - Manage orders and status tracking.
+  - Manage orders, status tracking, and transition logs.
   - Export orders as **PDF** or **CSV** reports.
+- **Logistics Sync Cron**: Scheduled background endpoint (`/api/cron/sync-shipments`) and manual detail controls (Sync Courier button) to automate tracking updates and automatically progress orders to `DELIVERED`, `RETURNED`, or `REPLACED`.
 - **Inventory Management**: Native WooCommerce-style inventory tracking with PostgreSQL row-level locks, variant-level stock, atomic ledger transactions, and auto-expiring background cart reservations.
 - **Invoice System**: Fully automated, GST-compliant PDF tax invoice generation, secure Supabase Storage integration, and automatic dispatch via Brevo email queue.
+- **Storefront Feature Toggles**: Dynamic toggles in admin settings page to customize store features (e.g. enable/disable Frequently Bought Together product sections).
 - **Security & Logs**: Admin security tracking and activity logging.
 
 ### 📈 Marketing & Analytics Attribution
