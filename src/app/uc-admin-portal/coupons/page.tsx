@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Ticket, Plus, Trash2, Calendar, Lock, AlertCircle, ToggleLeft, ToggleRight, Loader2, Sparkles } from 'lucide-react'
-import { getCouponsAction, createCouponAction, toggleCouponActiveAction, deleteCouponAction } from '@/app/actions/coupons'
+import { Ticket, Plus, Trash2, Calendar, Lock, AlertCircle, ToggleLeft, ToggleRight, Loader2, Sparkles, Pencil } from 'lucide-react'
+import { getCouponsAction, createCouponAction, toggleCouponActiveAction, deleteCouponAction, updateCouponAction } from '@/app/actions/coupons'
 import { createAdminClient } from '@/utils/supabase/admin-client'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/format'
@@ -32,6 +32,7 @@ export default function AdminCouponsPage() {
   const supabase = useMemo(() => createAdminClient(), [])
   const [submitting, setSubmitting] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCouponId, setEditingCouponId] = useState<string | null>(null)
 
   // Form state
   const [form, setForm] = useState({
@@ -106,7 +107,51 @@ export default function AdminCouponsPage() {
     }
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingCouponId(null)
+    setForm({
+      code: '',
+      discount_type: 'percentage',
+      discount_value: '',
+      min_order_amount: '',
+      max_discount_amount: '',
+      start_date: '',
+      expiration_date: '',
+      usage_limit: '',
+      active: true
+    })
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (coupon: Coupon) => {
+    const formatDateTimeLocal = (dateStr: string | null) => {
+      if (!dateStr) return ''
+      const date = new Date(dateStr)
+      const pad = (num: number) => String(num).padStart(2, '0')
+      const yyyy = date.getFullYear()
+      const MM = pad(date.getMonth() + 1)
+      const dd = pad(date.getDate())
+      const hh = pad(date.getHours())
+      const mm = pad(date.getMinutes())
+      return `${yyyy}-${MM}-${dd}T${hh}:${mm}`
+    }
+
+    setEditingCouponId(coupon.id)
+    setForm({
+      code: coupon.code,
+      discount_type: coupon.discount_type,
+      discount_value: String(coupon.discount_value),
+      min_order_amount: String(coupon.min_order_amount),
+      max_discount_amount: coupon.max_discount_amount !== null ? String(coupon.max_discount_amount) : '',
+      start_date: formatDateTimeLocal(coupon.start_date),
+      expiration_date: formatDateTimeLocal(coupon.expiration_date),
+      usage_limit: coupon.usage_limit !== null ? String(coupon.usage_limit) : '',
+      active: coupon.active
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.code.trim()) {
       toast.error('Coupon code is required.')
@@ -124,7 +169,7 @@ export default function AdminCouponsPage() {
 
     setSubmitting(true)
     try {
-      const res = await createCouponAction({
+      const couponData = {
         code: form.code,
         discount_type: form.discount_type,
         discount_value: val,
@@ -134,10 +179,17 @@ export default function AdminCouponsPage() {
         expiration_date: form.expiration_date || undefined,
         usage_limit: form.usage_limit ? parseInt(form.usage_limit) : undefined,
         active: form.active
-      })
+      }
 
-      if (res.success && res.coupon) {
-        toast.success('Coupon created successfully!')
+      let res
+      if (editingCouponId) {
+        res = await updateCouponAction(editingCouponId, couponData)
+      } else {
+        res = await createCouponAction(couponData)
+      }
+
+      if (res.success) {
+        toast.success(editingCouponId ? 'Coupon updated successfully!' : 'Coupon created successfully!')
         setIsModalOpen(false)
         setForm({
           code: '',
@@ -150,9 +202,10 @@ export default function AdminCouponsPage() {
           usage_limit: '',
           active: true
         })
+        setEditingCouponId(null)
         fetchCoupons()
       } else {
-        toast.error(res.error || 'Failed to create coupon')
+        toast.error(res.error || `Failed to ${editingCouponId ? 'update' : 'create'} coupon`)
       }
     } catch (err: any) {
       toast.error(err.message || 'An unexpected error occurred')
@@ -196,7 +249,7 @@ export default function AdminCouponsPage() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="rounded-xl h-11 px-5 bg-slate-900 hover:bg-teal-600 hover:shadow-lg hover:shadow-teal-500/10 text-white font-bold text-xs tracking-wide transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" /> Create Coupon
@@ -302,10 +355,18 @@ export default function AdminCouponsPage() {
                           )}
                         </button>
                       </td>
-                      <td className="p-4 pr-6 text-right">
+                      <td className="p-4 pr-6 text-right flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openEditModal(coupon)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-teal-650 hover:bg-teal-50 transition border border-transparent hover:border-teal-100"
+                          title="Edit Coupon"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDelete(coupon.id)}
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-100"
+                          title="Delete Coupon"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -329,7 +390,9 @@ export default function AdminCouponsPage() {
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <Ticket className="w-5 h-5 text-teal-600" />
-                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-wide">Create Coupon</h2>
+                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-wide">
+                    {editingCouponId ? 'Edit Coupon' : 'Create Coupon'}
+                  </h2>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -339,7 +402,7 @@ export default function AdminCouponsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreate} className="flex-1 p-6 overflow-y-auto space-y-5">
+              <form onSubmit={handleSubmit} className="flex-1 p-6 overflow-y-auto space-y-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Coupon Code *</label>
                   <input
@@ -464,7 +527,7 @@ export default function AdminCouponsPage() {
                         <Loader2 className="w-4 h-4 animate-spin" /> Saving...
                       </>
                     ) : (
-                      'Save Coupon'
+                      editingCouponId ? 'Update Coupon' : 'Save Coupon'
                     )}
                   </button>
                 </div>

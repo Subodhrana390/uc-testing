@@ -248,3 +248,60 @@ export async function deleteCouponAction(id: string) {
     return { success: false, error: error.message || 'Failed to delete coupon.' }
   }
 }
+
+export async function updateCouponAction(id: string, data: {
+  code: string
+  discount_type: 'percentage' | 'fixed'
+  discount_value: number
+  min_order_amount?: number
+  max_discount_amount?: number
+  start_date?: string
+  expiration_date?: string
+  usage_limit?: number
+  active?: boolean
+}) {
+  try {
+    const supabase = await createAdminClient()
+    const isAdmin = await checkAdminRole(supabase)
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized: Admin access required.' }
+    }
+
+    const formattedCode = data.code.trim().toUpperCase()
+    if (!formattedCode) {
+      return { success: false, error: 'Coupon code is required.' }
+    }
+
+    const updateData: any = {
+      code: formattedCode,
+      discount_type: data.discount_type,
+      discount_value: data.discount_value,
+      min_order_amount: data.min_order_amount || 0,
+      max_discount_amount: data.max_discount_amount || null,
+      start_date: data.start_date || null,
+      expiration_date: data.expiration_date || null,
+      usage_limit: data.usage_limit || null,
+      active: data.active !== undefined ? data.active : true,
+    }
+
+    const { data: updatedCoupon, error } = await supabase
+      .from('coupons')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') {
+        return { success: false, error: 'A coupon with this code already exists.' }
+      }
+      throw error
+    }
+
+    revalidatePath('/uc-admin-portal/coupons')
+    return { success: true, coupon: updatedCoupon }
+  } catch (error: any) {
+    console.error('updateCouponAction error:', error)
+    return { success: false, error: error.message || 'Failed to update coupon.' }
+  }
+}

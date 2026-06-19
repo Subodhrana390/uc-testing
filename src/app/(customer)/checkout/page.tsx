@@ -374,6 +374,8 @@ export default function CheckoutPage() {
 
           setForm((prev) => ({
             ...prev,
+            fullName: defaultAddr.full_name || prev.fullName,
+            phone: defaultAddr.phone || prev.phone,
             address: `${defaultAddr.address_line1}${defaultAddr.address_line2
               ? ", " +
               defaultAddr.address_line2
@@ -398,6 +400,8 @@ export default function CheckoutPage() {
 
     setForm((prev) => ({
       ...prev,
+      fullName: addr.full_name || prev.fullName,
+      phone: addr.phone || prev.phone,
       address: `${addr.address_line1}${addr.address_line2
         ? ", " + addr.address_line2
         : ""
@@ -908,57 +912,7 @@ export default function CheckoutPage() {
 
             {currentStep === 1 && (
               <>
-                {/* Contact Information */}
-                <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-100">
-                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-900">
-                      <User className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-xl font-black tracking-tight text-zinc-950">
-                      Contact Information
-                    </h2>
-                  </div>
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-zinc-600 ml-1">
-                        Full Name <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        value={form.fullName}
-                        onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                        placeholder="Enter your name"
-                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-zinc-600 ml-1">
-                        Phone Number <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        placeholder="10-digit mobile number"
-                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                      />
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-xs font-bold text-zinc-600 ml-1">
-                        Email Address
-                      </label>
-                      <Input
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        placeholder="email@example.com"
-                        className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Address */}
+                {/* Shipping Address */}
                 <section className="bg-white border border-zinc-200 p-4 sm:p-6 md:p-8 shadow-sm rounded-2xl sm:rounded-3xl space-y-6">
                   <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
                     <div className="flex items-center gap-3">
@@ -980,8 +934,8 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  {user && addresses.length > 0 && (
-                    <div className="pb-6 border-b border-zinc-100">
+                  {user && addresses.length > 0 ? (
+                    <div className="pb-2">
                       <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 ml-1">
                         Select a Saved Address
                       </h3>
@@ -1026,78 +980,19 @@ export default function CheckoutPage() {
                         ))}
                       </div>
                     </div>
-                  )}
-
-                  {/* Manual input fields */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">
-                      Shipping Address Details
-                    </h3>
-                    <div className="grid gap-5 md:grid-cols-2">
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-xs font-bold text-zinc-600 ml-1">
-                          Street Address <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={form.address}
-                          onChange={(e) => setForm({ ...form, address: e.target.value })}
-                          placeholder="Flat/House No., Building, Street/Locality"
-                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-zinc-600 ml-1">
-                          City <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={form.city}
-                          onChange={(e) => setForm({ ...form, city: e.target.value })}
-                          placeholder="City"
-                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-zinc-600 ml-1">
-                          State <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={form.state}
-                          onChange={(e) => setForm({ ...form, state: e.target.value })}
-                          placeholder="State"
-                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-zinc-600 ml-1">
-                          PIN Code <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={form.postalCode}
-                          onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-                          placeholder="6-digit PIN code"
-                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-zinc-600 ml-1">
-                          Country <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          value={form.country}
-                          onChange={(e) => setForm({ ...form, country: e.target.value })}
-                          placeholder="Country"
-                          className="h-12 border-zinc-200 rounded-xl focus-visible:ring-zinc-950"
-                        />
-                      </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-zinc-500 text-sm mb-4">No saved addresses found. Please add a shipping address in your address book to proceed.</p>
+                      <Link href="/account/address-book?returnTo=/checkout">
+                        <button className="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-zinc-950 text-white font-bold text-xs hover:bg-primary transition">
+                          Add Shipping Address
+                        </button>
+                      </Link>
                     </div>
-                  </div>
+                  )}
                 </section>
 
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
+                <div className="hidden lg:flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
                   <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Payment
                   </button>
@@ -1280,7 +1175,7 @@ export default function CheckoutPage() {
                   <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Shipping
                   </button>
-                  <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="hidden lg:inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition items-center justify-center gap-2">
                     Continue to Review
                   </button>
                 </div>
@@ -1375,7 +1270,7 @@ export default function CheckoutPage() {
                   <button
                     onClick={handlePlaceOrder}
                     disabled={submitting || isPlacingOrder}
-                    className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="hidden lg:inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2"
                   >
                     {submitting || isPlacingOrder
                       ? "Processing..."

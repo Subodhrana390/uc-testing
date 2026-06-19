@@ -28,6 +28,7 @@ export interface SiteSettings {
   whatsapp_enabled: boolean
   emi_enabled: boolean
   coupons_enabled: boolean
+  frequently_bought_together_enabled: boolean
   created_at?: string
   updated_at?: string
 }

@@ -6,11 +6,16 @@ export function formatCurrency(value: number | string | null | undefined) {
         ? Number.parseFloat(value)
         : 0;
 
+  const validNumber = Number.isFinite(numericValue) ? numericValue : 0;
+  const roundedValue = Math.round(validNumber * 100) / 100;
+  const hasPaise = roundedValue % 1 !== 0;
+
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(numericValue) ? numericValue : 0);
+    minimumFractionDigits: hasPaise ? 2 : 0,
+    maximumFractionDigits: hasPaise ? 2 : 0,
+  }).format(validNumber);
 }
 
 export function formatDate(value: string | null | undefined) {

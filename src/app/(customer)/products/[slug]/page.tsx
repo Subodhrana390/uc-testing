@@ -5,9 +5,12 @@ import ProductCarousel from "@/components/storefront/ProductCarousel";
 import RecentlyViewedProducts from "@/components/storefront/RecentlyViewedProducts";
 import RelatedProducts from "@/components/storefront/RelatedProducts";
 import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTogether";
+import { getSiteSettings } from "@/app/actions/settings";
 
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const supabase = await createClient();
+  const settings = await getSiteSettings();
+  const frequentlyBoughtTogetherEnabled = settings?.frequently_bought_together_enabled ?? true;
 
   const { data: productData, error } = await supabase.rpc(
     "get_product_by_slug",
@@ -52,10 +55,16 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
   return (
     <div className="bg-white min-h-screen">
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8">
-        <ProductDetailsClient product={product} attributes={attrData || []} />
+        <ProductDetailsClient 
+          product={product} 
+          attributes={attrData || []} 
+          frequentlyBoughtTogetherEnabled={frequentlyBoughtTogetherEnabled}
+        />
 
         {/* Frequently Bought Together */}
-        <FrequentlyBoughtTogether currentProduct={product} />
+        {frequentlyBoughtTogetherEnabled && (
+          <FrequentlyBoughtTogether currentProduct={product} />
+        )}
 
         {/* Similar Products */}
         <SimilarProducts categoryId={product.category_id} currentProductId={product.id} price={product.price} />

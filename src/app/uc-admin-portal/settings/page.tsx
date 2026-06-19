@@ -90,6 +90,7 @@ export default function SettingsPage() {
   const [featuresForm, setFeaturesForm] = useState({
     emi_enabled: true,
     coupons_enabled: true,
+    frequently_bought_together_enabled: true,
   });
 
   // Saving state
@@ -157,6 +158,7 @@ export default function SettingsPage() {
         setFeaturesForm({
           emi_enabled: settingsData.emi_enabled ?? true,
           coupons_enabled: settingsData.coupons_enabled ?? true,
+          frequently_bought_together_enabled: settingsData.frequently_bought_together_enabled ?? true,
         });
       }
 
@@ -890,6 +892,19 @@ export default function SettingsPage() {
                       id="coupons_enabled"
                       checked={featuresForm.coupons_enabled}
                       onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, coupons_enabled: checked })}
+                      className="data-[checked]:bg-zinc-900 data-[unchecked]:bg-zinc-200"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-150 rounded-2xl">
+                    <div className="space-y-0.5 text-left">
+                      <Label htmlFor="frequently_bought_together_enabled" className="text-sm font-bold text-zinc-800 cursor-pointer">Enable Frequently Bought Together</Label>
+                      <p className="text-[10px] text-zinc-400 font-medium leading-normal">Toggle display of Frequently Bought Together section on the product details page.</p>
+                    </div>
+                    <Switch
+                      id="frequently_bought_together_enabled"
+                      checked={featuresForm.frequently_bought_together_enabled}
+                      onCheckedChange={(checked) => setFeaturesForm({ ...featuresForm, frequently_bought_together_enabled: checked })}
                       className="data-[checked]:bg-zinc-900 data-[unchecked]:bg-zinc-200"
                     />
                   </div>

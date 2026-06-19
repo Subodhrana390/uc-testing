@@ -242,7 +242,7 @@ export async function createOrder(orderData: {
   }
 }
 
-export async function cancelOrder(orderId: string) {
+export async function cancelOrder(orderId: string, reason?: string) {
   try {
     const supabase = await createClient()
 
@@ -259,7 +259,7 @@ export async function cancelOrder(orderId: string) {
         p_new_status: 'CANCELLED',
         p_actor_type: 'customer',
         p_actor_id: user.id,
-        p_remarks: 'Cancelled by customer'
+        p_remarks: reason ? `Cancelled by customer: ${reason}` : 'Cancelled by customer'
       }
     )
 
@@ -439,7 +439,7 @@ export async function trackOrder(displayOrderId: string) {
 
     const { data: orders, error: err } = await supabase
       .from("orders")
-      .select("*, order_items(*, products(id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code)), payments(*)")
+      .select("*, order_items(*, products(id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code)), payments(*), shipments(*)")
       .gte("created_at", new Date(ts - 5000).toISOString())
       .lte("created_at", new Date(ts + 5000).toISOString());
 
@@ -458,5 +458,77 @@ export async function trackOrder(displayOrderId: string) {
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }
 }
+
+export async function requestOrderReplacement(orderId: string, reason: string) {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized: Please ensure you are logged in.' }
+    }
+
+    // Fetch order details with its status history to validate return period
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*, order_status_history(*)')
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError || !order) {
+      return { success: false, error: 'Order not found.' }
+    }
+
+    const { isReturnable } = getReturnWindowInfo(order)
+    if (!isReturnable) {
+      return { success: false, error: 'The 7-day return period for this order has expired.' }
+    }
+
+    // Call PostgreSQL RPC transition_order_status to set status to REPLACEMENT_REQUESTED
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'transition_order_status',
+      {
+        p_order_id: orderId,
+        p_new_status: 'REPLACEMENT_REQUESTED',
+        p_actor_type: 'customer',
+        p_actor_id: user.id,
+        p_remarks: `Replacement Requested: ${reason}`
+      }
+    )
+
+    if (rpcError) {
+      console.error('Order replacement RPC error:', rpcError)
+      return { success: false, error: 'Failed to request replacement due to server error' }
+    }
+
+    const result = rpcResult as any;
+    if (!result.success) {
+      console.error('Order replacement business logic error:', result.error)
+      return { success: false, error: result.error || 'Failed to request replacement' }
+    }
+
+    const returnTrackingId = "RTK" + Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    const { error: paymentUpdateError } = await supabase
+      .from('orders')
+      .update({
+        return_tracking_id: returnTrackingId,
+        return_carrier: 'Reverse Logistics Partner'
+      })
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+
+    if (paymentUpdateError) {
+      console.error('Failed to update tracking status for replacement:', paymentUpdateError)
+    }
+
+    revalidatePath('/account/orders')
+    return { success: true }
+  } catch (error: any) {
+    console.error('requestOrderReplacement unexpected error:', error)
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
+}
+
 
 

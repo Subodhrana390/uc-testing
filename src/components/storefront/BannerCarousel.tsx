@@ -86,71 +86,53 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   return (
     <div data-nosnippet className="relative overflow-hidden rounded-md lg:col-span-2 group">
       {/* Slides */}
-      <div className="relative h-[350px] md:h-[450px]">
-        {banners.map((banner, index) => (
-          <div
-            key={banner.id}
-            className="absolute inset-0 transition-all duration-700 ease-in-out"
-            style={{
-              opacity: index === currentBanner ? 1 : 0,
-              transform: index === currentBanner ? "scale(1)" : "scale(1.02)",
-              zIndex: index === currentBanner ? 10 : 1,
-            }}
-          >
-            {/* Background Graphic Strategy */}
-            {banner.image_url ? (
-              <div className="absolute inset-0">
-                <Image
-                  src={banner.image_url}
-                  alt={banner.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                  placeholder="blur"
-                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
-                  className="w-full h-full object-cover"
-                  priority={index === 0}
-                />
-                {/* Advanced localized lighting protection overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-slate-950/30 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent opacity-40 md:opacity-10" />
-              </div>
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-blue-950">
-                <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
-                <div className="absolute left-1/3 bottom-0 h-44 w-44 rounded-full bg-amber-500/5 blur-2xl" />
-              </div>
-            )}
-
-            {/* Banner Layout Content */}
-            <div className="relative z-10 h-full flex flex-col justify-center px-12 py-6 sm:p-12 max-w-2xl">
-              {/* <span className="inline-flex self-start rounded-md bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 border border-amber-500/20 mb-3">
-                UC Enterprises Exclusive
-              </span> */}
-
-              <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.4)]">
-                {banner.title}
-              </h2>
-
-              {banner.subtitle && (
-                <p className="mt-3 text-xs sm:text-sm leading-relaxed text-slate-300 md:text-base opacity-95 max-w-lg line-clamp-3">
-                  {banner.subtitle}
-                </p>
-              )}
-
-              {banner.link_url && (
-                <div className="mt-4 sm:mt-6 md:mt-8">
-                  <Link
-                    href={banner.link_url}
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 sm:px-5 sm:py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-950 shadow-md shadow-amber-500/10 hover:bg-amber-400 hover:shadow-lg transition-all"
-                  >
-                    {banner.link_text || "Order Now"}
-                    <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
-                  </Link>
+      <div className="relative aspect-[16/9] sm:aspect-auto sm:h-[350px] md:h-[450px]">
+        {banners.map((banner, index) => {
+          const slideContent = (
+            <>
+              {/* Background Graphic Strategy */}
+              {banner.image_url ? (
+                <div className="absolute inset-0">
+                  <Image
+                    src={banner.image_url}
+                    alt={banner.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    placeholder="blur"
+                    blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+                    className="w-full h-full object-cover"
+                    priority={index === 0}
+                  />
+                </div>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-blue-950">
+                  <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+                  <div className="absolute left-1/3 bottom-0 h-44 w-44 rounded-full bg-amber-500/5 blur-2xl" />
                 </div>
               )}
+            </>
+          );
+
+          return (
+            <div
+              key={banner.id}
+              className="absolute inset-0 transition-all duration-700 ease-in-out"
+              style={{
+                opacity: index === currentBanner ? 1 : 0,
+                transform: index === currentBanner ? "scale(1)" : "scale(1.02)",
+                zIndex: index === currentBanner ? 10 : 1,
+              }}
+            >
+              {banner.link_url ? (
+                <Link href={banner.link_url} className="absolute inset-0 block cursor-pointer">
+                  {slideContent}
+                </Link>
+              ) : (
+                slideContent
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Navigation Arrows (Highly visible handles optimized for touch/desktop hybrid layouts) */}
