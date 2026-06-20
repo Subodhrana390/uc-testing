@@ -46,10 +46,18 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
     `)
     .eq("product_id", productData.id);
 
+  const { data: variantsData } = await supabase
+    .from("product_variants")
+    .select("*")
+    .eq("product_id", productData.id)
+    .eq("status", "ACTIVE")
+    .order("is_default", { ascending: false });
+
   const product = {
     ...productData,
     averageRating: averageRating.toFixed(1),
     reviewCount,
+    variants: variantsData || [],
   };
 
   return (

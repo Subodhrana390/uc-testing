@@ -93,10 +93,10 @@ export async function createOrder(orderData: {
     let sgstAmount = 0;
     let igstAmount = 0;
 
-    const productIds = orderData.items.map(i => i.id);
+    const productIds = Array.from(new Set(orderData.items.map(i => i.product_id || i.id)));
     const { data: products } = await supabase.from('products').select('id, price, sale_price, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive').in('id', productIds);
 
-    const variantIds = orderData.items.filter(i => i.variant_id).map(i => i.variant_id);
+    const variantIds = orderData.items.map(i => i.variant_id).filter(Boolean);
     let variants: any[] = [];
     if (variantIds.length > 0) {
       const { data } = await supabase.from('product_variants').select('id, price, sale_price').in('id', variantIds);
@@ -104,39 +104,58 @@ export async function createOrder(orderData: {
     }
 
     for (const item of orderData.items) {
-      const prod = products?.find(p => p.id === item.id);
+      const prod = products?.find(p => p.id === (item.product_id || item.id));
       let price = prod ? (Number(prod.sale_price || prod.price) || 0) : 0;
 
       if (item.variant_id) {
         const variant = variants.find(v => v.id === item.variant_id);
         if (variant) price = Number(variant.sale_price || variant.price) || 0;
+      } else if (item.price && !prod) {
+        price = item.price; // fallback if product not found (shouldn't happen)
       }
 
       const qty = item.quantity || 1;
       const itemTotal = price * qty;
+      
       const igstRate = prod?.igst_rate || 0;
       const cgstRate = prod?.cgst_rate || 0;
       const sgstRate = prod?.sgst_rate || 0;
+
+      let appliedCgstRate = 0;
+      let appliedSgstRate = 0;
+      let appliedIgstRate = 0;
+
+      if (isIntraState) {
+        appliedCgstRate = cgstRate > 0 ? cgstRate : (igstRate > 0 ? igstRate / 2 : 0);
+        appliedSgstRate = sgstRate > 0 ? sgstRate : (igstRate > 0 ? igstRate / 2 : 0);
+      } else {
+        appliedIgstRate = igstRate > 0 ? igstRate : (cgstRate + sgstRate);
+      }
+
+      const rate = isIntraState ? (appliedCgstRate + appliedSgstRate) : appliedIgstRate;
 
       serverSubtotal += itemTotal;
       let taxAmount = 0;
       let baseTotal = itemTotal;
 
-      if (igstRate > 0) {
+      if (rate > 0) {
         if (prod?.is_tax_inclusive) {
-          baseTotal = itemTotal / (1 + igstRate / 100);
+          baseTotal = itemTotal / (1 + rate / 100);
           taxAmount = itemTotal - baseTotal;
         } else {
-          taxAmount = itemTotal * (igstRate / 100);
+          taxAmount = itemTotal * (rate / 100);
           serverTaxExclusive += taxAmount;
         }
-      }
 
-      if (isIntraState) {
-        cgstAmount += baseTotal * (cgstRate / 100);
-        sgstAmount += baseTotal * (sgstRate / 100);
-      } else {
-        igstAmount += baseTotal * (igstRate / 100);
+        if (isIntraState) {
+          const totalCgstSgst = appliedCgstRate + appliedSgstRate;
+          if (totalCgstSgst > 0) {
+            cgstAmount += taxAmount * (appliedCgstRate / totalCgstSgst);
+            sgstAmount += taxAmount * (appliedSgstRate / totalCgstSgst);
+          }
+        } else {
+          igstAmount += taxAmount;
+        }
       }
     }
 
@@ -179,8 +198,9 @@ export async function createOrder(orderData: {
         p_delivery_estimate: orderData.deliveryEstimate || null,
         p_idempotency_key: `order_${Date.now()}_${user ? user.id : 'guest_' + Math.random().toString(36).substring(2, 9)}`, // Idempotency protection
         p_items: orderData.items.map(item => ({
-          id: item.id,
-          quantity: item.quantity
+          id: item.product_id || item.id,
+          quantity: item.quantity,
+          variant_id: item.variant_id || null
         })),
         p_attribution: attribution,
         p_postal_code: orderData.postalCode,

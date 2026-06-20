@@ -103,6 +103,15 @@ export default function CartPage() {
                         >
                           {item.name}
                         </Link>
+                        {item.variant_attributes && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {Object.entries(item.variant_attributes).map(([key, val]) => (
+                              <span key={key} className="inline-flex items-center px-1.5 py-0.5 rounded shadow-sm text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200/80">
+                                <span className="text-zinc-400 mr-1 font-semibold">{key}:</span> {val as string}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {item.hsn_code && (
                           <div className="text-xs text-zinc-500 font-medium">HSN: {item.hsn_code}</div>
                         )}
@@ -174,6 +183,11 @@ export default function CartPage() {
                         <span className="font-bold text-zinc-950">{item.quantity} ×</span>
                         <div className="flex flex-col min-w-0">
                           <span className="text-zinc-600 truncate" title={item.name}>{item.name}</span>
+                          {item.variant_attributes && (
+                            <div className="text-[10px] text-zinc-400 mt-0.5 truncate">
+                              {Object.entries(item.variant_attributes).map(([key, val]) => `${val}`).join(", ")}
+                            </div>
+                          )}
                           {item.hsn_code && <span className="text-[10px] text-zinc-400">HSN: {item.hsn_code}</span>}
                         </div>
                       </div>

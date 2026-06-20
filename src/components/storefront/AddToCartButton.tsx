@@ -16,6 +16,8 @@ type Props = {
     hsn_code?: string | null;
     is_tax_inclusive?: boolean;
     igst_rate?: number;
+    attributes?: Record<string, string>;
+    product_id?: string;
   };
   quantity?: number;
   className?: string;
@@ -60,6 +62,9 @@ export default function AddToCartButton({
             hsn_code: product.hsn_code || undefined,
             is_tax_inclusive: product.is_tax_inclusive,
             igst_rate: product.igst_rate,
+            variant_attributes: product.attributes,
+            product_id: product.product_id || product.id,
+            variant_id: product.product_id ? product.id : undefined,
           },
           quantity
         );

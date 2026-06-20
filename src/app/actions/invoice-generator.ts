@@ -3,17 +3,10 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { numberToWords } from "@/lib/numberToWords";
 import { getDisplayOrderId } from "@/lib/order";
-import fs from "fs";
-import path from "path";
+import { LOGO_BASE_64 } from "@/lib/logo-base64";
 
 const getLogoBase64 = () => {
-  const filePath = path.join(process.cwd(), "public", "logo.png");
-  try {
-    const bitmap = fs.readFileSync(filePath);
-    return `data:image/png;base64,${bitmap.toString("base64")}`;
-  } catch {
-    return null;
-  }
+  return LOGO_BASE_64;
 };
 
 export async function generateAndStoreInvoicePDF(invoiceId: string) {
@@ -74,7 +67,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     const logoBase64 = getLogoBase64();
     if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 12, 16, 20, 20);
+      doc.addImage(logoBase64, "PNG", 12, 16, 22, 22);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text(businessInfo.name, 35, 20);
@@ -120,7 +113,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.setFillColor(220, 235, 245);
     doc.rect(10, 58, 95, 5, "F");
     doc.setFont("helvetica", "bold");
-    doc.text("Shipp To", 12, 62);
+    doc.text("Shipping To", 12, 62);
 
     doc.setFont("helvetica", "normal");
     doc.text(`Name : ${invoice.orders.customer_name || "Customer"}`, 12, 67);
@@ -138,9 +131,6 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     doc.text(`Payment Mode :`, 107, 50);
     doc.text(invoice.orders.payment_method || "Online", 140, 50);
-
-    doc.text(`Payment Status :`, 107, 54);
-    doc.text(invoice.status === "PAID" ? "Paid" : "Pending", 140, 54);
 
     doc.text(`Reverse Charge :`, 107, 58);
     doc.text("NO", 140, 58);
@@ -384,7 +374,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text("Authorised Signatory", 165, finalY + 63, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.text("Thank You For Business With US!", 130, finalY + 70, { align: "center" });
+    doc.text("Thank You For Business With US!", 110, finalY + 120, { align: "center" });
 
     // 4. Save to buffer and upload to Supabase Storage
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

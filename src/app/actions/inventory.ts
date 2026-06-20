@@ -276,7 +276,7 @@ export async function getInventoryTransactions({
       created_at,
       reference_id,
       reference_type,
-      product_variants (name),
+      product_variants (name, sku),
       created_by
     `;
 

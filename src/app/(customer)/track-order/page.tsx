@@ -10,6 +10,7 @@ import {
   Truck, MapPin, ReceiptText, ArrowRight, RotateCcw,
   AlertCircle, HelpCircle, FileDown, Star, ShieldCheck,
   BadgeCheck, Clock3, XCircle, RefreshCcw,
+  Phone,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -301,19 +302,19 @@ function TrackOrderContent() {
     if (!order?.shipments) return null;
     const list = Array.isArray(order.shipments) ? order.shipments : [order.shipments];
     if (list.length === 0) return null;
-    
+
     const isReverseStatus = [
       "return_requested", "return_approved", "returned", "refund_pending", "refunded",
       "replacement_requested", "replacement_approved", "replaced"
     ].includes(sl);
-    
+
     if (isReverseStatus) {
-      const reverseShipment = list.find((s: any) => 
+      const reverseShipment = list.find((s: any) =>
         ["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(s.status.toUpperCase())
       );
       if (reverseShipment) return reverseShipment;
     }
-    
+
     return list[0];
   }, [order?.shipments, sl]);
 
@@ -477,7 +478,7 @@ function TrackOrderContent() {
                       </div>
                     </div>
 
-                    <div className="px-6 py-4 flex items-center justify-between gap-4 border-b border-zinc-100">
+                    <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-100">
                       {order.shipping_address && (
                         <div className="flex items-start gap-3 flex-1">
                           <MapPin className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
@@ -485,9 +486,15 @@ function TrackOrderContent() {
                             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
                               Shipping To
                             </p>
-                            <p className="text-xs font-semibold text-zinc-700 whitespace-pre-wrap">
-                              {order.shipping_address}
-                            </p>
+                            <div className="text-xs text-zinc-700 whitespace-pre-wrap">
+                              <p className="font-bold text-zinc-900 mb-0.5">{order.customer_name}</p>
+                              <p className="font-medium leading-relaxed">{order.shipping_address}</p>
+                              {order.phone && (
+                                <p className="font-semibold text-zinc-900 mt-1 flex items-center gap-1.5">
+                                  <Phone className="w-3 h-3 text-zinc-400" /> {order.phone}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -515,9 +522,9 @@ function TrackOrderContent() {
                         const trackingUrl = getTrackingUrl(carrier, trackingId);
                         const shipStatus = shipment?.status || "IN_TRANSIT";
                         const theme = getShipmentStatusTheme(shipStatus);
-                        
+
                         return (
-                          <a 
+                          <a
                             href={trackingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -707,7 +714,7 @@ function TrackOrderContent() {
                         {(() => {
                           const currentStatus = shipment.status.toUpperCase();
                           const isOutbound = !["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(currentStatus);
-                          
+
                           const milestones = isOutbound ? [
                             { key: "LABEL_CREATED", label: "Label Created", desc: "Shipping label generated, waiting for pickup." },
                             { key: "IN_TRANSIT", label: "In Transit", desc: "Package has been picked up by courier." },

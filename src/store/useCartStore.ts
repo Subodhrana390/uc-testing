@@ -12,6 +12,9 @@ export interface CartItem {
   hsn_code?: string;
   is_tax_inclusive?: boolean;
   igst_rate?: number;
+  variant_id?: string;
+  product_id?: string;
+  variant_attributes?: Record<string, string>;
 }
 
 interface CartState {
