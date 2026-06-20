@@ -130,7 +130,7 @@ export default function CategoryList({ type }: CategoryListProps) {
     try {
       let q = supabase
         .from("categories")
-        .select("*", { count: "exact" });
+        .select("*, parent:parent_id(name)", { count: "exact" });
 
       if (type === "main") {
         q = q.is("parent_id", null);
@@ -539,7 +539,7 @@ export default function CategoryList({ type }: CategoryListProps) {
                     {type === "sub" && (
                       <td className="px-6 py-4">
                         <span className="text-[11px] font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg inline-block">
-                          {allCategories.find(c => c.id === category.parent_id)?.name || "Unknown"}
+                          {category.parent?.name || allCategories.find(c => c.id === category.parent_id)?.name || "Unknown"}
                         </span>
                       </td>
                     )}

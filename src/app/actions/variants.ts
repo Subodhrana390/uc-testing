@@ -18,6 +18,13 @@ export async function generateVariants(
 ) {
   const supabase = await createClient();
 
+  const { data: productData } = await supabase
+    .from("products")
+    .select("name")
+    .eq("id", productId)
+    .single();
+  const productName = productData?.name || "Product";
+
   const keys = Object.keys(attributesMatrix);
   const values = Object.values(attributesMatrix);
 
@@ -33,7 +40,7 @@ export async function generateVariants(
 
     const skuSuffix = combo.join("-").replace(/\s+/g, "").toUpperCase();
     const sku = `PRD-${productId.split("-")[0]}-${skuSuffix}`;
-    const name = combo.join(" / ") || sku;
+    const name = productName;
 
     return {
       product_id: productId,
@@ -68,9 +75,19 @@ export async function generateVariants(
 export async function bulkUpsertVariants(variants: any[]) {
   const supabase = await createClient();
 
+  let productName = "";
   if (variants.length > 0) {
     const productId = variants[0].product_id;
     if (productId) {
+      const { data: pData } = await supabase
+        .from("products")
+        .select("name")
+        .eq("id", productId)
+        .single();
+      if (pData?.name) {
+        productName = pData.name;
+      }
+
       await supabase
         .from("product_variants")
         .update({ is_default: false })
@@ -83,8 +100,9 @@ export async function bulkUpsertVariants(variants: any[]) {
 
   for (const v of variants) {
     // Strictly sanitize payload to ONLY include valid table columns
-    // Auto-derive name from attributes if not explicitly provided
+    // Auto-derive name from parent product name if not explicitly provided
     const derivedName = v.name ||
+      productName ||
       (v.attributes && Object.keys(v.attributes).length > 0
         ? Object.values(v.attributes as Record<string, string>).join(" / ")
         : v.sku);

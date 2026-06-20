@@ -86,7 +86,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   return (
     <div data-nosnippet className="relative overflow-hidden rounded-md lg:col-span-2 group">
       {/* Slides */}
-      <div className="relative aspect-[16/9] sm:aspect-auto sm:h-[350px] md:h-[450px]">
+      <div className="relative aspect-[16/9] w-full">
         {banners.map((banner, index) => {
           const slideContent = (
             <>

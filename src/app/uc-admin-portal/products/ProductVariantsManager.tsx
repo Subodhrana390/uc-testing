@@ -13,7 +13,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-export default function ProductVariantsManager({ productId, basePrice, gstRate = 0, onDefaultSync }: { productId: string, basePrice: number, gstRate?: number, onDefaultSync?: (v: any) => void }) {
+export default function ProductVariantsManager({ productId, productName = "", basePrice, gstRate = 0, onDefaultSync }: { productId: string, productName?: string, basePrice: number, gstRate?: number, onDefaultSync?: (v: any) => void }) {
   const [variants, setVariants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,6 +107,7 @@ export default function ProductVariantsManager({ productId, basePrice, gstRate =
         id: "",
         product_id: productId,
         sku: autoSku,
+        name: productName,
         sale_price: basePrice || 0,
         stock_quantity: 0,
         attributes: {},
@@ -191,6 +192,22 @@ export default function ProductVariantsManager({ productId, basePrice, gstRate =
               />
             </div>
           </div>
+        );
+      }
+    }),
+    columnHelper.accessor("name", {
+      header: "Variant Name",
+      cell: (info) => {
+        const i = info.row.index;
+        const v = info.row.original;
+        return (
+          <input
+            type="text"
+            value={v.name || ""}
+            onChange={e => handleUpdateVariant(i, 'name', e.target.value)}
+            className="w-full min-w-[150px] border border-zinc-200 rounded text-xs px-2 py-1 outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
+            placeholder="Variant Name"
+          />
         );
       }
     }),

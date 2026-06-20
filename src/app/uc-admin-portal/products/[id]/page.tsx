@@ -856,6 +856,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 <div className="space-y-6">
                   <ProductVariantsManager 
                     productId={productId} 
+                    productName={formData.name}
                     basePrice={parseFloat(formData.price) || 0} 
                     gstRate={igstRateVal} 
                     onDefaultSync={(v) => {
