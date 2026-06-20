@@ -7,12 +7,12 @@ import fs from "fs";
 import path from "path";
 
 const getLogoBase64 = () => {
-  const filePath = path.join(process.cwd(), "public", "logo.jpg");
+  const filePath = path.join(process.cwd(), "public", "logo.png");
   try {
     const bitmap = fs.readFileSync(filePath);
-    return `data:image/jpeg;base64,${bitmap.toString("base64")}`;
+    return `data:image/png;base64,${bitmap.toString("base64")}`;
   } catch (err) {
-    console.error("Failed to read logo.jpg at path:", filePath, err);
+    console.error("Failed to read logo.png at path:", filePath, err);
     return null;
   }
 };
@@ -75,7 +75,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     const logoBase64 = getLogoBase64();
     if (logoBase64) {
-      doc.addImage(logoBase64, "JPEG", 12, 16, 20, 20);
+      doc.addImage(logoBase64, "PNG", 12, 16, 22, 22);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text(businessInfo.name, 35, 20);
