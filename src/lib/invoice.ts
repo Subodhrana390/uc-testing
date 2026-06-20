@@ -1,31 +1,9 @@
 import { getDisplayOrderId } from "./order";
 import { numberToWords } from "./numberToWords";
+import { LOGO_BASE_64 } from "./logo-base64";
 
 const getLogoBase64 = async () => {
-  if (typeof window === "undefined") {
-    const fs = await import("fs");
-    const path = await import("path");
-    const filePath = path.join(process.cwd(), "public", "logo.png");
-    try {
-      const bitmap = fs.readFileSync(filePath);
-      return `data:image/png;base64,${bitmap.toString("base64")}`;
-    } catch {
-      return null;
-    }
-  } else {
-    try {
-      const response = await fetch("/logo.png");
-      const blob = await response.blob();
-      return new Promise<string | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return null;
-    }
-  }
+  return LOGO_BASE_64;
 };
 
 export interface InvoiceData {

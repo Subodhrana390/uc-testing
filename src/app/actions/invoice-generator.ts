@@ -3,18 +3,10 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { numberToWords } from "@/lib/numberToWords";
 import { getDisplayOrderId } from "@/lib/order";
-import fs from "fs";
-import path from "path";
+import { LOGO_BASE_64 } from "@/lib/logo-base64";
 
 const getLogoBase64 = () => {
-  const filePath = path.join(process.cwd(), "public", "logo.png");
-  try {
-    const bitmap = fs.readFileSync(filePath);
-    return `data:image/png;base64,${bitmap.toString("base64")}`;
-  } catch (err) {
-    console.error("Failed to read logo.png at path:", filePath, err);
-    return null;
-  }
+  return LOGO_BASE_64;
 };
 
 export async function generateAndStoreInvoicePDF(invoiceId: string) {
