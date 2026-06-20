@@ -33,10 +33,12 @@ export async function generateVariants(
 
     const skuSuffix = combo.join("-").replace(/\s+/g, "").toUpperCase();
     const sku = `PRD-${productId.split("-")[0]}-${skuSuffix}`;
+    const name = combo.join(" / ") || sku;
 
     return {
       product_id: productId,
       sku: sku,
+      name: name,
       price: basePrice,
       stock_quantity: 0,
       attributes: attributes,
@@ -81,9 +83,16 @@ export async function bulkUpsertVariants(variants: any[]) {
 
   for (const v of variants) {
     // Strictly sanitize payload to ONLY include valid table columns
+    // Auto-derive name from attributes if not explicitly provided
+    const derivedName = v.name ||
+      (v.attributes && Object.keys(v.attributes).length > 0
+        ? Object.values(v.attributes as Record<string, string>).join(" / ")
+        : v.sku);
+
     const sanitized = {
       product_id: v.product_id,
       sku: v.sku,
+      name: derivedName,
       barcode: v.barcode,
       price: v.price,
       sale_price: v.sale_price,

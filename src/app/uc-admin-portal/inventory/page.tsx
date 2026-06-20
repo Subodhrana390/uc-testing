@@ -803,9 +803,9 @@ export default function InventoryPage() {
                             <span className="text-sm font-medium text-zinc-700 block">
                               {tx.products?.name || "Unknown Product"}
                             </span>
-                            {tx.product_variants?.name && (
+                            {(tx.product_variants?.name || tx.product_variants?.sku) && (
                               <span className="text-[11px] text-zinc-400 font-mono">
-                                Variant: {tx.product_variants.name}
+                                Variant: {tx.product_variants.name || tx.product_variants.sku}
                               </span>
                             )}
                           </div>
