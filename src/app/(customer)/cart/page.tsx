@@ -79,14 +79,18 @@ export default function CartPage() {
                   key={item.id}
                   className="flex gap-4 sm:gap-6 border border-zinc-100 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow rounded-2xl group"
                 >
-                  <div className="relative h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 shrink-0 overflow-hidden flex items-center justify-center">
-                    <Image
-                      src={item.image_url || "/images/prod_main.png"}
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 160px"
-                      className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="relative h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 shrink-0 overflow-hidden flex items-center justify-center bg-zinc-50/50 rounded-xl">
+                    {item.image_url ? (
+                      <Image
+                        src={item.image_url}
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 160px"
+                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span className="text-[9px] text-zinc-300 font-bold uppercase tracking-widest text-center">No Image</span>
+                    )}
                   </div>
 
                   {/* Product Info & Actions */}

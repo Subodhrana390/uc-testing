@@ -37,7 +37,10 @@ function getStatusStep(status: string) {
     "return_approved",
     "returned",
     "refund_pending",
-    "refunded"
+    "refunded",
+    "replacement_requested",
+    "replacement_approved",
+    "replaced"
   ].includes(s)) {
     return 5;
   }
@@ -52,6 +55,73 @@ function getReturnStatusStep(status: string) {
   if (s === "refund_pending") return 3;
   if (s === "refunded") return 4;
   return -1;
+}
+
+function getReplacementStatusStep(status: string) {
+  const s = status.toLowerCase();
+  if (s === "replacement_requested") return 0;
+  if (s === "replacement_approved") return 1;
+  if (s === "replaced") return 2;
+  return -1;
+}
+
+function getTrackingUrl(carrier: string, trackingId: string) {
+  if (!trackingId) return "";
+  const c = (carrier || "").toLowerCase();
+  const awb = encodeURIComponent(trackingId.trim());
+  if (c.includes("delhivery")) {
+    return `https://www.delhivery.com/tracking/package-tracking/${awb}`;
+  }
+  if (c.includes("bluedart") || c.includes("blue dart")) {
+    return `https://www.bluedart.com/web/guest/track-shipment-rt?trackables=${awb}`;
+  }
+  if (c.includes("fedex")) {
+    return `https://www.fedex.com/fedextrack/?trknbr=${awb}`;
+  }
+  if (c.includes("dhl")) {
+    return `https://www.dhl.com/in-en/home/tracking/tracking-express.html?submit=1&tracking-id=${awb}`;
+  }
+  if (c.includes("dtdc")) {
+    return `https://www.dtdc.in/tracking/shipment-tracking.html?strConsignmentNo=${awb}`;
+  }
+  if (c.includes("ekart")) {
+    return `https://ekartlogistics.com/shipment/${awb}`;
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(carrier + " tracking " + trackingId)}`;
+}
+
+function getShipmentStatusTheme(status: string) {
+  const s = (status || "").toUpperCase();
+  if (["DELIVERED", "RETURN_RECEIVED"].includes(s)) {
+    return {
+      bg: "bg-emerald-50/70 border-emerald-100",
+      text: "text-emerald-700",
+      badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      iconBg: "bg-emerald-500",
+    };
+  }
+  if (["IN_TRANSIT", "RETURN_IN_TRANSIT"].includes(s)) {
+    return {
+      bg: "bg-indigo-50/70 border-indigo-100",
+      text: "text-indigo-700",
+      badge: "bg-indigo-100 text-indigo-800 border-indigo-200",
+      iconBg: "bg-indigo-500",
+    };
+  }
+  if (["OUT_FOR_DELIVERY", "PICKED_UP"].includes(s)) {
+    return {
+      bg: "bg-amber-50/70 border-amber-100",
+      text: "text-amber-700",
+      badge: "bg-amber-100 text-amber-800 border-amber-200",
+      iconBg: "bg-amber-500",
+    };
+  }
+  return {
+    bg: "bg-slate-50/70 border-slate-100",
+    text: "text-slate-700",
+    badge: "bg-slate-100 text-slate-800 border-slate-200",
+    iconBg: "bg-zinc-500",
+  };
 }
 
 function fmtDate(iso: string, hoursToAdd = 0) {
@@ -73,6 +143,9 @@ function statusColor(s: string) {
   if (sl === "return_requested") return "pink";
   if (sl === "return_approved" || sl === "returned") return "rose";
   if (sl === "refund_pending") return "orange";
+  if (sl === "replacement_requested") return "amber";
+  if (sl === "replacement_approved") return "blue";
+  if (sl === "replaced") return "emerald";
   return "zinc";
 }
 
@@ -94,6 +167,9 @@ const STATUS_LABEL: Record<string, string> = {
   shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled",
   failed: "Failed", returned: "Returned", return_requested: "Return Requested",
   return_approved: "Return Approved", refund_pending: "Refund Pending", refunded: "Refunded",
+  replacement_requested: "Replacement Requested",
+  replacement_approved: "Replacement Approved",
+  replaced: "Replaced",
 };
 
 /* ─────────────────────────── component ─────────────────────────── */
@@ -221,6 +297,25 @@ function TrackOrderContent() {
   const step = getStatusStep(sl);
   const isTerminal = step === -1;
   const col = statusColor(sl);
+  const shipment = useMemo(() => {
+    if (!order?.shipments) return null;
+    const list = Array.isArray(order.shipments) ? order.shipments : [order.shipments];
+    if (list.length === 0) return null;
+    
+    const isReverseStatus = [
+      "return_requested", "return_approved", "returned", "refund_pending", "refunded",
+      "replacement_requested", "replacement_approved", "replaced"
+    ].includes(sl);
+    
+    if (isReverseStatus) {
+      const reverseShipment = list.find((s: any) => 
+        ["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(s.status.toUpperCase())
+      );
+      if (reverseShipment) return reverseShipment;
+    }
+    
+    return list[0];
+  }, [order?.shipments, sl]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 pb-24">
@@ -413,19 +508,42 @@ function TrackOrderContent() {
                     </div>
 
                     {/* carrier */}
-                    {order.tracking_id && (
-                      <div className="px-6 py-4 flex items-center justify-between gap-4 bg-red-50/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                            <Truck className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{order.carrier || "Delivery Partner"}</p>
-                            <p className="text-xs font-bold text-zinc-900 font-mono">{order.tracking_id}</p>
-                          </div>
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-red-600 bg-red-100 px-2.5 py-1 rounded-full">In Transit</span>
-                      </div>
+                    {(order.tracking_id || shipment?.awb) && (
+                      (() => {
+                        const carrier = shipment?.carrier || order.carrier || "Delivery Partner";
+                        const trackingId = shipment?.awb || order.tracking_id;
+                        const trackingUrl = getTrackingUrl(carrier, trackingId);
+                        const shipStatus = shipment?.status || "IN_TRANSIT";
+                        const theme = getShipmentStatusTheme(shipStatus);
+                        
+                        return (
+                          <a 
+                            href={trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "px-6 py-4 flex items-center justify-between gap-4 border-t transition-colors hover:bg-zinc-50/80 group",
+                              theme.bg
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105", theme.iconBg)}>
+                                <Truck className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className={cn("text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5", theme.text)}>
+                                  {carrier}
+                                  <span className="text-[9px] font-normal lowercase text-zinc-400 group-hover:underline">(click to track)</span>
+                                </p>
+                                <p className="text-xs font-bold text-zinc-900 font-mono mt-0.5">{trackingId}</p>
+                              </div>
+                            </div>
+                            <span className={cn("text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border", theme.badge)}>
+                              {shipStatus.replace(/_/g, " ")}
+                            </span>
+                          </a>
+                        );
+                      })()
                     )}
                   </div>
 
@@ -568,8 +686,239 @@ function TrackOrderContent() {
                     )}
                   </div>
 
+                  {/* Live Shipment/Courier Tracker */}
+                  {shipment && (
+                    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 mt-6 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between mb-4 border-b border-zinc-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-5 h-5 text-indigo-600 animate-bounce" />
+                          <div>
+                            <h3 className="text-sm font-black text-zinc-900">Live Courier Tracking</h3>
+                            <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mt-0.5">Carrier Status journey</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-600 font-mono bg-zinc-50 border border-zinc-200 px-3 py-1 rounded-xl">
+                          {shipment.carrier?.toUpperCase()}: {shipment.awb}
+                        </span>
+                      </div>
+
+                      {/* Shipment Journey Timeline */}
+                      <div className="relative pl-6 border-l-2 border-zinc-100 space-y-6 my-4 ml-2">
+                        {(() => {
+                          const currentStatus = shipment.status.toUpperCase();
+                          const isOutbound = !["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(currentStatus);
+                          
+                          const milestones = isOutbound ? [
+                            { key: "LABEL_CREATED", label: "Label Created", desc: "Shipping label generated, waiting for pickup." },
+                            { key: "IN_TRANSIT", label: "In Transit", desc: "Package has been picked up by courier." },
+                            { key: "OUT_FOR_DELIVERY", label: "Out for Delivery", desc: "Package is out with local courier agent." },
+                            { key: "DELIVERED", label: "Delivered", desc: "Shipment delivered successfully." }
+                          ] : [
+                            { key: "PICKUP_SCHEDULED", label: "Pickup Scheduled", desc: "Reverse pickup scheduled at shipping address." },
+                            { key: "PICKED_UP", label: "Picked Up", desc: "Package picked up by courier partner." },
+                            { key: "RETURN_IN_TRANSIT", label: "In Transit", desc: "Return shipment is in transit to warehouse." },
+                            { key: "RETURN_RECEIVED", label: "Returned to Warehouse", desc: "Package received at warehouse, processing refund/replacement." }
+                          ];
+
+                          // Find current step index
+                          let stepIdx = milestones.findIndex(m => m.key === currentStatus);
+                          if (stepIdx === -1) {
+                            if (currentStatus === "PICKED_UP") stepIdx = 1;
+                            else if (currentStatus === "IN_TRANSIT") stepIdx = 1;
+                            else if (currentStatus === "DELIVERED") stepIdx = 3;
+                            else if (currentStatus === "RETURN_RECEIVED") stepIdx = 3;
+                            else stepIdx = 0;
+                          }
+
+                          return milestones.map((m, idx) => {
+                            const isDone = idx < stepIdx;
+                            const isCurrent = idx === stepIdx;
+                            const isPending = idx > stepIdx;
+
+                            return (
+                              <div key={m.key} className="relative">
+                                {/* timeline point */}
+                                <div className={cn(
+                                  "absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 bg-white transition-all z-10",
+                                  isDone && "border-emerald-500 bg-emerald-500",
+                                  isCurrent && "border-indigo-600 bg-indigo-600 animate-pulse",
+                                  isPending && "border-zinc-200"
+                                )} />
+
+                                <div>
+                                  <p className={cn(
+                                    "text-xs font-bold",
+                                    isDone && "text-emerald-700",
+                                    isCurrent && "text-zinc-950 font-black",
+                                    isPending && "text-zinc-400"
+                                  )}>
+                                    {m.label}
+                                  </p>
+                                  <p className="text-[10px] text-zinc-500 mt-0.5 leading-normal">
+                                    {m.desc}
+                                  </p>
+                                  {isCurrent && (
+                                    <p className="text-[9px] font-mono text-zinc-400 mt-1">
+                                      Last updated: {new Date(shipment.updated_at).toLocaleString("en-IN")}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Replacement Progress Timeline card ── */}
+                  {order.return_tracking_id && ["replacement_requested", "replacement_approved", "replaced"].includes(sl) && (
+                    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 mt-6 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                          <RotateCcw className="w-4 h-4 text-indigo-500" />
+                          <h3 className="text-sm font-bold text-zinc-900">Replacement Progress</h3>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-full animate-pulse">
+                          Reverse Logistics
+                        </span>
+                      </div>
+
+                      {/* Replacement Logistics Carrier and Tracking ID */}
+                      {(() => {
+                        const carrier = order.return_carrier || "Reverse Logistics Partner";
+                        const trackingId = order.return_tracking_id;
+                        const trackingUrl = getTrackingUrl(carrier, trackingId);
+                        const shipStatus = shipment?.status || "PICKUP_SCHEDULED";
+                        const theme = getShipmentStatusTheme(shipStatus);
+
+                        return (
+                          <a
+                            href={trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "p-4 rounded-xl border flex flex-col sm:flex-row justify-between gap-4 mb-6 hover:bg-zinc-50/80 transition-colors group",
+                              theme.bg
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105", theme.iconBg)}>
+                                <Truck className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className={cn("text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5", theme.text)}>
+                                  {carrier}
+                                  <span className="text-[9px] font-normal lowercase text-zinc-400 group-hover:underline">(click to track)</span>
+                                </p>
+                                <p className="text-xs font-bold text-zinc-900 font-mono mt-0.5">
+                                  {trackingId}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-center sm:text-right">
+                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Replacement Status</p>
+                              <span className={cn("text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border mt-0.5 inline-block text-center", theme.badge)}>
+                                {shipStatus.replace(/_/g, " ")}
+                              </span>
+                            </div>
+                          </a>
+                        );
+                      })()}
+
+                      {/* Visual Timeline of Replacement Stages */}
+                      <div className="relative">
+                        {(() => {
+                          const repStep = getReplacementStatusStep(sl);
+                          const REP_STEPS = [
+                            { key: "replacement_requested", label: "Replacement Requested", desc: "Replacement request received. We'll review it shortly.", Icon: RotateCcw },
+                            { key: "replacement_approved", label: "Replacement Approved", desc: "Replacement approved. We have scheduled a reverse pickup.", Icon: BadgeCheck },
+                            { key: "replaced", label: "Replaced", desc: "Product successfully picked up and replaced.", Icon: ShieldCheck },
+                          ];
+
+                          return REP_STEPS.map((st, idx) => {
+                            const isDone = repStep > idx;
+                            const isCurrent = repStep === idx;
+                            const isPending = repStep < idx || repStep === -1;
+                            const { Icon } = st;
+                            const isLast = idx === REP_STEPS.length - 1;
+
+                            return (
+                              <div key={st.key} className="flex gap-4">
+                                {/* ─ left column: dot + line ─ */}
+                                <div className="flex flex-col items-center w-10 shrink-0">
+                                  <motion.div
+                                    initial={false}
+                                    animate={isCurrent ? { scale: [1, 1.12, 1] } : {}}
+                                    transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                                    className={cn(
+                                      "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10 shrink-0",
+                                      isDone && "bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-100",
+                                      isCurrent && "text-white shadow-lg ring-4 bg-indigo-500 border-indigo-500 ring-indigo-500/10",
+                                      isPending && "bg-white border-zinc-200 text-zinc-300"
+                                    )}
+                                  >
+                                    {isDone ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      <Icon className="w-4.5 h-4.5" />
+                                    )}
+                                  </motion.div>
+                                  {!isLast && (
+                                    <div className="relative w-0.5 flex-1 my-1 overflow-hidden rounded-full bg-zinc-100" style={{ minHeight: "2.5rem" }}>
+                                      <motion.div
+                                        className="absolute inset-x-0 top-0 bg-indigo-400 rounded-full"
+                                        initial={{ height: "0%" }}
+                                        animate={{ height: isDone ? "100%" : "0%" }}
+                                        transition={{ duration: 0.5, delay: idx * 0.1 }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* ─ right column: content ─ */}
+                                <div className={cn("pb-7 pt-1.5 flex-1 min-w-0", isLast && "pb-0")}>
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className={cn(
+                                      "text-sm font-bold",
+                                      isDone && "text-indigo-700",
+                                      isCurrent && "text-zinc-950",
+                                      isPending && "text-zinc-300"
+                                    )}>
+                                      {st.label}
+                                    </span>
+                                    {isCurrent && (
+                                      <span className="text-[9px] font-black uppercase tracking-widest bg-zinc-950 text-white px-2 py-0.5 rounded-full animate-pulse">
+                                        Current
+                                      </span>
+                                    )}
+                                    {isDone && (
+                                      <span className="text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                                        ✓ Done
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className={cn("text-xs leading-relaxed", isPending ? "text-zinc-300" : "text-zinc-500")}>
+                                    {st.desc}
+                                  </p>
+
+                                  {(isDone || isCurrent) && (
+                                    <p className="text-[10px] font-mono text-zinc-400 mt-1.5">
+                                      {fmtDate(order.updated_at || order.created_at)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   {/* ── Return Progress Timeline card ── */}
-                  {order.return_tracking_id && (
+                  {order.return_tracking_id && ["return_requested", "return_approved", "returned", "refund_pending", "refunded"].includes(sl) && (
                     <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 mt-6 animate-in fade-in duration-300">
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
@@ -582,27 +931,46 @@ function TrackOrderContent() {
                       </div>
 
                       {/* Return Logistics Carrier and Tracking ID */}
-                      <div className="p-4 bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-rose-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                            <Truck className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">
-                              {order.return_carrier || "Reverse Logistics Partner"}
-                            </p>
-                            <p className="text-xs font-bold text-zinc-900 font-mono">
-                              {order.return_tracking_id}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col justify-center sm:text-right">
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Return Status</p>
-                          <p className="text-xs font-black text-rose-600 capitalize">
-                            {STATUS_LABEL[sl] ?? order.status.replace(/_/g, " ")}
-                          </p>
-                        </div>
-                      </div>
+                      {(() => {
+                        const carrier = order.return_carrier || "Reverse Logistics Partner";
+                        const trackingId = order.return_tracking_id;
+                        const trackingUrl = getTrackingUrl(carrier, trackingId);
+                        const shipStatus = shipment?.status || "PICKUP_SCHEDULED";
+                        const theme = getShipmentStatusTheme(shipStatus);
+
+                        return (
+                          <a
+                            href={trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "p-4 rounded-xl border flex flex-col sm:flex-row justify-between gap-4 mb-6 hover:bg-zinc-50/80 transition-colors group",
+                              theme.bg
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-105", theme.iconBg)}>
+                                <Truck className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className={cn("text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5", theme.text)}>
+                                  {carrier}
+                                  <span className="text-[9px] font-normal lowercase text-zinc-400 group-hover:underline">(click to track)</span>
+                                </p>
+                                <p className="text-xs font-bold text-zinc-900 font-mono mt-0.5">
+                                  {trackingId}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-center sm:text-right">
+                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Return Status</p>
+                              <span className={cn("text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border mt-0.5 inline-block text-center", theme.badge)}>
+                                {shipStatus.replace(/_/g, " ")}
+                              </span>
+                            </div>
+                          </a>
+                        );
+                      })()}
 
                       {/* Visual Timeline of Return Stages */}
                       <div className="relative">

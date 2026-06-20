@@ -412,6 +412,49 @@ export async function POST(req: Request) {
       });
     }
 
+    // 6. Integrate with Shipping Protocol: Sync shipments table
+    if (order) {
+      const orderStatusUpper = order.status.toUpperCase();
+      if (orderStatusUpper === "SHIPPED") {
+        const { error: shipmentError } = await serviceRoleSupabase
+          .from("shipments")
+          .upsert({
+            order_id: order.id,
+            awb: order.tracking_id || trackingId || "",
+            carrier: order.carrier || carrier || "Standard Courier",
+            status: "IN_TRANSIT",
+            updated_at: new Date().toISOString()
+          }, { onConflict: "order_id" });
+        if (shipmentError) {
+          console.error("Shipping Protocol: Failed to upsert outbound shipment:", shipmentError.message);
+        }
+      } else if (orderStatusUpper === "RETURN_APPROVED" || orderStatusUpper === "REPLACEMENT_APPROVED") {
+        let returnAwb = order.return_tracking_id || returnTrackingId;
+        if (!returnAwb) {
+          returnAwb = "RTK" + Math.floor(1000000000 + Math.random() * 9000000000).toString();
+          // Update order return_tracking_id in database
+          await serviceRoleSupabase
+            .from("orders")
+            .update({ return_tracking_id: returnAwb })
+            .eq("id", order.id);
+          order.return_tracking_id = returnAwb; // sync local object
+        }
+        const returnCarrierVal = order.return_carrier || returnCarrier || "Reverse Logistics Partner";
+        const { error: shipmentError } = await serviceRoleSupabase
+          .from("shipments")
+          .upsert({
+            order_id: order.id,
+            awb: returnAwb,
+            carrier: returnCarrierVal,
+            status: "PICKUP_SCHEDULED",
+            updated_at: new Date().toISOString()
+          }, { onConflict: "order_id" });
+        if (shipmentError) {
+          console.error("Shipping Protocol: Failed to upsert reverse shipment:", shipmentError.message);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true, order });
   } catch (error: any) {
     console.error("Order Status Update Error:", error?.message || "Unknown error");

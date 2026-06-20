@@ -91,7 +91,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type StatusType = "All" | "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Return";
+type StatusType = "All" | "Pending" | "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Return" | "Replacement_Requested" | "Replacement_Approved" | "Replaced";
 
 const getPossibleNextStatuses = (currentStatus: string): string[] => {
   const status = (currentStatus || "").trim().toUpperCase();
@@ -105,6 +105,9 @@ const getPossibleNextStatuses = (currentStatus: string): string[] => {
     RETURN_APPROVED: ["Returned"],
     RETURNED: ["Refund_Pending"],
     REFUND_PENDING: ["Refunded"],
+    REPLACEMENT_REQUESTED: ["Replacement_Approved", "Delivered"],
+    REPLACEMENT_APPROVED: ["Replaced"],
+    REPLACED: [],
     FAILED: ["Cancelled"],
     CANCELLED: [],
     REFUNDED: [],
@@ -115,6 +118,7 @@ const getPossibleNextStatuses = (currentStatus: string): string[] => {
     "Shipped", "Delivered", "Cancelled",
     "Return_Requested", "Return_Approved", "Returned",
     "Refund_Pending", "Refunded",
+    "Replacement_Requested", "Replacement_Approved", "Replaced",
   ];
 
   return transitions[status] ?? defaultStatuses;
@@ -417,6 +421,18 @@ function PriceRangePicker({ minPrice, maxPrice, setMinPrice, setMaxPrice }: Pric
   );
 }
 
+const extractPhotoUrls = (remarks: string): string[] => {
+  if (!remarks) return [];
+  const urlRegex = /(https?:\/\/[^\s,)]+)/g;
+  const matches = remarks.match(urlRegex);
+  return matches || [];
+};
+
+const cleanRemarks = (remarks: string): string => {
+  if (!remarks) return "";
+  return remarks.replace(/\s*\(Damage Photos:.*?\)/i, "");
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -433,6 +449,7 @@ export default function OrdersPage() {
   const [carrier, setCarrier] = useState("");
   const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [isSyncingShipment, setIsSyncingShipment] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -502,6 +519,9 @@ export default function OrdersPage() {
               cgst_rate,
               sgst_rate
             )
+          ),
+          shipments (
+            *
           )
         `)
         .order("created_at", { ascending: false });
@@ -533,6 +553,12 @@ export default function OrdersPage() {
               cgst_rate,
               sgst_rate
             )
+          ),
+          status_history:order_status_history (
+            *
+          ),
+          shipments (
+            *
           )
         `, { count: "exact" });
 
@@ -739,16 +765,50 @@ export default function OrdersPage() {
         throw new Error(resData.error || "Update failed");
       }
 
-      const updatedOrder = resData.order;
-      if (updatedOrder) {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder } : o));
-        setTableOrders(prev => prev.map(o => o.id === id ? { ...o, ...updatedOrder, items: o.items } : o));
+      // Fetch refreshed order with items and status_history
+      const { data: refreshedOrder, error: refreshError } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          items:order_items (
+            *,
+            products (
+              name,
+              hsn_code,
+              is_tax_inclusive,
+              igst_rate,
+              cgst_rate,
+              sgst_rate
+            )
+          ),
+          status_history:order_status_history (
+            *
+          ),
+          shipments (
+            *
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (refreshError) {
+        console.error("Error refreshing order after status update:", refreshError);
+      }
+
+      const finalOrder = refreshedOrder || resData.order;
+
+      if (finalOrder) {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...finalOrder } : o));
+        setTableOrders(prev => prev.map(o => o.id === id ? { ...o, ...finalOrder, items: finalOrder.items } : o));
+        setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, ...finalOrder } : prev);
         toast.success(`Order marked as ${status}`, { id: toastId });
-        return updatedOrder;
+        fetchTableOrders();
+        return finalOrder;
       } else {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
         setTableOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
         toast.success(`Order marked as ${status}`, { id: toastId });
+        fetchTableOrders();
         return null;
       }
     } catch (error: any) {
@@ -781,6 +841,7 @@ export default function OrdersPage() {
 
       toast.success(`Bulk updated ${selectedOrders.length} orders to ${status}`, { id: toastId });
       setSelectedOrders([]);
+      fetchTableOrders();
     } catch (error: any) {
       toast.error("Failed to update some orders", { id: toastId });
     }
@@ -803,6 +864,7 @@ export default function OrdersPage() {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
       setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: paymentStatus, payment_method: paymentMethod || o.payment_method } : o));
       toast.success(`Payment marked as ${paymentStatus}`, { id: toastId });
+      fetchTableOrders();
     } catch (error: any) {
       toast.error(error.message || "Failed to update payment status", { id: toastId });
     }
@@ -897,10 +959,63 @@ export default function OrdersPage() {
       toast.success("Logistics updated", { id: toastId });
       setIsTrackingOpen(false);
       setSelectedOrder(null);
+      fetchTableOrders();
     } catch (error: any) {
       toast.error(error.message || "Failed to update logistics", { id: toastId });
     } finally {
       setIsUpdatingTracking(false);
+    }
+  };
+
+  const handleSyncShipment = async (orderId: string) => {
+    setIsSyncingShipment(true);
+    const toastId = toast.loading("Syncing courier shipment status...");
+    try {
+      const response = await fetch("/api/cron/sync-shipments?bypass=true", {
+        method: "GET"
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Sync failed");
+      
+      toast.success(`Shipment synced successfully! (${data.synced || 0} updated)`, { id: toastId });
+      
+      // Refresh selected order
+      const { data: refreshed, error } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          items:order_items (
+            *,
+            products (
+              name,
+              hsn_code,
+              is_tax_inclusive,
+              igst_rate,
+              cgst_rate,
+              sgst_rate
+            )
+          ),
+          status_history:order_status_history (
+            *
+          ),
+          shipments (
+            *
+          )
+        `)
+        .eq("id", orderId)
+        .single();
+      
+      if (refreshed) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...refreshed } : o));
+        setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...refreshed, items: refreshed.items } : o));
+        setSelectedOrder(refreshed);
+      }
+      
+      fetchTableOrders();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to sync shipment", { id: toastId });
+    } finally {
+      setIsSyncingShipment(false);
     }
   };
 
@@ -1099,6 +1214,12 @@ export default function OrdersPage() {
         return <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100">Refunded</Badge>;
       case "FAILED":
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-50">Failed</Badge>;
+      case "REPLACEMENT_REQUESTED":
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100">Replacement Requested</Badge>;
+      case "REPLACEMENT_APPROVED":
+        return <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-50">Replacement Approved</Badge>;
+      case "REPLACED":
+        return <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-50">Replaced</Badge>;
       default:
         const lower = status.toLowerCase();
         if (lower === "placed") return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50">Placed</Badge>;
@@ -1528,6 +1649,9 @@ export default function OrdersPage() {
                   <SelectItem value="Returned">Returned</SelectItem>
                   <SelectItem value="Refund_Pending">Refund Pending</SelectItem>
                   <SelectItem value="Refunded">Refunded</SelectItem>
+                  <SelectItem value="Replacement_Requested">Replacement Requested</SelectItem>
+                  <SelectItem value="Replacement_Approved">Replacement Approved</SelectItem>
+                  <SelectItem value="Replaced">Replaced</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2304,22 +2428,250 @@ export default function OrdersPage() {
                   );
                 })()}
 
-                {(selectedOrder.tracking_id || selectedOrder.delivery_estimate) && (
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedOrder.delivery_estimate && (
-                      <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-zinc-505">Expected Arrival</span>
-                        <span className="text-sm font-bold text-[#18181b]">{selectedOrder.delivery_estimate}</span>
+                {/* Live Courier Tracking Timeline (Shipping Protocol Integration) */}
+                {(() => {
+                  const shipment = (() => {
+                    if (!selectedOrder.shipments) return null;
+                    const list = Array.isArray(selectedOrder.shipments) ? selectedOrder.shipments : [selectedOrder.shipments];
+                    if (list.length === 0) return null;
+                    
+                    const orderStatus = (selectedOrder.status || "").toLowerCase();
+                    const isReverseStatus = [
+                      "return_requested", "return_approved", "returned", "refund_pending", "refunded",
+                      "replacement_requested", "replacement_approved", "replaced"
+                    ].includes(orderStatus);
+                    
+                    if (isReverseStatus) {
+                      const reverseShipment = list.find((s: any) => 
+                        ["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(s.status.toUpperCase())
+                      );
+                      if (reverseShipment) return reverseShipment;
+                    }
+                    return list[0];
+                  })();
+                  if (!shipment && !selectedOrder.tracking_id) return null;
+
+                  return (
+                    <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-4">
+                      <div className="flex items-center justify-between border-b border-zinc-200/60 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4.5 h-4.5 text-indigo-600" />
+                          <div>
+                            <h4 className="font-bold text-xs text-zinc-900">Shipment Tracker</h4>
+                            <p className="text-[10px] text-zinc-400 font-medium">Granular courier transit logs</p>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shrink-0"
+                          onClick={() => handleSyncShipment(selectedOrder.id)}
+                          disabled={isSyncingShipment}
+                        >
+                          {isSyncingShipment ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5" /> Sync Courier
+                            </>
+                          )}
+                        </Button>
                       </div>
-                    )}
-                    {selectedOrder.tracking_id && (
-                      <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-zinc-505">{selectedOrder.carrier}</span>
-                        <span className="text-sm font-bold font-mono text-[#18181b]">{selectedOrder.tracking_id}</span>
+
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        {selectedOrder.delivery_estimate && (
+                          <div>
+                            <span className="text-zinc-400 font-semibold block mb-0.5">Est. Delivery</span>
+                            <span className="font-bold text-zinc-800">{selectedOrder.delivery_estimate}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-zinc-400 font-semibold block mb-0.5">AWB / Courier</span>
+                          <span className="font-bold text-zinc-800 font-mono">
+                            {shipment?.awb || selectedOrder.tracking_id || "N/A"} ({shipment?.carrier?.toUpperCase() || selectedOrder.carrier || "Standard"})
+                          </span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {shipment && (
+                        <div className="pt-2">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-3">Courier Milestones</span>
+                          
+                          <div className="relative pl-5 border-l-2 border-zinc-200 ml-1.5 space-y-4">
+                            {(() => {
+                              const currentStatus = shipment.status.toUpperCase();
+                              const isOutbound = !["PICKUP_SCHEDULED", "PICKED_UP", "RETURN_IN_TRANSIT", "RETURN_RECEIVED"].includes(currentStatus);
+                              
+                              const milestones = isOutbound ? [
+                                { key: "LABEL_CREATED", label: "Label Created", desc: "Shipping label generated, waiting for pickup." },
+                                { key: "IN_TRANSIT", label: "In Transit", desc: "Package has been picked up by courier." },
+                                { key: "OUT_FOR_DELIVERY", label: "Out for Delivery", desc: "Package is out with local courier agent." },
+                                { key: "DELIVERED", label: "Delivered", desc: "Shipment delivered successfully." }
+                              ] : [
+                                { key: "PICKUP_SCHEDULED", label: "Pickup Scheduled", desc: "Reverse pickup scheduled at shipping address." },
+                                { key: "PICKED_UP", label: "Picked Up", desc: "Package picked up by courier partner." },
+                                { key: "RETURN_IN_TRANSIT", label: "In Transit", desc: "Return shipment is in transit to warehouse." },
+                                { key: "RETURN_RECEIVED", label: "Returned to Warehouse", desc: "Package received at warehouse, processing refund/replacement." }
+                              ];
+
+                              let stepIdx = milestones.findIndex(m => m.key === currentStatus);
+                              if (stepIdx === -1) {
+                                if (currentStatus === "PICKED_UP") stepIdx = 1;
+                                else if (currentStatus === "IN_TRANSIT") stepIdx = 1;
+                                else if (currentStatus === "DELIVERED") stepIdx = 3;
+                                else if (currentStatus === "RETURN_RECEIVED") stepIdx = 3;
+                                else stepIdx = 0;
+                              }
+
+                              return milestones.map((m, idx) => {
+                                const isDone = idx < stepIdx;
+                                const isCurrent = idx === stepIdx;
+                                const isPending = idx > stepIdx;
+
+                                return (
+                                  <div key={m.key} className="relative">
+                                    <div className={cn(
+                                      "absolute -left-[27px] top-1 w-2.5 h-2.5 rounded-full border bg-white z-10",
+                                      isDone && "border-emerald-500 bg-emerald-500",
+                                      isCurrent && "border-indigo-600 bg-indigo-600 animate-pulse ring-2 ring-indigo-600/10",
+                                      isPending && "border-zinc-300"
+                                    )} />
+                                    <div>
+                                      <p className={cn(
+                                        "text-[11px] font-bold",
+                                        isDone && "text-emerald-700",
+                                        isCurrent && "text-zinc-900 font-black",
+                                        isPending && "text-zinc-400"
+                                      )}>
+                                        {m.label}
+                                      </p>
+                                      <p className="text-[10px] text-zinc-500 mt-0.5 leading-normal">
+                                        {m.desc}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Order Status History Timeline */}
+                <div className="border-t border-zinc-200 pt-6 space-y-4">
+                  <h4 className="font-bold text-sm text-zinc-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-zinc-500 animate-pulse" />
+                    Order Status History & Log
+                  </h4>
+                  {(() => {
+                    const sortedHistory = [...(selectedOrder.status_history || [])].sort(
+                      (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    );
+
+                    if (sortedHistory.length === 0) {
+                      return <p className="text-xs text-zinc-500 italic">No status history recorded yet.</p>;
+                    }
+
+                    return (
+                      <div className="relative pl-6 border-l border-zinc-200 ml-3 space-y-6 py-2">
+                        {sortedHistory.map((item: any, idx: number) => {
+                          const photoUrls = extractPhotoUrls(item.remarks || "");
+                          const displayText = cleanRemarks(item.remarks || "No remarks provided");
+                          const dateStr = new Date(item.created_at).toLocaleString('en-IN', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          });
+
+                          const statusColors: Record<string, { bg: string, text: string, border: string }> = {
+                            PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                            CONFIRMED: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                            PROCESSING: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+                            SHIPPED: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                            DELIVERED: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+                            CANCELLED: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
+                            RETURN_REQUESTED: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+                            RETURN_APPROVED: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+                            RETURNED: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+                            REFUND_PENDING: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+                            REFUNDED: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+                            FAILED: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' }
+                          };
+
+                          const statusUpper = (item.new_status || "").trim().toUpperCase();
+                          const colors = statusColors[statusUpper] || { bg: 'bg-zinc-50', text: 'text-zinc-700', border: 'border-zinc-200' };
+
+                          return (
+                            <div key={item.id || idx} className="relative group/node">
+                              {/* Timeline Dot Connector */}
+                              <span className={cn(
+                                "absolute -left-[31px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full border bg-white ring-4 ring-white transition-all duration-200 shadow-xs",
+                                idx === sortedHistory.length - 1 ? "border-[#3b82f6] bg-[#3b82f6] scale-110 shadow-xs" : "border-zinc-300"
+                              )}>
+                                <span className={cn(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  idx === sortedHistory.length - 1 ? "bg-white" : "bg-zinc-400"
+                                )} />
+                              </span>
+
+                              {/* Timeline Node Content */}
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider", colors.bg, colors.text, colors.border)}>
+                                    {item.new_status}
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-zinc-400">
+                                    {dateStr}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider px-1.5 py-0.5 bg-zinc-100 rounded-md">
+                                    by {item.actor_type || "system"}
+                                  </span>
+                                </div>
+
+                                {/* Remarks Box */}
+                                <div className="text-xs text-zinc-700 bg-zinc-50/70 hover:bg-zinc-50 border border-zinc-200 p-3 rounded-xl transition-all duration-200">
+                                  <p className="font-medium whitespace-pre-wrap leading-relaxed">{displayText}</p>
+
+                                  {/* Render damage photo thumbnails if present */}
+                                  {photoUrls.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                      <span className="text-[10px] font-bold text-rose-600 tracking-wider uppercase block">
+                                        Uploaded Damage Photos ({photoUrls.length})
+                                      </span>
+                                      <div className="flex flex-wrap gap-2.5 pt-0.5">
+                                        {photoUrls.map((url, uIdx) => (
+                                          <div 
+                                            key={uIdx} 
+                                            onClick={() => window.open(url, '_blank')}
+                                            className="relative h-16 w-16 cursor-pointer overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 shadow-xs transition-all hover:scale-105 hover:shadow-md hover:border-zinc-400 group/img"
+                                          >
+                                            <img 
+                                              src={url} 
+                                              alt={`Damage proof ${uIdx + 1}`} 
+                                              className="h-full w-full object-cover" 
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                              <span className="text-[10px] font-bold text-white px-1">View</span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </ScrollArea>

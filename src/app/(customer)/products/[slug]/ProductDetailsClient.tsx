@@ -20,10 +20,12 @@ import FrequentlyBoughtTogether from "@/components/storefront/FrequentlyBoughtTo
 
 export default function ProductDetailsClient({
   product,
-  attributes
+  attributes,
+  frequentlyBoughtTogetherEnabled = true
 }: {
-  product: any,
-  attributes: any[]
+  product: any;
+  attributes: any[];
+  frequentlyBoughtTogetherEnabled?: boolean;
 }) {
   const router = useRouter();
   const { addItem, updateQuantity, isInCart, items: cartItems } = useCartStore();
@@ -458,9 +460,6 @@ export default function ProductDetailsClient({
                   {discount}% OFF
                 </span>
               )}
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
-                Exclusive of GST
-              </span>
             </div>
 
             {lowestEMI !== null && (
@@ -613,13 +612,12 @@ export default function ProductDetailsClient({
         </div>
 
         {/* Desktop Content */}
-        <div className={`hidden sm:block pt-2 lg:pt-4 transition-all duration-300 ${
-          activeTab === "shipping"
-            ? "max-w-3xl"
-            : activeTab === "reviews"
+        <div className={`hidden sm:block pt-2 lg:pt-4 transition-all duration-300 ${activeTab === "shipping"
+          ? "max-w-3xl"
+          : activeTab === "reviews"
             ? "max-w-none"
             : "max-w-5xl"
-        }`}>
+          }`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -633,7 +631,9 @@ export default function ProductDetailsClient({
           </AnimatePresence>
         </div>
       </section>
-      <FrequentlyBoughtTogether currentProduct={product} />
+      {frequentlyBoughtTogetherEnabled && (
+        <FrequentlyBoughtTogether currentProduct={product} />
+      )}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
