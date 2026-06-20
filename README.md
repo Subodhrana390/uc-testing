@@ -51,7 +51,7 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
   - Export orders as **PDF** or **CSV** reports.
 - **Logistics Sync Cron**: Scheduled background endpoint (`/api/cron/sync-shipments`) and manual detail controls (Sync Courier button) to automate tracking updates and automatically progress orders to `DELIVERED`, `RETURNED`, or `REPLACED`.
 - **Inventory Management**: Native WooCommerce-style inventory tracking with PostgreSQL row-level locks, variant-level stock, atomic ledger transactions, and auto-expiring background cart reservations.
-- **Invoice System**: Fully automated, GST-compliant PDF tax invoice generation, secure Supabase Storage integration, and automatic dispatch via Brevo email queue.
+- **Invoice System**: Fully automated, GST-compliant PDF tax invoice generation, secure Supabase Storage integration, and automatic dispatch via Brevo email queue. Uses a bundled base64 logo asset to ensure reliable serverless execution on Vercel (avoiding filesystem and network fetch errors).
 - **Storefront Feature Toggles**: Dynamic toggles in admin settings page to customize store features (e.g. enable/disable Frequently Bought Together product sections).
 - **Security & Logs**: Admin security tracking and activity logging.
 
@@ -116,11 +116,25 @@ A premium, high-performance B2B & B2C ecommerce platform built for **UC Enterpri
 
 ## 🧪 Testing
 
-The codebase uses **Vitest** for unit testing. To run the tests:
+The codebase uses **Vitest** for unit testing. 
 
+### Running Tests
+To run all tests once:
+```bash
+npm run test
+```
+
+To run tests in watch/interactive mode:
 ```bash
 npx vitest
 ```
+
+### Coverage
+- **Invoice Generator Action**: Comprehensive unit tests ([tests/invoice-generator.test.ts](file:///c:/Users/SubodhRana/Downloads/uc%20enterprises/tests/invoice-generator.test.ts)) covering:
+  - CGST/SGST (Tax Inclusive & Exclusive) calculations.
+  - IGST calculations.
+  - Failures: Invoice not found, items query error, storage upload failures, database updates.
+  - Bundled asset integration (serverless-safe logo rendering).
 
 ## 📁 Project Structure
 
