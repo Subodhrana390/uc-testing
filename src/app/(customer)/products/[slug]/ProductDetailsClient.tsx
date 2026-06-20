@@ -38,6 +38,28 @@ export default function ProductDetailsClient({
     : null;
   const [quantity, setQuantity] = useState(1);
 
+  const hasVariants = product.variants && product.variants.length > 0;
+  const defaultVariant = hasVariants ? (product.variants.find((v: any) => v.is_default) || product.variants[0]) : null;
+
+  const [selectedVariant, setSelectedVariant] = useState(defaultVariant);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>(() => {
+    if (defaultVariant && defaultVariant.attributes) {
+      return defaultVariant.attributes;
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    if (hasVariants) {
+      const match = product.variants.find((v: any) => {
+        return Object.entries(selectedAttributes).every(([key, val]) => v.attributes[key] === val);
+      });
+      if (match) setSelectedVariant(match);
+    }
+  }, [selectedAttributes, hasVariants, product.variants]);
+
+  const activeProduct = selectedVariant ? { ...product, ...selectedVariant, id: selectedVariant.id, product_id: product.id } : product;
+
   // Sync quantity state when existingCartItem changes or product changes
   useEffect(() => {
     if (existingCartItem) {
@@ -45,7 +67,7 @@ export default function ProductDetailsClient({
     } else {
       setQuantity(1);
     }
-  }, [existingCartItem, product.id]);
+  }, [existingCartItem, activeProduct.id]);
 
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("description");
@@ -61,14 +83,17 @@ export default function ProductDetailsClient({
   const resumeTimeoutRef = useMemo(() => ({ current: null as any }), []);
 
   const handleBuyNow = () => {
-    const price = Number(product.sale_price || product.price) || 0;
+    const price = Number(activeProduct.sale_price || activeProduct.price) || 0;
     const item = {
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
+      id: activeProduct.id,
+      slug: activeProduct.slug,
+      name: activeProduct.name,
       price,
-      image_url: product.image_url || "",
+      image_url: activeProduct.image_url || activeProduct.images?.[0] || "",
       quantity,
+      variant_attributes: activeProduct.attributes,
+      product_id: activeProduct.product_id || activeProduct.id,
+      variant_id: activeProduct.product_id ? activeProduct.id : undefined,
     };
     sessionStorage.setItem("buy_now_item", JSON.stringify(item));
     router.push("/checkout?buyNow=true");
@@ -110,7 +135,7 @@ export default function ProductDetailsClient({
 
   // Fetch EMI options on mount
   useEffect(() => {
-    const price = Number(product.sale_price || product.price) || 0;
+    const price = Number(activeProduct.sale_price || activeProduct.price) || 0;
     if (price >= 3000) {
       setFetchingEmi(true);
       import("@/app/actions/emi").then(({ getEligibleEMIOptions }) => {
@@ -138,8 +163,11 @@ export default function ProductDetailsClient({
         console.error("Error loading EMI module:", err);
         setFetchingEmi(false);
       });
+    } else {
+      setEmiPlans([]);
+      setLowestEMI(null);
     }
-  }, [product]);
+  }, [activeProduct.price, activeProduct.sale_price]);
 
   // Auto-scrolling gallery effect
   useEffect(() => {
@@ -189,10 +217,10 @@ export default function ProductDetailsClient({
   };
 
   useEffect(() => {
-    if (product && isInCart(product.id) && existingCartItem && existingCartItem.quantity !== quantity) {
-      updateQuantity(product.id, quantity);
+    if (activeProduct && isInCart(activeProduct.id) && existingCartItem && existingCartItem.quantity !== quantity) {
+      updateQuantity(activeProduct.id, quantity);
     }
-  }, [quantity, product.id, existingCartItem, isInCart, updateQuantity]);
+  }, [quantity, activeProduct.id, existingCartItem, isInCart, updateQuantity]);
 
   const renderTabContent = (tabId: string) => {
     switch (tabId) {
@@ -310,12 +338,29 @@ export default function ProductDetailsClient({
     }
   };
 
-  const isOutOfStock = product?.stock_quantity === 0;
-  const isReadyStock = product?.stock_quantity > 0;
+  const isOutOfStock = activeProduct?.stock_quantity === 0;
+  const isReadyStock = activeProduct?.stock_quantity > 0;
   const isIndustrialGrade =
-    product?.categories?.name?.toLowerCase().includes("industrial") ||
-    product?.categories?.parent?.name?.toLowerCase().includes("industrial") ||
-    Number(product?.price || 0) >= 50000;
+    activeProduct?.categories?.name?.toLowerCase().includes("industrial") ||
+    activeProduct?.categories?.parent?.name?.toLowerCase().includes("industrial") ||
+    Number(activeProduct?.price || 0) >= 50000;
+
+  // Extract all available attribute keys and their unique values across all variants
+  const availableAttributes = useMemo(() => {
+    if (!hasVariants) return {};
+    const attrs: Record<string, Set<string>> = {};
+    product.variants.forEach((v: any) => {
+      Object.entries(v.attributes || {}).forEach(([key, val]) => {
+        if (!attrs[key]) attrs[key] = new Set();
+        attrs[key].add(val as string);
+      });
+    });
+    const result: Record<string, string[]> = {};
+    Object.keys(attrs).forEach(key => {
+      result[key] = Array.from(attrs[key]);
+    });
+    return result;
+  }, [hasVariants, product.variants]);
 
   return (
     <>
@@ -415,15 +460,21 @@ export default function ProductDetailsClient({
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 leading-[1.2]">{product.name}</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 leading-[1.2]">{activeProduct.name}</h1>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-1 text-amber-500">
-                <Star className={`h-4 w-4 ${Number(product.averageRating) > 0 ? "fill-amber-500" : ""}`} />
-                <span className="text-sm font-bold">{Number(product.averageRating) > 0 ? product.averageRating : "N/A"}</span>
-                <span className="text-zinc-500 text-sm font-medium ml-1">({product.reviewCount} Reviews)</span>
+                <Star className={`h-4 w-4 ${Number(activeProduct.averageRating) > 0 ? "fill-amber-500" : ""}`} />
+                <span className="text-sm font-bold">{Number(activeProduct.averageRating) > 0 ? activeProduct.averageRating : "N/A"}</span>
+                <span className="text-zinc-500 text-sm font-medium ml-1">({activeProduct.reviewCount} Reviews)</span>
               </div>
               <span className="hidden sm:inline text-zinc-200">|</span>
-              <span className="text-sm font-medium text-zinc-500">Brand: <span className="text-zinc-900 font-semibold">{product.brands?.name || "UC Generic"}</span></span>
+              <span className="text-sm font-medium text-zinc-500">Brand: <span className="text-zinc-900 font-semibold">{activeProduct.brands?.name || "UC Generic"}</span></span>
+              {activeProduct.sku && (
+                <>
+                  <span className="hidden sm:inline text-zinc-200">|</span>
+                  <span className="text-sm font-medium text-zinc-500">SKU: <span className="text-zinc-900 font-semibold">{activeProduct.sku}</span></span>
+                </>
+              )}
 
               <span className="hidden sm:inline text-zinc-200">|</span>
               <button
@@ -438,21 +489,49 @@ export default function ProductDetailsClient({
               </button>
             </div>
             <p className="text-base leading-relaxed text-zinc-600 max-w-2xl">
-              {product.short_description}
+              {activeProduct.short_description}
             </p>
           </div>
+
+          {hasVariants && Object.keys(availableAttributes).length > 0 && (
+            <div className="space-y-6 py-4 border-y border-zinc-100">
+              {Object.entries(availableAttributes).map(([attrKey, attrValues]) => (
+                <div key={attrKey} className="space-y-3">
+                  <h3 className="text-sm font-bold text-zinc-900">{attrKey}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {attrValues.map((val) => {
+                      const isSelected = selectedAttributes[attrKey] === val;
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => setSelectedAttributes({ ...selectedAttributes, [attrKey]: val })}
+                          className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-all ${
+                            isSelected 
+                              ? "border-zinc-900 bg-zinc-900 text-white shadow-sm" 
+                              : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                          }`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-4 py-2">
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
-                  {formatCurrency(getExclusivePrice(product.sale_price || product.price, product.is_tax_inclusive, product.igst_rate))}
+                  {formatCurrency(getExclusivePrice(activeProduct.sale_price || activeProduct.price, activeProduct.is_tax_inclusive, activeProduct.igst_rate))}
                 </span>
                 <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider">+ GST</span>
               </div>
-              {product.sale_price && (
+              {activeProduct.sale_price && activeProduct.sale_price < activeProduct.price && (
                 <span className="text-lg sm:text-xl font-medium text-zinc-400 line-through">
-                  {formatCurrency(getExclusivePrice(product.price, product.is_tax_inclusive, product.igst_rate))}
+                  {formatCurrency(getExclusivePrice(activeProduct.price, activeProduct.is_tax_inclusive, activeProduct.igst_rate))}
                 </span>
               )}
               {discount && (
@@ -508,7 +587,7 @@ export default function ProductDetailsClient({
 
               <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <AddToCartButton
-                  product={product}
+                  product={activeProduct}
                   quantity={quantity}
                   className={`h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl px-4 sm:px-8 text-xs font-bold text-white shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200" : "bg-zinc-950 hover:bg-zinc-800"}`}
                 />
@@ -520,7 +599,7 @@ export default function ProductDetailsClient({
                   Buy Now
                 </button>
                 <WishlistToggleButton
-                  productId={product.id}
+                  productId={activeProduct.id}
                   label={null as any}
                   className="h-11 w-11 shrink-0 rounded-xl border border-zinc-200 p-0 flex items-center justify-center hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
                 />

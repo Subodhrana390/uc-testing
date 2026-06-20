@@ -112,12 +112,28 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
+  const originState = "Punjab";
+  const destState = form.state || "";
+  const isIntraState = originState.toLowerCase() === destState.toLowerCase();
+
   const totals = items.reduce(
     (acc, item) => {
       const igstRate = item.igst_rate || 0;
       const cgstRate = item.cgst_rate || 0;
       const sgstRate = item.sgst_rate || 0;
-      const rate = igstRate > 0 ? igstRate : (cgstRate + sgstRate);
+
+      let appliedCgstRate = 0;
+      let appliedSgstRate = 0;
+      let appliedIgstRate = 0;
+
+      if (isIntraState) {
+        appliedCgstRate = cgstRate > 0 ? cgstRate : (igstRate > 0 ? igstRate / 2 : 0);
+        appliedSgstRate = sgstRate > 0 ? sgstRate : (igstRate > 0 ? igstRate / 2 : 0);
+      } else {
+        appliedIgstRate = igstRate > 0 ? igstRate : (cgstRate + sgstRate);
+      }
+
+      const rate = isIntraState ? (appliedCgstRate + appliedSgstRate) : appliedIgstRate;
       const isTaxInclusive = item.is_tax_inclusive || false;
       const itemTotal = item.price * item.quantity;
 
@@ -132,17 +148,17 @@ export default function CheckoutPage() {
           itemTax = itemTotal * (rate / 100);
         }
 
-        if (igstRate > 0) {
-          acc.igstAmt += itemTax;
-          acc.orderIgstRate = igstRate;
-        } else {
-          const totalCgstSgst = cgstRate + sgstRate;
+        if (isIntraState) {
+          const totalCgstSgst = appliedCgstRate + appliedSgstRate;
           if (totalCgstSgst > 0) {
-            acc.cgstAmt += itemTax * (cgstRate / totalCgstSgst);
-            acc.sgstAmt += itemTax * (sgstRate / totalCgstSgst);
-            acc.orderCgstRate = cgstRate;
-            acc.orderSgstRate = sgstRate;
+            acc.cgstAmt += itemTax * (appliedCgstRate / totalCgstSgst);
+            acc.sgstAmt += itemTax * (appliedSgstRate / totalCgstSgst);
+            acc.orderCgstRate = appliedCgstRate;
+            acc.orderSgstRate = appliedSgstRate;
           }
+        } else {
+          acc.igstAmt += itemTax;
+          acc.orderIgstRate = appliedIgstRate;
         }
       }
 
@@ -274,19 +290,36 @@ export default function CheckoutPage() {
     async function fetchData() {
       loadRazorpayScript();
 
+      const variantIds = checkoutItems.map((i) => i.variant_id || (i.variant_attributes ? i.id : null)).filter(Boolean);
+      const { data: variants } = variantIds.length > 0
+        ? await supabase.from("product_variants").select("id, product_id, price, sale_price, stock_quantity").in("id", variantIds)
+        : { data: [] };
+
+      const missingProductIds = variants?.map(v => v.product_id) || [];
+      const allProductIds = Array.from(new Set([...checkoutItems.map((i) => i.product_id || i.id), ...missingProductIds]));
+
       const { data: products } = await supabase
         .from("products")
         .select("id, price, sale_price, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, stock_quantity")
-        .in(
-          "id",
-          checkoutItems.map((i) => i.id)
-        );
+        .in("id", allProductIds);
 
       const itemsWithTax = checkoutItems.map((item) => {
+        const variant = variants?.find((v: any) => v.id === item.variant_id || (item.variant_attributes && v.id === item.id));
+        const resolvedProductId = item.product_id || variant?.product_id || item.id;
+        
         const prod = products?.find(
-          (p: any) => p.id === item.id
+          (p: any) => p.id === resolvedProductId
         );
-        const currentPrice = prod ? (Number(prod.sale_price || prod.price) || 0) : item.price;
+
+        let currentPrice = prod ? (Number(prod.sale_price || prod.price) || 0) : item.price;
+        let stock_quantity = prod?.stock_quantity || 0;
+
+        if (variant) {
+          currentPrice = Number(variant.sale_price || variant.price) || 0;
+          stock_quantity = variant.stock_quantity || 0;
+        } else if (item.variant_id || item.variant_attributes) {
+          stock_quantity = 0; // If variant is missing, treat as out of stock
+        }
 
         return {
           ...item,
@@ -295,7 +328,7 @@ export default function CheckoutPage() {
           cgst_rate: prod?.cgst_rate || 0,
           sgst_rate: prod?.sgst_rate || 0,
           is_tax_inclusive: prod?.is_tax_inclusive || false,
-          stock_quantity: prod?.stock_quantity || 0,
+          stock_quantity,
         };
       });
 
@@ -1505,6 +1538,11 @@ export default function CheckoutPage() {
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex flex-col min-w-0">
                             <p className="text-xs font-bold text-zinc-950 truncate">{item.name}</p>
+                            {item.variant_attributes && (
+                              <div className="text-[9px] text-zinc-400 mt-0.5 truncate">
+                                {Object.entries(item.variant_attributes).map(([key, val]) => `${val}`).join(", ")}
+                              </div>
+                            )}
                             {item.hsn_code && <span className="text-[10px] text-zinc-500 font-medium">HSN: {item.hsn_code}</span>}
                           </div>
                           <div className="flex justify-between items-center text-[11px] font-bold text-zinc-500">

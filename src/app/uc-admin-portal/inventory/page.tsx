@@ -207,7 +207,7 @@ export default function InventoryPage() {
         .select(`
           id, name, stock_quantity, low_stock_threshold, manage_stock, created_at, price, image_url,
           categories(name),
-          product_variants(id, name, stock_quantity, sku)
+          product_variants(id, sku, stock_quantity, attributes)
         `)
         .order("stock_quantity", { ascending: true });
 
@@ -218,10 +218,12 @@ export default function InventoryPage() {
       data?.forEach(p => {
         if (p.product_variants && p.product_variants.length > 0) {
           p.product_variants.forEach((v: any) => {
+            const variantDetails = Object.values(v.attributes || {}).join(" / ");
+            const variantName = variantDetails ? `${p.name} - ${variantDetails}` : `${p.name} Variant`;
             flattenedInventory.push({
               id: p.id,
               variant_id: v.id,
-              name: `${p.name} - ${v.name}`,
+              name: variantName,
               sku: v.sku,
               stock_quantity: v.stock_quantity,
               category: Array.isArray(p.categories) ? p.categories[0]?.name : (p.categories as any)?.name,

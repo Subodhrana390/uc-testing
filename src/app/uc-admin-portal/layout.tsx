@@ -146,6 +146,7 @@ export default function AdminLayout({
       group: "Catalog",
       items: [
         { icon: <Package className="w-3.5 h-3.5" />, label: "Products", href: "/uc-admin-portal/products" },
+        { icon: <Layers className="w-3.5 h-3.5" />, label: "Variants", href: "/uc-admin-portal/variants" },
         { icon: <Layers className="w-3.5 h-3.5" />, label: "Main Categories", href: "/uc-admin-portal/categories/main" },
         { icon: <FolderTree className="w-3.5 h-3.5" />, label: "Sub Categories", href: "/uc-admin-portal/categories/sub" },
         { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Brands", href: "/uc-admin-portal/brands" },
@@ -172,23 +173,7 @@ export default function AdminLayout({
     }
   ];
 
-  // 2. Realtime Order Notifications
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-notifications')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload: any) => {
-          toast.success(`SYSTEM: New Order #${payload.new.id.slice(0, 8).toUpperCase()} - Valuation: ₹${payload.new.total_amount}`, {
-            duration: 6000,
-          });
-        }
-      )
-      .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [supabase]);
 
 
 
@@ -243,6 +228,10 @@ export default function AdminLayout({
       case "Products":
         iconColor = "text-orange-500";
         activeBg = "bg-orange-50 border-orange-200 text-orange-700";
+        break;
+      case "Variants":
+        iconColor = "text-fuchsia-500";
+        activeBg = "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700";
         break;
       case "Main Categories":
         iconColor = "text-purple-500";
@@ -314,6 +303,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/invoices")) return "theme-invoices";
     if (path.startsWith("/uc-admin-portal/reviews")) return "theme-reviews";
     if (path.startsWith("/uc-admin-portal/products")) return "theme-products";
+    if (path.startsWith("/uc-admin-portal/variants")) return "theme-variants";
     if (path.startsWith("/uc-admin-portal/categories/main")) return "theme-categories-main";
     if (path.startsWith("/uc-admin-portal/categories/sub")) return "theme-categories-sub";
     if (path.startsWith("/uc-admin-portal/brands")) return "theme-brands";

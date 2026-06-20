@@ -51,6 +51,7 @@ export default function AddProductPage() {
     seo_title: "",
     seo_keywords: "",
     seo_description: "",
+    has_variants: false,
   });
 
   const [brands, setBrands] = useState<any[]>([]);
@@ -196,11 +197,10 @@ export default function AddProductPage() {
           sgst_rate: parseFloat(formData.sgst_rate || "0"),
           is_tax_inclusive: true,
           visibility: formData.visibility,
-          is_industrial_grade: formData.is_industrial_grade,
-          is_ready_stock: formData.is_ready_stock,
           seo_title: formData.seo_title || null,
           seo_keywords: formData.seo_keywords || null,
           seo_description: formData.seo_description || null,
+          has_variants: formData.has_variants,
         },
       ]).select().single();
 
@@ -229,7 +229,7 @@ export default function AddProductPage() {
   };
 
   // Reusable Tailwind Class for Inputs
-  const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100";
+  const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
   const getTabLabel = (tab: string) => {
     switch (tab) {
@@ -277,16 +277,30 @@ export default function AddProductPage() {
               <h2 className="text-lg font-semibold">Basic Information</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className={labelClass} htmlFor="name">Product Name *</label>
-                <input
-                  id="name"
-                  className={inputClass}
-                  placeholder="e.g. Premium Wireless Headphones"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass} htmlFor="product_type">Product Type</label>
+                  <select
+                    id="product_type"
+                    className={inputClass}
+                    value={formData.has_variants ? "variable" : "simple"}
+                    onChange={(e) => setFormData({ ...formData, has_variants: e.target.value === "variable" })}
+                  >
+                    <option value="simple">Simple Product (No Variants)</option>
+                    <option value="variable">Variable Product (Has Variants)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="name">Product Name *</label>
+                  <input
+                    id="name"
+                    className={inputClass}
+                    placeholder="e.g. Premium Wireless Headphones"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -376,7 +390,18 @@ export default function AddProductPage() {
                             igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
                             cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
                             sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
-                            is_tax_inclusive: igstRateVal > 0
+                            is_tax_inclusive: mainCat ? (mainCat.igst_rate > 0) : formData.is_tax_inclusive
+                          });
+                        } else {
+                          const subCat = categories.find((c: any) => c.id === catId);
+                          const mainCat = subCat ? categories.find((c: any) => c.id === subCat.parent_id) : categories.find((c: any) => c.id === selectedMainCategoryId);
+                          setFormData({
+                            ...formData,
+                            category_id: catId,
+                            igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
+                            cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
+                            sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
+                            is_tax_inclusive: mainCat ? (mainCat.igst_rate > 0) : formData.is_tax_inclusive
                           });
                         }
                       }}
@@ -469,6 +494,7 @@ export default function AddProductPage() {
                     placeholder="0.00"
                     value={formData.cost_price}
                     onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                   />
                 </div>
                 <div>
@@ -480,6 +506,7 @@ export default function AddProductPage() {
                     placeholder="0.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                     required
                   />
                   {formData.price && igstRateVal > 0 && (
@@ -520,6 +547,7 @@ export default function AddProductPage() {
                           className={inputClass}
                           placeholder={discountType === "percentage" ? "e.g. 10" : "e.g. 50"}
                           value={discountValue}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
                           onChange={(e) => {
                             const val = e.target.value;
                             setDiscountValue(val);
@@ -613,6 +641,7 @@ export default function AddProductPage() {
                     placeholder="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                   />
                 </div>
                 <div>

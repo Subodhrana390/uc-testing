@@ -256,7 +256,11 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
               <div className="w-full sm:w-64 space-y-2 text-xs font-semibold text-zinc-500">
                 {(() => {
                   const grossSubtotal = order.order_items?.reduce((acc: number, item: any) => acc + (item.quantity * parseFloat(item.unit_price)), 0) || 0;
-                  const taxAmount = parseFloat(order.tax_amount || 0);
+                  const cgstAmt = parseFloat(order.cgst_amount || 0);
+                  const sgstAmt = parseFloat(order.sgst_amount || 0);
+                  const igstAmt = parseFloat(order.igst_amount || 0);
+                  const isSplit = (cgstAmt + sgstAmt + igstAmt) > 0;
+                  const taxAmount = isSplit ? (cgstAmt + sgstAmt + igstAmt) : parseFloat(order.tax_amount || 0);
                   const subtotalExcl = grossSubtotal - taxAmount;
 
                   return (
@@ -269,12 +273,35 @@ export default async function ShippingLabelPage({ params }: { params: { id: stri
                               ₹{subtotalExcl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span>GST (Tax):</span>
-                            <span className="text-zinc-800">
-                              ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
+                          {isSplit ? (
+                            <>
+                              {cgstAmt > 0 && (
+                                <div className="flex justify-between text-zinc-600">
+                                  <span>CGST:</span>
+                                  <span className="text-zinc-800">₹{cgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+                              {sgstAmt > 0 && (
+                                <div className="flex justify-between text-zinc-600">
+                                  <span>SGST:</span>
+                                  <span className="text-zinc-800">₹{sgstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+                              {igstAmt > 0 && (
+                                <div className="flex justify-between text-zinc-600">
+                                  <span>IGST:</span>
+                                  <span className="text-zinc-800">₹{igstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex justify-between">
+                              <span>GST (Tax):</span>
+                              <span className="text-zinc-800">
+                                ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="flex justify-between">

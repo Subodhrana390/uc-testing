@@ -787,9 +787,20 @@ export default function OrderDetailsPage() {
                               className="object-contain p-1"
                             />
                           </div>
-                          <span className="font-semibold text-zinc-900 line-clamp-2 pr-2">
-                            {item.products?.name || "Deleted Product"}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-zinc-900 line-clamp-2 pr-2">
+                              {item.products?.name || "Deleted Product"}
+                            </span>
+                            {item.variants?.attributes && Object.keys(item.variants.attributes).length > 0 && (
+                              <div className="text-[10px] text-zinc-500 font-medium mt-0.5 flex flex-wrap gap-1">
+                                {Object.entries(item.variants.attributes).map(([k, v]) => (
+                                  <span key={k} className="bg-zinc-100 px-1.5 py-0.5 rounded-sm border border-zinc-200/60">
+                                    {k}: <span className="text-zinc-700 font-bold">{String(v)}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-zinc-505">
                           {item.products?.hsn_code || "-"}
@@ -869,6 +880,15 @@ export default function OrderDetailsPage() {
                         <h4 className="text-xs font-semibold text-zinc-900 leading-snug">
                           {item.products?.name || "Deleted Product"}
                         </h4>
+                        {item.variants?.attributes && Object.keys(item.variants.attributes).length > 0 && (
+                          <div className="text-[10px] text-zinc-500 font-medium mt-0.5 flex flex-wrap gap-1">
+                            {Object.entries(item.variants.attributes).map(([k, v]) => (
+                              <span key={k} className="bg-zinc-100 px-1.5 py-0.5 rounded-sm border border-zinc-200/60">
+                                {k}: <span className="text-zinc-700 font-bold">{String(v)}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {item.products?.hsn_code && (
                           <p className="text-[10px] text-zinc-400 font-medium font-mono">
                             HSN: {item.products.hsn_code}
@@ -926,14 +946,20 @@ export default function OrderDetailsPage() {
               const shipAmt = parseFloat(order.shipping_amount || 0);
               const discAmt = parseFloat(order.discount_amount || 0);
 
-              let cgstAmt = 0;
-              let sgstAmt = 0;
-              let igstAmt = 0;
+              let cgstAmt = parseFloat(order.cgst_amount || 0);
+              let sgstAmt = parseFloat(order.sgst_amount || 0);
+              let igstAmt = parseFloat(order.igst_amount || 0);
               let baseSubtotal = 0;
               
               let orderCgstRate = 0;
               let orderSgstRate = 0;
               let orderIgstRate = 0;
+
+              // Fallback calculation for older orders that don't have split tax recorded
+              const hasSplitTax = (cgstAmt + sgstAmt + igstAmt) > 0;
+              let fallbackCgst = 0;
+              let fallbackSgst = 0;
+              let fallbackIgst = 0;
 
               order.order_items?.forEach((item: any) => {
                 const quantity = item.quantity;
@@ -960,18 +986,26 @@ export default function OrderDetailsPage() {
                     itemTax = itemTotal * (rate / 100);
                   }
 
-                  if (igstRate > 0) {
-                    igstAmt += itemTax;
-                  } else {
-                    const totalCgstSgst = cgstRate + sgstRate;
-                    if (totalCgstSgst > 0) {
-                      cgstAmt += itemTax * (cgstRate / totalCgstSgst);
-                      sgstAmt += itemTax * (sgstRate / totalCgstSgst);
+                  if (!hasSplitTax) {
+                    if (igstRate > 0) {
+                      fallbackIgst += itemTax;
+                    } else {
+                      const totalCgstSgst = cgstRate + sgstRate;
+                      if (totalCgstSgst > 0) {
+                        fallbackCgst += itemTax * (cgstRate / totalCgstSgst);
+                        fallbackSgst += itemTax * (sgstRate / totalCgstSgst);
+                      }
                     }
                   }
                 }
                 baseSubtotal += itemBase;
               });
+
+              if (!hasSplitTax) {
+                cgstAmt = fallbackCgst;
+                sgstAmt = fallbackSgst;
+                igstAmt = fallbackIgst;
+              }
 
               const actualTax = cgstAmt + sgstAmt + igstAmt;
 
@@ -980,6 +1014,9 @@ export default function OrderDetailsPage() {
                 const rawTaxAmt = parseFloat(order.tax_amount || 0);
                 baseSubtotal = totalAmt - rawTaxAmt - shipAmt + discAmt;
               }
+
+              // Clamp to prevent negative subtotals in edge cases
+              baseSubtotal = Math.max(0, Math.round(baseSubtotal * 100) / 100);
 
               const expectedTotal = baseSubtotal + actualTax + shipAmt - discAmt;
               const diff = totalAmt - expectedTotal;

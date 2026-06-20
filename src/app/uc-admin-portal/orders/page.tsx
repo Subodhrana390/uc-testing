@@ -518,6 +518,11 @@ export default function OrdersPage() {
               igst_rate,
               cgst_rate,
               sgst_rate
+            ),
+            variant_id,
+            variants:product_variants (
+              id,
+              attributes
             )
           ),
           shipments (
@@ -552,6 +557,10 @@ export default function OrdersPage() {
               igst_rate,
               cgst_rate,
               sgst_rate
+            ),
+            variants:product_variants (
+              id,
+              attributes
             )
           ),
           status_history:order_status_history (
@@ -566,25 +575,27 @@ export default function OrdersPage() {
         const query = debouncedSearchQuery.trim();
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
 
-        // Check if query is a custom display order ID (e.g. OD178100194544591134)
-        const odMatch = query.match(/^OD(\d{13})(\d{5})$/i);
-        if (odMatch) {
-          const ts = parseInt(odMatch[1]);
-          const startWindow = new Date(ts - 2000).toISOString();
-          const endWindow = new Date(ts + 2000).toISOString();
-
-          const { data: windowOrders } = await supabase
+        // Check if query starts with "OD" for custom display ID search
+        if (query.toUpperCase().startsWith('OD')) {
+          // Fetch all IDs and dates to filter in-memory (fast for typical order volumes)
+          const { data: allOrders } = await supabase
             .from("orders")
             .select("id, created_at")
-            .gte("created_at", startWindow)
-            .lte("created_at", endWindow);
+            .order("created_at", { ascending: false })
+            .limit(10000); // Check up to 10k recent orders
+            
+          if (allOrders) {
+            const matchingIds = allOrders
+              .filter(o => getDisplayOrderId(o.id, o.created_at).toLowerCase().includes(query.toLowerCase()))
+              .map(o => o.id);
 
-          const matchingOrder = windowOrders?.find(o => getDisplayOrderId(o.id, o.created_at).toLowerCase() === query.toLowerCase());
-          if (matchingOrder) {
-            q = q.eq("id", matchingOrder.id);
+            if (matchingIds.length > 0) {
+              q = q.in("id", matchingIds);
+            } else {
+              q = q.eq("id", "00000000-0000-0000-0000-000000000000"); // No match
+            }
           } else {
-            // No matching order, force 0 results
-            q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+            q = q.eq("id", "00000000-0000-0000-0000-000000000000"); // Error state
           }
         } else {
           let orConditions = `customer_name.ilike.%${query}%`;
@@ -2280,7 +2291,16 @@ export default function OrdersPage() {
                           return (
                             <TableRow key={i} className="hover:bg-zinc-50 border-b border-zinc-100">
                               <TableCell className="font-medium text-[#18181b]">
-                                {item.products?.name}
+                                {item.products?.name || <span className="text-zinc-400 italic">Deleted Product</span>}
+                                {item.variants?.attributes && Object.keys(item.variants.attributes).length > 0 && (
+                                  <div className="text-[10px] text-zinc-500 font-medium mt-0.5 flex flex-wrap gap-1">
+                                    {Object.entries(item.variants.attributes).map(([k, v]) => (
+                                      <span key={k} className="bg-zinc-100 px-1.5 py-0.5 rounded-sm border border-zinc-200/60">
+                                        {k}: <span className="text-zinc-700 font-bold">{String(v)}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 {item.products?.hsn_code && (
                                   <div className="text-[10px] text-zinc-500 font-normal mt-0.5">HSN: {item.products.hsn_code}</div>
                                 )}
@@ -2305,14 +2325,20 @@ export default function OrdersPage() {
                   const shipAmt = parseFloat(selectedOrder.shipping_amount || 0);
                   const discAmt = parseFloat(selectedOrder.discount_amount || 0);
 
-                  let cgstAmt = 0;
-                  let sgstAmt = 0;
-                  let igstAmt = 0;
-                  let subtotalExclGst = 0;
-
+                  let cgstAmt = parseFloat(selectedOrder.cgst_amount || 0);
+                  let sgstAmt = parseFloat(selectedOrder.sgst_amount || 0);
+                  let igstAmt = parseFloat(selectedOrder.igst_amount || 0);
+                  
                   let orderCgstRate = 0;
                   let orderSgstRate = 0;
                   let orderIgstRate = 0;
+
+                  // Use loop only to fetch rates, fallback calculation if DB taxes are all 0
+                  const hasSplitTax = (cgstAmt + sgstAmt + igstAmt) > 0;
+                  let fallbackCgst = 0;
+                  let fallbackSgst = 0;
+                  let fallbackIgst = 0;
+                  let fallbackSubtotal = 0;
 
                   selectedOrder.items?.forEach((item: any) => {
                     const quantity = item.quantity;
@@ -2339,31 +2365,59 @@ export default function OrdersPage() {
                         itemTax = itemTotal * (rate / 100);
                       }
 
-                      if (igstRate > 0) {
-                        igstAmt += itemTax;
-                      } else {
-                        const totalCgstSgst = cgstRate + sgstRate;
-                        if (totalCgstSgst > 0) {
-                          cgstAmt += itemTax * (cgstRate / totalCgstSgst);
-                          sgstAmt += itemTax * (sgstRate / totalCgstSgst);
+                      if (!hasSplitTax) {
+                        if (igstRate > 0) {
+                          fallbackIgst += itemTax;
+                        } else {
+                          const totalCgstSgst = cgstRate + sgstRate;
+                          if (totalCgstSgst > 0) {
+                            fallbackCgst += itemTax * (cgstRate / totalCgstSgst);
+                            fallbackSgst += itemTax * (sgstRate / totalCgstSgst);
+                          }
                         }
                       }
                     }
-                    subtotalExclGst += itemBase;
+                    fallbackSubtotal += itemBase;
                   });
 
-                  const actualTax = cgstAmt + sgstAmt + igstAmt;
-
-                  if (subtotalExclGst === 0 && totalAmt > 0) {
-                    const rawTaxAmt = parseFloat(selectedOrder.tax_amount || 0);
-                    subtotalExclGst = totalAmt - rawTaxAmt - shipAmt + discAmt;
+                  if (!hasSplitTax) {
+                    cgstAmt = fallbackCgst;
+                    sgstAmt = fallbackSgst;
+                    igstAmt = fallbackIgst;
                   }
 
-                  const expectedTotal = subtotalExclGst + actualTax + shipAmt - discAmt;
-                  const diff = totalAmt - expectedTotal;
-                  const isShippingGst = diff > 0 && Math.abs(diff - (shipAmt * 0.18)) < 0.1;
-                  const shippingGst = isShippingGst ? diff : 0;
-                  const roundOff = isShippingGst ? 0 : diff;
+                  const actualTax = cgstAmt + sgstAmt + igstAmt;
+                  let subtotalExclGst = totalAmt - actualTax - shipAmt + discAmt;
+
+                  // Determine if Shipping GST was applied
+                  let shippingGst = 0;
+                  const expectedShipGst = shipAmt * 0.18;
+                  if (expectedShipGst > 0) {
+                     // Check if DB tax already includes shipping GST
+                     // We know the shipping GST is usually added to the total tax
+                     if (igstAmt > 0 && igstAmt >= expectedShipGst - 0.1) {
+                         shippingGst = expectedShipGst;
+                         igstAmt -= shippingGst;
+                     } else if (cgstAmt > 0 && cgstAmt >= (expectedShipGst/2) - 0.1) {
+                         shippingGst = expectedShipGst;
+                         cgstAmt -= shippingGst/2;
+                         sgstAmt -= shippingGst/2;
+                     } else {
+                         // Fallback heuristic if it was calculated purely on items
+                         const diff = totalAmt - (subtotalExclGst + actualTax + shipAmt - discAmt);
+                         if (diff > 0 && Math.abs(diff - expectedShipGst) < 0.1) {
+                             shippingGst = diff;
+                         }
+                     }
+                  }
+
+                  // Rounding correction if any tiny floats
+                  subtotalExclGst = Math.max(0, Math.round(subtotalExclGst * 100) / 100);
+                  cgstAmt = Math.max(0, cgstAmt);
+                  sgstAmt = Math.max(0, sgstAmt);
+                  igstAmt = Math.max(0, igstAmt);
+                  
+                  const roundOff = totalAmt - (subtotalExclGst + actualTax + shipAmt - discAmt);
 
                   return (
                     <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5">
@@ -2378,7 +2432,7 @@ export default function OrdersPage() {
                               <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
                               TOTAL FEE
                             </span>
-                            <span>₹{(actualTax + shipAmt + shippingGst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>₹{(actualTax + shipAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </summary>
                           <div className="pt-2 pb-1 space-y-1.5 ml-3">
                             {cgstAmt > 0 && (

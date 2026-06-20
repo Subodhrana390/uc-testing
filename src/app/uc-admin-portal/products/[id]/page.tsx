@@ -26,6 +26,8 @@ const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor")
   loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-md border" />
 });
 
+import ProductVariantsManager from "../ProductVariantsManager";
+
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const productId = params.id;
   const router = useRouter();
@@ -66,6 +68,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     seo_title: "",
     seo_keywords: "",
     seo_description: "",
+    has_variants: false,
   });
 
   const [dynamicAttributes, setDynamicAttributes] = useState<any[]>([]);
@@ -176,6 +179,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         seo_title: product.seo_title || "",
         seo_keywords: product.seo_keywords || "",
         seo_description: product.seo_description || "",
+        has_variants: product.has_variants || false,
       });
 
       if (attributes && attributes.length > 0) {
@@ -231,10 +235,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       const priceInclusive = priceExclusive * (1 + igstRate / 100);
       const salePriceInclusive = salePriceExclusive !== null ? salePriceExclusive * (1 + igstRate / 100) : null;
 
+      const generateSlug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      const slug = generateSlug(formData.name.trim());
+
       const { error } = await supabase
         .from("products")
         .update({
           name: formData.name.trim(),
+          slug,
           price: priceInclusive,
           cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
           sale_price: salePriceInclusive,
@@ -262,10 +270,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           seo_title: formData.seo_title,
           seo_keywords: formData.seo_keywords,
           seo_description: formData.seo_description,
+          has_variants: formData.has_variants,
         })
         .eq("id", productId);
 
       if (error) throw error;
+
+      if (formData.has_variants) {
+        await supabase
+          .from("product_variants")
+          .update({
+            price: priceInclusive,
+            sale_price: salePriceInclusive,
+          })
+          .eq("product_id", productId)
+          .eq("is_default", true);
+      }
 
       await supabase.from("product_attributes").delete().eq("product_id", productId);
       const attrInserts = Object.entries(attributeValues)
@@ -340,7 +360,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     deleteProductMutation.mutate();
   };
 
-  const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100";
+  const inputClass = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
   const getTabLabel = (tab: string) => {
@@ -348,6 +368,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       case 'description': return 'Long Description';
       case 'key_features': return 'Key Features';
       case 'attributes': return 'Attributes';
+      case 'variants': return 'Variants';
       case 'applications': return 'Applications & Manufacturing';
       case 'warranty': return 'Warranty & Support';
       case 'images': return 'Product Images';
@@ -398,15 +419,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <h2 className="text-lg font-semibold">Basic Information</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className={labelClass} htmlFor="name">Product Name *</label>
-                <input
-                  id="name"
-                  className={inputClass}
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass} htmlFor="product_type">Product Type</label>
+                  <select
+                    id="product_type"
+                    className={inputClass}
+                    value={formData.has_variants ? "variable" : "simple"}
+                    onChange={(e) => setFormData({ ...formData, has_variants: e.target.value === "variable" })}
+                  >
+                    <option value="simple">Simple Product (No Variants)</option>
+                    <option value="variable">Variable Product (Has Variants)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass} htmlFor="name">Product Name *</label>
+                  <input
+                    id="name"
+                    className={inputClass}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -488,19 +523,28 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       value={categories.find((c: any) => c.id === formData.category_id)?.parent_id === selectedMainCategoryId ? formData.category_id : ""}
                       onChange={(e) => {
                         const catId = e.target.value;
-                        const subCat = categories.find((c: any) => c.id === catId);
-                        const mainCat = subCat ? categories.find((c: any) => c.id === subCat.parent_id) : null;
-                        const igstRate = mainCat ? mainCat.igst_rate : 0;
-                        const cgstRate = mainCat ? mainCat.cgst_rate : 0;
-                        const sgstRate = mainCat ? mainCat.sgst_rate : 0;
-                        setFormData({
-                          ...formData,
-                          category_id: catId,
-                          igst_rate: igstRate.toString(),
-                          cgst_rate: cgstRate.toString(),
-                          sgst_rate: sgstRate.toString(),
-                          is_tax_inclusive: igstRate > 0
-                        });
+                        if (!catId) {
+                          const mainCat = categories.find((c: any) => c.id === selectedMainCategoryId);
+                          setFormData({
+                            ...formData,
+                            category_id: selectedMainCategoryId,
+                            igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
+                            cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
+                            sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
+                            is_tax_inclusive: mainCat ? (mainCat.igst_rate > 0) : formData.is_tax_inclusive
+                          });
+                        } else {
+                          const subCat = categories.find((c: any) => c.id === catId);
+                          const mainCat = subCat ? categories.find((c: any) => c.id === subCat.parent_id) : categories.find((c: any) => c.id === selectedMainCategoryId);
+                          setFormData({
+                            ...formData,
+                            category_id: catId,
+                            igst_rate: mainCat ? mainCat.igst_rate?.toString() || "0" : formData.igst_rate,
+                            cgst_rate: mainCat ? mainCat.cgst_rate?.toString() || "0" : formData.cgst_rate,
+                            sgst_rate: mainCat ? mainCat.sgst_rate?.toString() || "0" : formData.sgst_rate,
+                            is_tax_inclusive: mainCat ? (mainCat.igst_rate > 0) : formData.is_tax_inclusive
+                          });
+                        }
                       }}
                     >
                       <option value="">(All of {categories.find((c: any) => c.id === selectedMainCategoryId)?.name})</option>
@@ -597,6 +641,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       placeholder="0.00"
                       value={formData.cost_price}
                       onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
                     />
                   </div>
 
@@ -610,6 +655,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         placeholder="0.00"
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
                         required
                       />
                       {formData.price && igstRateVal > 0 && (
@@ -752,6 +798,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     placeholder="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                   />
                 </div>
                 <div>
@@ -771,7 +818,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           {/* Tabs Section */}
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
             <div className="flex border-b bg-gray-50/50 overflow-x-auto no-scrollbar">
-              {['description', 'key_features', 'attributes', 'applications', 'warranty', 'images'].map((tab) => (
+              {['description', 'key_features', 'attributes', 'variants', 'applications', 'warranty', 'images']
+                .filter(tab => tab !== 'variants' || formData.has_variants)
+                .map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -799,6 +848,25 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <RichTextEditor
                     value={formData.specification}
                     onChange={(content) => handleEditorChange("specification", content)}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'variants' && (
+                <div className="space-y-6">
+                  <ProductVariantsManager 
+                    productId={productId} 
+                    basePrice={parseFloat(formData.price) || 0} 
+                    gstRate={igstRateVal} 
+                    onDefaultSync={(v) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        price: v.price || prev.price,
+                        sale_price: v.sale_price || prev.sale_price,
+                        sku: v.sku || prev.sku,
+                        stock_quantity: v.stock_quantity ? v.stock_quantity.toString() : prev.stock_quantity
+                      }));
+                    }}
                   />
                 </div>
               )}
@@ -914,7 +982,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   {formData.visibility ? 'Active' : 'Hidden'}
                 </button>
               </div>
-              </div>
+            </div>
           </section>
 
 

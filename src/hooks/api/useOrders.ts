@@ -17,7 +17,9 @@ export function useOrders() {
           *,
           order_items (
             id, quantity, unit_price,
-            products (id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code)
+            products (id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code),
+            variant_id,
+            variants:product_variants (id, attributes)
           ),
           payments (*)
         `)
@@ -45,7 +47,9 @@ export function useOrderDetails(orderId: string) {
           *,
           order_items (
             id, quantity, unit_price,
-            products (id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code)
+            products (id, name, slug, image_url, igst_rate, cgst_rate, sgst_rate, is_tax_inclusive, hsn_code),
+            variant_id,
+            variants:product_variants (id, attributes)
           ),
           payments (*)
         `)
