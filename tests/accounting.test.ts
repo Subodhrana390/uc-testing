@@ -11,7 +11,8 @@ describe('TaxCalculationService', () => {
           price: 1000,
           quantity: 2,
           taxConfig: {
-            gstRate: 18,
+            productId: 'prod-1',
+            gstRate: 18 as const,
             hsnCode: '1234',
             taxInclusive: false,
             taxable: true
@@ -46,7 +47,8 @@ describe('TaxCalculationService', () => {
           price: 1000,
           quantity: 2,
           taxConfig: {
-            gstRate: 18,
+            productId: 'prod-1',
+            gstRate: 18 as const,
             hsnCode: '1234',
             taxInclusive: false,
             taxable: true
