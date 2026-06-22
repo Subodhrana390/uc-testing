@@ -49,14 +49,25 @@ export default function BulkUploadPage() {
       {
         "Name": "Sample Product A",
         "SKU": "SMP-001",
+        "Barcode": "1234567890123",
+        "HSN Code": "8501",
         "Price": 1500,
         "Cost Price": 1000,
+        "Sale Price": 1400,
         "Stock Quantity": 50,
         "Category": categories[0]?.name || "Chemicals",
         "Brand": brands[0]?.name || "Generic",
         "Unit": "pcs",
         "Status": "Active",
-        "Short Description": "A simple sample product for reference."
+        "Short Description": "A simple sample product for reference.",
+        "Long Description": "<p>A detailed long description.</p>",
+        "Specification": "<ul><li>Spec 1</li><li>Spec 2</li></ul>",
+        "Manufacturing Info": "Manufactured in India.",
+        "Warranty Info": "1 Year Warranty.",
+        "SEO Title": "Sample Product A - Best Price",
+        "SEO Keywords": "sample, product, a",
+        "SEO Description": "Buy Sample Product A online at the best price.",
+        "Has Variants": "No"
       }
     ];
 
