@@ -327,15 +327,20 @@ export default function SettingsPage() {
       toast.error("Link target URL is required");
       return;
     }
+    if (/^(https?:)?\/\//i.test(linkFormData.url.trim())) {
+      toast.error("External URLs are not allowed. Please use relative paths (e.g., /about).");
+      return;
+    }
 
     setSavingLink(true);
     try {
+      const dataToSave = { ...linkFormData, is_external: false };
       if (editingLink) {
-        const result = await updateNavigationLinkAction(editingLink.id, linkFormData);
+        const result = await updateNavigationLinkAction(editingLink.id, dataToSave);
         if (!result.success) throw new Error(result.error);
         toast.success("Menu link updated successfully");
       } else {
-        const result = await createNavigationLinkAction(linkFormData);
+        const result = await createNavigationLinkAction(dataToSave);
         if (!result.success) throw new Error(result.error);
         toast.success("Menu link added successfully");
       }
@@ -956,37 +961,23 @@ export default function SettingsPage() {
                 id="link_url"
                 value={linkFormData.url}
                 onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
-                placeholder="e.g. /products?promo=true or https://external-blog.com"
+                placeholder="e.g. /products?promo=true"
                 className="h-10 rounded-xl text-sm font-mono text-xs"
               />
               <span className="text-[9px] text-zinc-400 block font-medium leading-none">
-                Use relative paths (e.g. `/about`) for local pages or full URL (e.g. `https://example.com`) for external links.
+                Use relative paths (e.g. `/about`). External URLs are not allowed.
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 text-left">
-                <Label htmlFor="link_order" className="text-xs font-bold text-zinc-700">Order Index</Label>
-                <Input
-                  id="link_order"
-                  type="number"
-                  value={linkFormData.order_index}
-                  onChange={(e) => setLinkFormData({ ...linkFormData, order_index: parseInt(e.target.value) || 0 })}
-                  className="h-10 rounded-xl text-sm"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 justify-end pb-1 text-left">
-                <label className="flex items-center gap-2 text-xs font-bold text-zinc-700 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={linkFormData.is_external}
-                    onChange={(e) => setLinkFormData({ ...linkFormData, is_external: e.target.checked })}
-                    className="w-4 h-4 rounded-sm border-zinc-350 text-zinc-950 accent-zinc-950 cursor-pointer focus:ring-0 focus:ring-offset-0"
-                  />
-                  Open in New Window
-                </label>
-              </div>
+            <div className="space-y-2 text-left">
+              <Label htmlFor="link_order" className="text-xs font-bold text-zinc-700">Order Index</Label>
+              <Input
+                id="link_order"
+                type="number"
+                value={linkFormData.order_index}
+                onChange={(e) => setLinkFormData({ ...linkFormData, order_index: parseInt(e.target.value) || 0 })}
+                className="h-10 rounded-xl text-sm"
+              />
             </div>
 
             <div className="flex items-center gap-2 pt-2 text-left">

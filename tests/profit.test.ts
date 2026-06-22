@@ -14,8 +14,8 @@ vi.mock('@/utils/supabase/service-role', () => ({
           discount_amount: '10',
           payment_method: 'ONLINE',
           order_items: [
-            { quantity: 2, price: '100', cost_price: '60' }, // Rev: 200, COGS: 120
-            { quantity: 1, price: '50', cost_price: '30' }   // Rev: 50, COGS: 30
+            { quantity: 2, unit_price: '100', cost_price: '60' }, // Rev: 200, COGS: 120
+            { quantity: 1, unit_price: '50', cost_price: '30' }   // Rev: 50, COGS: 30
           ],
           payments: [
             { amount: '300' } // 2% fee = 6

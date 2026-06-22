@@ -26,7 +26,7 @@ export class ProfitCalculationService {
 
     for (const item of order.order_items) {
       const qty = item.quantity;
-      const sellingPrice = parseFloat(item.price) || 0;
+      const sellingPrice = parseFloat(item.unit_price) || 0;
       // cost_price is already snapshotted in order_items by a previous migration
       const costPrice = parseFloat(item.cost_price) || 0; 
 
@@ -79,7 +79,7 @@ export class ProfitCalculationService {
 
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('id, total_amount, shipping_amount, discount_amount, payment_method, order_items(quantity, price, cost_price)')
+      .select('id, total_amount, shipping_amount, discount_amount, payment_method, order_items(quantity, unit_price, cost_price)')
       .gte('created_at', startDate)
       .lte('created_at', endDate)
       .in('status', ['DELIVERED', 'COMPLETED', 'PLACED']); // Only successful orders
@@ -110,7 +110,7 @@ export class ProfitCalculationService {
       // Product Revenue & COGS
       for (const item of order.order_items) {
         const qty = item.quantity;
-        productRevenue += (parseFloat(item.price) * qty);
+        productRevenue += (parseFloat(item.unit_price) * qty);
         cogs += (parseFloat(item.cost_price) * qty);
       }
 

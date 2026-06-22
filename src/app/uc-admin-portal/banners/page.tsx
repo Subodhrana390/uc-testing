@@ -119,6 +119,10 @@ export default function BannersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) { toast.error("Banner title is required"); return; }
+    if (formData.link_url && /^(https?:)?\/\//i.test(formData.link_url.trim())) {
+      toast.error("External URLs are not allowed. Please use relative paths (e.g., /products).");
+      return;
+    }
     setSaving(true);
     try {
       if (editingBanner) {
@@ -440,6 +444,9 @@ export default function BannersPage() {
                 className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400"
                 placeholder="/products/welding-kit"
               />
+              <span className="text-[9px] text-zinc-400 block font-medium leading-none">
+                Use relative paths (e.g. `/products`). External URLs are not allowed.
+              </span>
             </div>
           </form>
 
