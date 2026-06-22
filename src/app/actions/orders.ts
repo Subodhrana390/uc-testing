@@ -236,6 +236,32 @@ export async function createOrder(orderData: {
       return { success: false, error: result.error || 'Failed to place order' }
     }
 
+    // ----- ACCOUNTING & SHIPPING HOOKS -----
+    try {
+      const { AccountingService } = await import('@/lib/accounting/AccountingService');
+      const { ShippingService } = await import('@/lib/accounting/ShippingService');
+      
+      const breakdown = {
+        orderId: result.order_id,
+        itemSubtotal: serverSubtotal,
+        discountAmount: 0, // currently discount isn't broken down at root in orderData in this block
+        taxableAmount: serverTaxExclusive - shippingGst,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        shippingCost: serverShipping,
+        shippingTaxAmount: shippingGst,
+        totalTaxAmount: cgstAmount + sgstAmount + igstAmount,
+        grandTotal: serverTaxExclusive + cgstAmount + sgstAmount + igstAmount
+      };
+
+      await AccountingService.recordSale(result.order_id, breakdown, `PENDING-${result.order_id}`);
+      await ShippingService.logShippingCost(result.order_id, 'Pending Allocation', 0, serverShipping, undefined);
+    } catch (accErr) {
+      console.error('Failed to log accounting/shipping entries:', accErr);
+    }
+    // ---------------------------------------
+
     // Send confirmation email for COD immediately, since they are placed right away
     if (orderData.paymentMethod === 'COD') {
       try {
