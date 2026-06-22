@@ -21,7 +21,8 @@ import {
   ChevronRight,
   SlidersHorizontal,
   RefreshCw,
-  Star
+  Star,
+  UploadCloud
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -806,6 +807,11 @@ export default function ProductsPage() {
               <RefreshCw className="w-4.5 h-4.5 animate-duration-1000" />
               <span>Refresh</span>
             </Button>
+            <Link href="/uc-admin-portal/products/bulk" passHref legacyBehavior>
+              <Button className="h-11 px-4 bg-white/10 hover:bg-white/25 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2">
+                <UploadCloud className="w-4 h-4" /> Bulk Upload
+              </Button>
+            </Link>
             <Link href="/uc-admin-portal/products/add" passHref legacyBehavior>
               <Button className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2">
                 <Plus className="w-4 h-4" /> Add Product
