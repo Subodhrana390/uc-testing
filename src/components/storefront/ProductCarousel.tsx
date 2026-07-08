@@ -1,47 +1,70 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "./ProductCard";
+import { FixedSizeList as List } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 
 interface ProductCarouselProps {
   products: any[];
 }
 
 export default function ProductCarousel({ products }: ProductCarouselProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, clientWidth } = scrollContainerRef.current;
-      const scrollTo = direction === "left"
-        ? scrollLeft - clientWidth * 0.8
-        : scrollLeft + clientWidth * 0.8;
-
-      scrollContainerRef.current.scrollTo({
-        left: scrollTo,
-        behavior: "smooth"
-      });
-    }
-  };
-
+  const listRef = useRef<List>(null);
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const [showArrows, setShowArrows] = useState(false);
 
   useEffect(() => {
-    const checkScrollable = () => {
-      if (scrollContainerRef.current) {
-        setShowArrows(scrollContainerRef.current.scrollWidth > scrollContainerRef.current.clientWidth);
-      }
+    const checkViewport = () => {
+      setIsMobile(window.innerWidth < 640);
     };
-    checkScrollable();
-    window.addEventListener("resize", checkScrollable);
-    return () => window.removeEventListener("resize", checkScrollable);
-  }, [products]);
+    checkViewport();
+    window.addEventListener("resize", checkViewport);
+    return () => window.removeEventListener("resize", checkViewport);
+  }, []);
+
+  const itemWidth = isMobile ? 180 : 200;
+  const gap = 24; // gap-6
+  const itemSize = itemWidth + gap;
+
+  useEffect(() => {
+    // Show arrows if total width is greater than container width
+    const totalWidth = products.length * itemSize;
+    if (typeof window !== "undefined") {
+      setShowArrows(totalWidth > window.innerWidth - 64); // approx padding
+    }
+  }, [products, itemSize]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (listRef.current) {
+      const containerWidth = typeof window !== "undefined" ? window.innerWidth : 1000;
+      const amountToScroll = containerWidth * 0.8;
+      const scrollTo = direction === "left"
+        ? Math.max(0, scrollOffset - amountToScroll)
+        : scrollOffset + amountToScroll;
+
+      listRef.current.scrollTo(scrollTo);
+      setScrollOffset(scrollTo);
+    }
+  };
 
   if (!products || products.length === 0) return null;
 
+  const Row = ({ index, style }: { index: number; style: CSSProperties }) => {
+    const product = products[index];
+    return (
+      <div style={{ ...style, width: itemWidth, paddingRight: gap }}>
+        <div className="h-full w-full">
+          <ProductCard product={product} />
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="relative">
+    <div className="relative h-[420px] w-full">
       {/* Navigation Buttons */}
       {showArrows && (
         <>
@@ -63,20 +86,26 @@ export default function ProductCarousel({ products }: ProductCarouselProps) {
         </>
       )}
 
-      {/* Scroll Container */}
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-4 px-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="w-[180px] sm:w-[200px] shrink-0 snap-start"
-          >
-            <ProductCard product={product} />
-          </div>
-        ))}
+      {/* Virtualized Scroll Container */}
+      <div className="h-full w-full py-4 px-1">
+        <AutoSizer renderProp={({ height, width }: { height?: number; width?: number }) => {
+          if (height === undefined || width === undefined) return null;
+          return (
+            <List
+              ref={listRef}
+              height={height}
+              itemCount={products.length}
+              itemSize={itemSize}
+              layout="horizontal"
+              width={width}
+              className="scrollbar-hide"
+              style={{ overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" }}
+              onScroll={({ scrollOffset }: { scrollOffset: number }) => setScrollOffset(scrollOffset)}
+            >
+              {Row}
+            </List>
+          );
+        }} />
       </div>
 
       {/* Visual Fade indicators */}
