@@ -98,7 +98,6 @@ export default function CategoryList({ type }: CategoryListProps) {
     cgst_rate: 0,
     sgst_rate: 0,
     igst_rate: 0,
-    hsn_code: ""
   });
 
   const supabase = useMemo(() => createClient(), []);
@@ -107,7 +106,7 @@ export default function CategoryList({ type }: CategoryListProps) {
     try {
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, parent_id, status, cgst_rate, sgst_rate, igst_rate, hsn_code")
+        .select("id, name, parent_id, status, cgst_rate, sgst_rate, igst_rate")
         .order("display_order", { ascending: true });
 
       if (error) throw error;
@@ -213,7 +212,6 @@ export default function CategoryList({ type }: CategoryListProps) {
         cgst_rate: category.cgst_rate || 0,
         sgst_rate: category.sgst_rate || 0,
         igst_rate: category.igst_rate || 0,
-        hsn_code: category.hsn_code || ""
       });
       setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(category.igst_rate || 0));
     } else {
@@ -230,8 +228,7 @@ export default function CategoryList({ type }: CategoryListProps) {
         parent_id: defaultParent,
         cgst_rate: parentCat ? parentCat.cgst_rate : 0,
         sgst_rate: parentCat ? parentCat.sgst_rate : 0,
-        igst_rate: parentCat ? parentCat.igst_rate : 0,
-        hsn_code: parentCat ? (parentCat.hsn_code || "") : ""
+        igst_rate: parentCat ? parentCat.igst_rate : 0
       });
       setIsCustomTax(![0, 3, 5, 12, 18, 28].includes(parentCat ? parentCat.igst_rate : 0));
     }
@@ -279,7 +276,6 @@ export default function CategoryList({ type }: CategoryListProps) {
             cgst_rate: submitData.cgst_rate,
             sgst_rate: submitData.sgst_rate,
             igst_rate: submitData.igst_rate,
-            hsn_code: submitData.hsn_code
           };
           const { error: subError } = await supabase
             .from("categories")
@@ -294,7 +290,7 @@ export default function CategoryList({ type }: CategoryListProps) {
             igst_rate: submitData.igst_rate,
             is_tax_inclusive: submitData.igst_rate > 0
           }).eq("category_id", editingCategory.id);
-          
+
           // And products under subcategories
           const { data: subCats } = await supabase.from("categories").select("id").eq("parent_id", editingCategory.id);
           if (subCats && subCats.length > 0) {
@@ -488,7 +484,6 @@ export default function CategoryList({ type }: CategoryListProps) {
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category Info</th>
                 {type === "sub" && <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Parent</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">URL Slug</th>
-                <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">HSN Code</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">IGST Rate</th>
                 <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
                 <th className="w-14 pr-8 text-right"></th>
@@ -546,11 +541,6 @@ export default function CategoryList({ type }: CategoryListProps) {
                     <td className="px-6 py-4">
                       <span className="text-xs font-medium text-teal-700 bg-teal-50 border border-teal-150 px-2 py-0.5 rounded-lg inline-block font-mono">
                         /{category.slug}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg inline-block font-mono">
-                        {category.hsn_code || "N/A"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -707,24 +697,6 @@ export default function CategoryList({ type }: CategoryListProps) {
                 <Settings className="w-4 h-4" />
                 Settings & Taxation
               </h3>
-
-              {/* HSN Code */}
-              <div className="space-y-2">
-                <Label>HSN Code</Label>
-                {type === "sub" ? (
-                  <div className="flex items-center gap-2 h-11 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600 select-none cursor-not-allowed">
-                    <span className="text-sm font-semibold">{formData.hsn_code || "N/A"} (Inherited)</span>
-                  </div>
-                ) : (
-                  <Input
-                    value={formData.hsn_code}
-                    onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                    className="h-11"
-                    placeholder="e.g. 8544"
-                  />
-                )}
-              </div>
-
               {/* GST */}
               <div className="space-y-4">
                 <Label>GST Configuration</Label>

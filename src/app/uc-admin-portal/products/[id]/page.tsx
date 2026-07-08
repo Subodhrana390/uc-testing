@@ -381,29 +381,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8 text-gray-900">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8 text-gray-900">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div className="flex items-center gap-4">
-          <Link href="/uc-admin-portal/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors">
+          <Link href="/uc-admin-portal/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors shrink-0">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
-            <p className="text-gray-500 text-sm">Update product specifications, inventory and visibility.</p>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Edit Product</h1>
+            <p className="text-gray-500 text-xs md:text-sm">Update product specifications, inventory and visibility.</p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <button
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 border border-red-100 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2 border border-red-100 text-red-600 rounded-md hover:bg-red-50 transition-colors"
           >
             <Trash2 className="w-4 h-4" /> Delete
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Updating..." : "Update Product"}
@@ -411,7 +411,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Basic Info Section */}
           <section className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -711,10 +711,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 <div className="lg:col-span-5 bg-zinc-50/70 border border-zinc-200/80 rounded-xl p-4 flex flex-col justify-between space-y-4">
                   <div className="space-y-3">
                     <label className="block text-sm font-semibold text-zinc-700">Discount Configuration</label>
-                    <div className="flex flex-col items-center gap-2.5">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                       <select
                         id="discount_type"
-                        className={`${inputClass} w-36 bg-white shrink-0`}
+                        className={`${inputClass} w-full sm:w-36 bg-white shrink-0`}
                         value={discountType}
                         onChange={(e) => {
                           const type = e.target.value;
@@ -729,7 +729,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       </select>
 
                       {discountType !== "none" && (
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 w-full">
                           <input
                             id="discount_value"
                             type="number"

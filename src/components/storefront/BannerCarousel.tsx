@@ -10,6 +10,7 @@ interface Banner {
   title: string;
   subtitle?: string;
   image_url?: string;
+  mobile_image_url?: string;
   link_url?: string;
   link_text?: string;
 }
@@ -40,7 +41,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
     [banners.length]
   );
 
-  {/* Empty State / Default Fallback Banner */}
+  {/* Empty State / Default Fallback Banner */ }
   if (banners.length === 0) {
     return (
       <div data-nosnippet className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white min-h-[300px] sm:min-h-[400px] md:min-h-[480px] flex flex-col justify-center">
@@ -88,23 +89,39 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   return (
     <div data-nosnippet className="relative overflow-hidden w-full group">
       {/* Slides */}
-      <div className="relative aspect-[3/1] w-full">
+      <div className="relative aspect-[16/9] md:aspect-[3/1] w-full">
         {banners.map((banner, index) => {
           const slideContent = (
             <>
               {/* Background Graphic Strategy */}
-              {banner.image_url ? (
+              {banner.image_url || banner.mobile_image_url ? (
                 <div className="absolute inset-0">
-                  <Image
-                    src={banner.image_url}
-                    alt={banner.title}
-                    fill
-                    sizes="100vw"
-                    placeholder="blur"
-                    blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
-                    className="w-full h-full object-cover"
-                    priority={index === 0}
-                  />
+                  {/* Desktop Image (Fallbacks to showing everywhere if no mobile image) */}
+                  {banner.image_url && (
+                    <Image
+                      src={banner.image_url}
+                      alt={banner.title}
+                      fill
+                      sizes="100vw"
+                      placeholder="blur"
+                      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+                      className={`w-full h-full ${banner.mobile_image_url ? 'hidden md:block object-cover' : 'object-contain md:object-cover bg-zinc-50 md:bg-transparent'}`}
+                      priority={index === 0}
+                    />
+                  )}
+                  {/* Mobile-Specific Image */}
+                  {banner.mobile_image_url && (
+                    <Image
+                      src={banner.mobile_image_url}
+                      alt={banner.title}
+                      fill
+                      sizes="100vw"
+                      placeholder="blur"
+                      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+                      className="w-full h-full object-cover md:hidden"
+                      priority={index === 0}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-blue-950">

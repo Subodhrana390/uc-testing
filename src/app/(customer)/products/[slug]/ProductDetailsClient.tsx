@@ -266,9 +266,9 @@ export default function ProductDetailsClient({
               </div>
             )}
             {product.datasheet_url && (
-              <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-xl flex items-center justify-between mb-8 max-w-xl">
+              <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 max-w-xl">
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-teal-650" />
+                  <FileText className="w-5 h-5 text-teal-650 shrink-0" />
                   <div>
                     <p className="text-xs font-bold text-zinc-800">Product Datasheet (PDF)</p>
                     <p className="text-[10px] text-zinc-400">Technical specifications and usage guidelines</p>
@@ -278,7 +278,7 @@ export default function ProductDetailsClient({
                   href={product.datasheet_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-sm transition-all"
+                  className="inline-flex shrink-0 w-full sm:w-auto justify-center items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-sm transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download</span>
@@ -396,10 +396,11 @@ export default function ProductDetailsClient({
         </span>
       </div>
 
-      <div className="grid gap-12 lg:grid-cols-2">
-        <div className="flex flex-col-reverse lg:flex-row gap-6">
+      <div className="grid gap-8 lg:gap-12 lg:grid-cols-2">
+        <div className="flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 min-w-0">
+          {/* Thumbnails: horizontal below image on mobile, vertical left on desktop */}
           {product.images && product.images.length > 1 && (
-            <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto no-scrollbar pb-2 lg:pb-0 snap-x lg:snap-y max-h-[600px]">
+            <div className="flex flex-row lg:flex-col gap-2 sm:gap-3 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto snap-x lg:snap-y lg:max-h-[500px] w-full lg:w-[96px] shrink-0 pb-2 lg:pb-0 lg:pr-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 [&::-webkit-scrollbar-track]:bg-transparent">
               {product.images.map((img: string, idx: number) => (
                 <button
                   key={idx}
@@ -407,23 +408,25 @@ export default function ProductDetailsClient({
                     handleUserInteraction();
                     setActiveImage(img);
                   }}
-                  className={`relative w-20 h-20 lg:w-24 lg:h-24 shrink-0 snap-center transition-all rounded-sm overflow-hidden ${activeImage === img
-                    ? "border-1 border-black" : "border-none"}`}
+                  className={`relative w-16 h-16 sm:w-20 sm:h-20 lg:w-full lg:aspect-square shrink-0 snap-center transition-all rounded-lg overflow-hidden bg-white border ${activeImage === img
+                    ? "border-zinc-900 shadow-sm" : "border-zinc-200 hover:border-zinc-400"}`}
                 >
                   <Image
                     src={img}
                     alt={`${product.name} thumbnail ${idx + 1}`}
                     fill
-                    sizes="100px"
+                    sizes="(max-width: 1024px) 80px, 96px"
                     className="object-cover"
                   />
                 </button>
               ))}
             </div>
           )}
-          <div className="flex-1 max-w-[450px] mx-auto lg:mx-0 w-full relative">
+
+          {/* Main Image */}
+          <div className="flex-1 w-full relative">
             <div
-              className="relative aspect-square overflow-hidden rounded-md group cursor-zoom-in"
+              className="relative w-full aspect-square overflow-hidden rounded-2xl group cursor-zoom-in bg-white border border-zinc-100"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseMove={(e) => {
@@ -440,7 +443,7 @@ export default function ProductDetailsClient({
                   alt={product.name}
                   fill
                   sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-contain p-6 transition-transform duration-200 group-hover:scale-[2.5]"
+                  className="object-contain p-2 sm:p-6 transition-transform duration-200 group-hover:scale-[2.5]"
                   style={{
                     transformOrigin: 'var(--x, 50%) var(--y, 50%)'
                   } as any}
@@ -505,11 +508,10 @@ export default function ProductDetailsClient({
                         <button
                           key={val}
                           onClick={() => setSelectedAttributes({ ...selectedAttributes, [attrKey]: val })}
-                          className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-all ${
-                            isSelected 
-                              ? "border-zinc-900 bg-zinc-900 text-white shadow-sm" 
+                          className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-all ${isSelected
+                              ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
                               : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
-                          }`}
+                            }`}
                         >
                           {val}
                         </button>
@@ -589,12 +591,12 @@ export default function ProductDetailsClient({
                 <AddToCartButton
                   product={activeProduct}
                   quantity={quantity}
-                  className={`h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl px-4 sm:px-8 text-xs font-bold text-white shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200" : "bg-zinc-950 hover:bg-zinc-800"}`}
+                  className={`h-11 flex-1 sm:flex-initial justify-center rounded-xl px-2 sm:px-8 text-xs font-bold text-white shadow-md shadow-zinc-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200" : "bg-zinc-950 hover:bg-zinc-800"}`}
                 />
                 <button
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
-                  className={`h-11 flex-1 min-w-[140px] sm:flex-initial justify-center rounded-xl px-4 sm:px-8 text-xs font-bold text-white shadow-md shadow-red-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200 shadow-none" : "bg-primary hover:bg-red-700"}`}
+                  className={`h-11 flex-1 sm:flex-initial justify-center rounded-xl px-2 sm:px-8 text-xs font-bold text-white shadow-md shadow-red-100 transition-all active:scale-[0.98] whitespace-nowrap ${isOutOfStock ? "bg-zinc-200 text-zinc-500 cursor-not-allowed hover:bg-zinc-200 shadow-none" : "bg-primary hover:bg-red-700"}`}
                 >
                   Buy Now
                 </button>

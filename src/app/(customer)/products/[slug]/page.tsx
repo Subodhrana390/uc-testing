@@ -61,7 +61,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen overflow-x-hidden">
       <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto py-8">
         <ProductDetailsClient 
           product={product} 

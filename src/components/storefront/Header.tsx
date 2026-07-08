@@ -45,6 +45,7 @@ interface HeaderProps {
 
 export default function Header({ categories, user, settings, navLinks }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
@@ -210,6 +211,15 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   </div>
                 )}
 
+                {/* Mobile Search Icon */}
+                <button
+                  className="lg:hidden p-2 text-zinc-700 hover:text-primary transition-colors"
+                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                  aria-label="Toggle search"
+                >
+                  {isMobileSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+                </button>
+
                 <WishlistButton />
 
                 <CartButton />
@@ -307,10 +317,22 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
               ))}
             </nav>
 
-            {/* Mobile Search */}
-            <div className="lg:hidden pb-3">
-              <HeaderSearch />
-            </div>
+            {/* Mobile Search (toggle) */}
+            <AnimatePresence>
+              {isMobileSearchOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="lg:hidden overflow-hidden"
+                >
+                  <div className="pb-3">
+                    <HeaderSearch />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </header>
       </div>

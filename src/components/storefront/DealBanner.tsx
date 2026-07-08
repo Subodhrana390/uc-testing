@@ -19,7 +19,7 @@ export default function DealBanner({
   gradient = "from-zinc-900 via-zinc-800 to-zinc-950"
 }: DealBannerProps) {
   const content = (
-    <div data-nosnippet className={`relative overflow-hidden aspect-[3/1] w-full bg-gradient-to-r ${gradient}`}>
+    <div data-nosnippet className={`relative overflow-hidden aspect-[16/9] md:aspect-[3/1] w-full bg-gradient-to-r ${gradient}`}>
 
       {/* Background Image Strategy (Full Card Background Cover) */}
       {imageUrl && (
