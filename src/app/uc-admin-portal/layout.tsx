@@ -32,7 +32,10 @@ import {
   Ticket,
   CreditCard,
   MessageSquare,
-  HelpCircle
+  HelpCircle,
+  UploadCloud,
+  FileText,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -128,13 +131,15 @@ export default function AdminLayout({
     {
       group: "Dashboard",
       items: [
-        { icon: <LayoutDashboard className="w-3.5 h-3.5" />, label: "Overview", href: "/uc-admin-portal" }
+        { icon: <LayoutDashboard className="w-3.5 h-3.5" />, label: "Overview", href: "/uc-admin-portal" },
+        { icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Finance", href: "/uc-admin-portal/finance" }
       ]
     },
     {
       group: "Manage",
       items: [
         { icon: <Clock className="w-3.5 h-3.5" />, label: "Orders", href: "/uc-admin-portal/orders" },
+        { icon: <FileText className="w-3.5 h-3.5" />, label: "Purchase Orders", href: "/uc-admin-portal/purchase-orders" },
         { icon: <IndianRupee className="w-3.5 h-3.5" />, label: "Payments", href: "/uc-admin-portal/payments" },
         { icon: <Activity className="w-3.5 h-3.5" />, label: "Delivery", href: "/uc-admin-portal/delivery" },
         { icon: <Terminal className="w-3.5 h-3.5" />, label: "Invoices", href: "/uc-admin-portal/invoices" },
@@ -146,12 +151,14 @@ export default function AdminLayout({
       group: "Catalog",
       items: [
         { icon: <Package className="w-3.5 h-3.5" />, label: "Products", href: "/uc-admin-portal/products" },
+        { icon: <UploadCloud className="w-3.5 h-3.5" />, label: "Bulk Upload", href: "/uc-admin-portal/products/bulk" },
         { icon: <Layers className="w-3.5 h-3.5" />, label: "Variants", href: "/uc-admin-portal/variants" },
         { icon: <Layers className="w-3.5 h-3.5" />, label: "Main Categories", href: "/uc-admin-portal/categories/main" },
         { icon: <FolderTree className="w-3.5 h-3.5" />, label: "Sub Categories", href: "/uc-admin-portal/categories/sub" },
         { icon: <ShieldCheck className="w-3.5 h-3.5" />, label: "Brands", href: "/uc-admin-portal/brands" },
         { icon: <Settings2 className="w-3.5 h-3.5" />, label: "Attributes", href: "/uc-admin-portal/attributes" },
         { icon: <Activity className="w-3.5 h-3.5" />, label: "Inventory", href: "/uc-admin-portal/inventory" },
+        { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Stock Ledger", href: "/uc-admin-portal/stock-ledger" },
       ]
     },
     {
@@ -205,9 +212,17 @@ export default function AdminLayout({
         iconColor = "text-cyan-500";
         activeBg = "bg-cyan-50 border-cyan-200 text-cyan-700";
         break;
+      case "Finance":
+        iconColor = "text-emerald-500";
+        activeBg = "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold";
+        break;
       case "Orders":
         iconColor = "text-sky-500";
         activeBg = "bg-sky-50 border-sky-200 text-sky-700";
+        break;
+      case "Purchase Orders":
+        iconColor = "text-blue-600";
+        activeBg = "bg-blue-50 border-blue-200 text-blue-750 font-bold";
         break;
       case "Payments":
         iconColor = "text-amber-500";
@@ -228,6 +243,10 @@ export default function AdminLayout({
       case "Products":
         iconColor = "text-orange-500";
         activeBg = "bg-orange-50 border-orange-200 text-orange-700";
+        break;
+      case "Bulk Upload":
+        iconColor = "text-amber-500";
+        activeBg = "bg-amber-50 border-amber-200 text-amber-700";
         break;
       case "Variants":
         iconColor = "text-fuchsia-500";
@@ -252,6 +271,10 @@ export default function AdminLayout({
       case "Inventory":
         iconColor = "text-emerald-500";
         activeBg = "bg-emerald-50 border-emerald-200 text-emerald-700";
+        break;
+      case "Stock Ledger":
+        iconColor = "text-indigo-650";
+        activeBg = "bg-indigo-50 border-indigo-200 text-indigo-750 font-bold";
         break;
       case "Banners":
         iconColor = "text-yellow-600";
@@ -297,7 +320,9 @@ export default function AdminLayout({
 
   const getThemeClass = (path: string) => {
     if (path === "/uc-admin-portal") return "theme-overview";
+    if (path.startsWith("/uc-admin-portal/finance")) return "theme-finance";
     if (path.startsWith("/uc-admin-portal/orders")) return "theme-orders";
+    if (path.startsWith("/uc-admin-portal/purchase-orders")) return "theme-purchase-orders";
     if (path.startsWith("/uc-admin-portal/payments")) return "theme-payments";
     if (path.startsWith("/uc-admin-portal/delivery")) return "theme-delivery";
     if (path.startsWith("/uc-admin-portal/invoices")) return "theme-invoices";
@@ -309,6 +334,7 @@ export default function AdminLayout({
     if (path.startsWith("/uc-admin-portal/brands")) return "theme-brands";
     if (path.startsWith("/uc-admin-portal/attributes")) return "theme-attributes";
     if (path.startsWith("/uc-admin-portal/inventory")) return "theme-inventory";
+    if (path.startsWith("/uc-admin-portal/stock-ledger")) return "theme-stock-ledger";
     if (path.startsWith("/uc-admin-portal/banners")) return "theme-banners";
     if (path.startsWith("/uc-admin-portal/deals")) return "theme-deals";
     if (path.startsWith("/uc-admin-portal/coupons")) return "theme-coupons";

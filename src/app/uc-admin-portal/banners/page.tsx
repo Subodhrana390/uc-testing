@@ -66,7 +66,7 @@ export default function BannersPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
-  const [formData, setFormData] = useState({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: 0, status: true });
+  const [formData, setFormData] = useState({ title: "", subtitle: "", image_url: "", mobile_image_url: "", link_url: "", link_text: "", position: 0, status: true });
   const [bannerToDelete, setBannerToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,10 +108,10 @@ export default function BannersPage() {
   const handleOpenDrawer = (banner?: any) => {
     if (banner) {
       setEditingBanner(banner);
-      setFormData({ title: banner.title, subtitle: banner.subtitle || "", image_url: banner.image_url || "", link_url: banner.link_url || "", link_text: banner.link_text || "", position: banner.position, status: banner.status });
+      setFormData({ title: banner.title, subtitle: banner.subtitle || "", image_url: banner.image_url || "", mobile_image_url: banner.mobile_image_url || "", link_url: banner.link_url || "", link_text: banner.link_text || "", position: banner.position, status: banner.status });
     } else {
       setEditingBanner(null);
-      setFormData({ title: "", subtitle: "", image_url: "", link_url: "", link_text: "", position: banners.length, status: true });
+      setFormData({ title: "", subtitle: "", image_url: "", mobile_image_url: "", link_url: "", link_text: "", position: banners.length, status: true });
     }
     setIsDrawerOpen(true);
   };
@@ -119,6 +119,10 @@ export default function BannersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) { toast.error("Banner title is required"); return; }
+    if (formData.link_url && /^(https?:)?\/\//i.test(formData.link_url.trim())) {
+      toast.error("External URLs are not allowed. Please use relative paths (e.g., /products).");
+      return;
+    }
     setSaving(true);
     try {
       if (editingBanner) {
@@ -410,13 +414,29 @@ export default function BannersPage() {
 
             {/* Visual URL & Position */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-zinc-500">Banner Image</Label>
+              <Label className="text-xs font-medium text-zinc-500">Desktop Banner Image</Label>
               <SingleImageUpload
                 value={formData.image_url}
                 onChange={(url: string) => setFormData({ ...formData, image_url: url })}
-                label="Select Banner Image"
+                label="Select Desktop Banner Image"
                 bucket="banners"
               />
+              <span className="text-[9px] text-zinc-400 block font-medium leading-none mt-1">
+                Recommended aspect ratio: 3:1 (Wide format)
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-zinc-500">Mobile Banner Image (Optional)</Label>
+              <SingleImageUpload
+                value={formData.mobile_image_url}
+                onChange={(url: string) => setFormData({ ...formData, mobile_image_url: url })}
+                label="Select Mobile Banner Image"
+                bucket="banners"
+              />
+              <span className="text-[9px] text-zinc-400 block font-medium leading-none mt-1">
+                Recommended aspect ratio: 16:9 or 2:1 (Mobile optimized). If left blank, the desktop image is used.
+              </span>
             </div>
 
             <div className="space-y-2">
@@ -440,6 +460,9 @@ export default function BannersPage() {
                 className="h-11 border-zinc-200 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-teal-600 focus-visible:border-teal-600 placeholder:text-zinc-400"
                 placeholder="/products/welding-kit"
               />
+              <span className="text-[9px] text-zinc-400 block font-medium leading-none">
+                Use relative paths (e.g. `/products`). External URLs are not allowed.
+              </span>
             </div>
           </form>
 

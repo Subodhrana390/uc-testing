@@ -10,6 +10,7 @@ interface Banner {
   title: string;
   subtitle?: string;
   image_url?: string;
+  mobile_image_url?: string;
   link_url?: string;
   link_text?: string;
 }
@@ -43,66 +44,84 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
   {/* Empty State / Default Fallback Banner */ }
   if (banners.length === 0) {
     return (
-      <div data-nosnippet className="relative overflow-hidden rounded-sm border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-white md:p-16 lg:col-span-2 shadow-sm min-h-[350px] md:min-h-[450px] flex flex-col justify-center">
+      <div data-nosnippet className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white min-h-[300px] sm:min-h-[400px] md:min-h-[480px] flex flex-col justify-center">
         <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="absolute left-10 bottom-0 h-44 w-44 rounded-full bg-amber-500/5 blur-3xl" />
 
-        <div className="relative z-10 flex flex-wrap gap-2 mb-4">
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-400 border border-blue-500/20">
-            🇮🇳 Verified B2B Marketplace
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
-            <ShieldCheck className="h-3 w-3" /> 100% GST Invoice
-          </span>
-        </div>
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-8 2xl:px-12 py-12 relative z-10">
+          <div className="relative z-10 flex flex-wrap gap-2 mb-4">
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-400 border border-blue-500/20">
+              🇮🇳 Verified B2B Marketplace
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+              <ShieldCheck className="h-3 w-3" /> 100% GST Invoice
+            </span>
+          </div>
 
-        <h1 className="relative z-10 max-w-2xl text-3xl font-extrabold tracking-tight md:text-5xl leading-tight text-white">
-          Industrial Supplies, Chemicals & Labware. <span className="text-amber-400">Direct Bulk Rates.</span>
-        </h1>
+          <h1 className="relative z-10 max-w-2xl text-3xl font-extrabold tracking-tight md:text-5xl leading-tight text-white">
+            Industrial Supplies, Chemicals & Labware. <span className="text-amber-400">Direct Bulk Rates.</span>
+          </h1>
 
-        <p className="relative z-10 mt-4 max-w-xl text-sm leading-relaxed text-slate-300">
-          Simplify your corporate procurement. Access real-time pricing on lakhs of items, claim valid input tax credits, and secure paneled logistics routes across India.
-        </p>
+          <p className="relative z-10 mt-4 max-w-xl text-sm leading-relaxed text-slate-300">
+            Simplify your corporate procurement. Access real-time pricing on lakhs of items, claim valid input tax credits, and secure paneled logistics routes across India.
+          </p>
 
-        <div className="relative z-10 mt-8 flex flex-wrap items-center gap-4">
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all hover:scale-[1.01]"
-          >
-            Explore Catalog
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <a
-            href="tel:+911234567890"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors ml-2"
-          >
-            <PhoneCall className="h-3.5 w-3.5" /> Speak to Expert
-          </a>
+          <div className="relative z-10 mt-8 flex flex-wrap items-center gap-4">
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all hover:scale-[1.01]"
+            >
+              Explore Catalog
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <a
+              href="tel:+911234567890"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors ml-2"
+            >
+              <PhoneCall className="h-3.5 w-3.5" /> Speak to Expert
+            </a>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div data-nosnippet className="relative overflow-hidden rounded-md lg:col-span-2 group">
+    <div data-nosnippet className="relative overflow-hidden w-full group">
       {/* Slides */}
-      <div className="relative aspect-[16/9] sm:aspect-auto sm:h-[350px] md:h-[450px]">
+      <div className="relative aspect-[16/9] md:aspect-[3/1] w-full">
         {banners.map((banner, index) => {
           const slideContent = (
             <>
               {/* Background Graphic Strategy */}
-              {banner.image_url ? (
+              {banner.image_url || banner.mobile_image_url ? (
                 <div className="absolute inset-0">
-                  <Image
-                    src={banner.image_url}
-                    alt={banner.title}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 66vw"
-                    placeholder="blur"
-                    blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
-                    className="w-full h-full object-cover"
-                    priority={index === 0}
-                  />
+                  {/* Desktop Image (Fallbacks to showing everywhere if no mobile image) */}
+                  {banner.image_url && (
+                    <Image
+                      src={banner.image_url}
+                      alt={banner.title}
+                      fill
+                      sizes="100vw"
+                      placeholder="blur"
+                      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+                      className={`w-full h-full ${banner.mobile_image_url ? 'hidden md:block object-cover' : 'object-contain md:object-cover bg-zinc-50 md:bg-transparent'}`}
+                      priority={index === 0}
+                    />
+                  )}
+                  {/* Mobile-Specific Image */}
+                  {banner.mobile_image_url && (
+                    <Image
+                      src={banner.mobile_image_url}
+                      alt={banner.title}
+                      fill
+                      sizes="100vw"
+                      placeholder="blur"
+                      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
+                      className="w-full h-full object-cover md:hidden"
+                      priority={index === 0}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-blue-950">
@@ -141,14 +160,14 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
           <button
             onClick={prevBanner}
             aria-label="Previous Banner"
-            className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
+            className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>
           <button
             onClick={nextBanner}
             aria-label="Next Banner"
-            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
+            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-700/50 flex items-center justify-center text-white md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-slate-900 hover:text-amber-400"
           >
             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </button>

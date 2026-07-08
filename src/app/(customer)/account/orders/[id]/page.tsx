@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Camera,
   Upload,
-  X
+  X,
+  FileDown
 } from "lucide-react";
 
 import { createClient } from "@/utils/supabase/client";
@@ -253,6 +254,26 @@ export default function OrderDetailsPage() {
       toast.error(err.message || "Error initiating payment.");
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleDownloadInvoice = async (o: any) => {
+    try {
+      const { generateInvoicePDF } = await import("@/lib/invoice");
+      const doc = await generateInvoicePDF({
+        orderId: o.id, date: o.created_at,
+        customerName: o.customer_name, customerEmail: o.customer_email,
+        customerPhone: o.phone, address: o.shipping_address || "N/A",
+        items: o.order_items || [], totalAmount: parseFloat(o.total_amount),
+        taxAmount: parseFloat(o.tax_amount || 0),
+        shippingAmount: parseFloat(o.shipping_amount || 0),
+        discountAmount: parseFloat(o.discount_amount || 0),
+      });
+      doc.save(`Invoice_${getDisplayOrderId(o.id, o.created_at)}.pdf`);
+      toast.success("Invoice downloaded successfully!");
+    } catch (err) {
+      console.error("Failed to generate invoice PDF:", err);
+      toast.error("Failed to download invoice.");
     }
   };
 
@@ -615,6 +636,17 @@ export default function OrderDetailsPage() {
                       Return window expired
                     </span>
                   )
+                )}
+
+                {!["cancelled", "failed"].includes(order.status?.toLowerCase()) && (
+                  <Button
+                    onClick={() => handleDownloadInvoice(order)}
+                    variant="outline"
+                    className="border-zinc-200 text-zinc-650 hover:bg-zinc-50 text-xs h-9 px-4 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    Download Invoice
+                  </Button>
                 )}
               </div>
             </div>

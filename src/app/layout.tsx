@@ -75,9 +75,9 @@ export default function RootLayout({
   return (
     <html
       lang="en-IN"
-      className={`${roboto.variable} ${robotoMono.variable} h-full antialiased`}
+      className={`${roboto.variable} ${robotoMono.variable} min-h-screen antialiased`}
     >
-      <body className="h-full flex flex-col">
+      <body className="min-h-screen flex flex-col">
         <QueryProvider>
           <AuthListener />
           {/* Global structured data — injected on every page */}

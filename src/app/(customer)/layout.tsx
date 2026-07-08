@@ -34,7 +34,7 @@ export default async function CustomerLayout({
   const activeNavLinks = (navLinks || []).filter(link => link.is_active);
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-white">
       <Header 
         categories={categories || []} 
         user={user} 

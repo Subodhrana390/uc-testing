@@ -89,6 +89,7 @@ export default function VariantsPage() {
         .from("product_variants")
         .update({
           sku: editForm.sku,
+          name: editForm.name,
           price: editForm.price,
           stock_quantity: editForm.stock_quantity,
           status: editForm.status
@@ -128,6 +129,7 @@ export default function VariantsPage() {
     setEditingVariantId(variant.id);
     setEditForm({
       sku: variant.sku,
+      name: variant.name || "",
       price: variant.price,
       stock_quantity: variant.stock_quantity,
       status: variant.status
@@ -180,6 +182,23 @@ export default function VariantsPage() {
           );
         }
         return <span className="font-mono text-xs font-bold text-zinc-700">{variant.sku}</span>;
+      }
+    }),
+    columnHelper.accessor("name", {
+      header: "Variant Name",
+      cell: (info) => {
+        const variant = info.row.original;
+        if (editingVariantId === variant.id) {
+          return (
+            <input
+              type="text"
+              value={editForm.name}
+              onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+              className="w-full text-xs border border-zinc-300 rounded px-2 py-1 min-w-[150px]"
+            />
+          );
+        }
+        return <span className="text-xs font-bold text-zinc-700">{variant.name || "-"}</span>;
       }
     }),
     columnHelper.accessor("attributes", {

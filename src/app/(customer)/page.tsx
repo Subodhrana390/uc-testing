@@ -76,7 +76,7 @@ export default async function HomePage() {
       <div className="absolute bottom-1/4 right-1/3 w-[800px] h-[800px] bg-amber-500/[0.012] rounded-full blur-[175px] pointer-events-none -z-10" />
 
       {/* Main Banner Slider */}
-      <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-4 bg-transparent">
+      <section className="w-full bg-transparent">
         <BannerCarousel banners={safeBanners} />
       </section>
 
@@ -108,17 +108,15 @@ export default async function HomePage() {
 
       {/* Deal 1: After Flash Sale */}
       {deal1 && (
-        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-          <div className="hover:scale-[1.005] transition-transform duration-500">
-            <DealBanner
-              title={deal1.title}
-              subtitle={deal1.description}
-              linkText={deal1.badge_text || "Claim Offer"}
-              linkUrl={deal1.link_url}
-              imageUrl={deal1.image_url}
-              gradient="from-zinc-950 via-zinc-900 to-zinc-950"
-            />
-          </div>
+        <section className="w-full py-8">
+          <DealBanner
+            title={deal1.title}
+            subtitle={deal1.description}
+            linkText={deal1.badge_text || "Claim Offer"}
+            linkUrl={deal1.link_url}
+            imageUrl={deal1.image_url}
+            gradient="from-zinc-950 via-zinc-900 to-zinc-950"
+          />
         </section>
       )}
 
@@ -178,17 +176,15 @@ export default async function HomePage() {
 
       {/* Deal 2: After Categories */}
       {deal2 && (
-        <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-          <div className="hover:scale-[1.005] transition-transform duration-500">
-            <DealBanner
-              title={deal2.title}
-              subtitle={deal2.description}
-              linkText={deal2.badge_text || "Bulk Offer"}
-              linkUrl={deal2.link_url}
-              imageUrl={deal2.image_url}
-              gradient="from-zinc-900 via-zinc-950 to-zinc-900"
-            />
-          </div>
+        <section className="w-full py-8">
+          <DealBanner
+            title={deal2.title}
+            subtitle={deal2.description}
+            linkText={deal2.badge_text || "Bulk Offer"}
+            linkUrl={deal2.link_url}
+            imageUrl={deal2.image_url}
+            gradient="from-zinc-900 via-zinc-950 to-zinc-900"
+          />
         </section>
       )}
 
@@ -251,17 +247,15 @@ export default async function HomePage() {
 
           {/* Inject dynamic deals after sections (Deal 3, 4, 5, 6 etc.) */}
           {safeDeals[2 + idx] && (
-            <section className="w-full px-4 md:px-8 2xl:px-12 mx-auto sm:px-2 lg:px-4 py-8">
-              <div className="hover:scale-[1.005] transition-transform duration-500">
-                <DealBanner
-                  title={safeDeals[2 + idx].title}
-                  subtitle={safeDeals[2 + idx].description}
-                  linkText={safeDeals[2 + idx].badge_text || "Explore Offer"}
-                  linkUrl={safeDeals[2 + idx].link_url}
-                  imageUrl={safeDeals[2 + idx].image_url}
-                  gradient={idx % 2 === 0 ? "from-zinc-950 via-zinc-900 to-zinc-950" : "from-zinc-900 via-zinc-950 to-zinc-900"}
-                />
-              </div>
+            <section className="w-full py-8">
+              <DealBanner
+                title={safeDeals[2 + idx].title}
+                subtitle={safeDeals[2 + idx].description}
+                linkText={safeDeals[2 + idx].badge_text || "Explore Offer"}
+                linkUrl={safeDeals[2 + idx].link_url}
+                imageUrl={safeDeals[2 + idx].image_url}
+                gradient={idx % 2 === 0 ? "from-zinc-950 via-zinc-900 to-zinc-950" : "from-zinc-900 via-zinc-950 to-zinc-900"}
+              />
             </section>
           )}
 

@@ -9,6 +9,52 @@ const getLogoBase64 = () => {
   return LOGO_BASE_64;
 };
 
+// --- Calculation Utilities & Types ---
+
+export interface InvoiceCalculations {
+  taxableValue: number;
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
+  freightCharges: number;
+  freightGst: number;
+  discount: number;
+  grandTotal: number;
+  isIntraState: boolean;
+}
+
+export function determineIsIntraState(address: string, sellerState: string = "punjab"): boolean {
+  if (!address) return false;
+  const lowerAddress = address.toLowerCase();
+  if (sellerState === "punjab") {
+    return lowerAddress.includes("punjab") ||
+      lowerAddress.includes("pb") ||
+      /14[0-9]{4}/.test(address) ||
+      /15[0-2][0-9]{3}/.test(address) ||
+      /160[0-9]{3}/.test(address);
+  }
+  return lowerAddress.includes(sellerState.toLowerCase());
+}
+
+export function validateInvoiceData(invoice: any, items: any[]) {
+  if (!invoice.invoice_number) throw new Error("Validation Error: Invoice number is required.");
+  if (!invoice.orders?.customer_name) throw new Error("Validation Error: Customer name is required.");
+
+  for (const item of items) {
+    const productName = item.products?.name || item.product_name;
+    const hsn = item.products?.hsn_code || item.hsn_code;
+    const qty = item.quantity;
+    const rate = parseFloat(item.unit_price);
+
+    if (!productName) throw new Error("Validation Error: Product name is required.");
+    if (!hsn) throw new Error(`Validation Error: HSN code is required for product '${productName}'.`);
+    if (qty <= 0) throw new Error(`Validation Error: Quantity must be > 0 for product '${productName}'.`);
+    if (rate <= 0) throw new Error(`Validation Error: Rate must be > 0 for product '${productName}'.`);
+  }
+}
+
+export const formatCurrency = (amount: number) => `Rs. ${amount.toFixed(2)}`;
+
 export async function generateAndStoreInvoicePDF(invoiceId: string) {
   try {
     const supabase = createServiceRoleClient();
@@ -37,7 +83,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     if (itemsError) throw new Error("Invoice items not found");
 
-    // 3. Generate PDF
+    // 3. Validation
+    validateInvoiceData(invoice, items);
+
+    // Determine State for GST Logic
+    const addressStr = invoice.orders.shipping_address || invoice.orders.billing_address || "";
+    const isIntraState = determineIsIntraState(addressStr, "punjab");
+
+    // 4. Generate PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -109,7 +162,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text(`Address :`, 12, 51);
     doc.text(billAddress, 25, 51);
 
-    // Shipp To Header
+    // Ship To Header
     doc.setFillColor(220, 235, 245);
     doc.rect(10, 58, 95, 5, "F");
     doc.setFont("helvetica", "bold");
@@ -131,6 +184,9 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     doc.text(`Payment Mode :`, 107, 50);
     doc.text(invoice.orders.payment_method || "Online", 140, 50);
+
+    doc.text(`State :`, 107, 54);
+    doc.text(isIntraState ? "Punjab" : "Other State", 140, 54);
 
     doc.text(`Reverse Charge :`, 107, 58);
     doc.text("NO", 140, 58);
@@ -155,54 +211,57 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       const qty = item.quantity;
       const unitPrice = parseFloat(item.unit_price);
       const itemTotal = unitPrice * qty;
-      const igst = item.products?.igst_rate || 0;
-      const cgst = item.products?.cgst_rate || 0;
-      const sgst = item.products?.sgst_rate || 0;
-      const rate = igst > 0 ? igst : (cgst + sgst);
 
+      const productTotalGst = item.products?.gst_rate || item.products?.igst_rate || (item.products?.cgst_rate + item.products?.sgst_rate) || 0;
       const isTaxInclusive = item.products?.is_tax_inclusive || false;
 
       let baseTotal = itemTotal;
       let taxAmount = 0;
-      let lineTotal = itemTotal;
 
-      if (rate > 0) {
+      if (productTotalGst > 0) {
         if (isTaxInclusive) {
-          baseTotal = itemTotal / (1 + rate / 100);
+          baseTotal = itemTotal / (1 + productTotalGst / 100);
           taxAmount = itemTotal - baseTotal;
         } else {
-          taxAmount = itemTotal * (rate / 100);
-          lineTotal = itemTotal + taxAmount;
+          taxAmount = itemTotal * (productTotalGst / 100);
         }
       }
 
       const baseUnitPrice = baseTotal / qty;
-      const hsn = item.products?.hsn_code || item.hsn_code || "-";
+      const hsn = item.products?.hsn_code || item.hsn_code;
 
       subtotalTaxable += baseTotal;
       totalQuantity += qty;
 
-      // Breakdown tax amounts based on rates
-      if (igst > 0) {
-        totalIgst += taxAmount;
+      let cgstRate = 0, sgstRate = 0, igstRate = 0;
+      let cgstAmount = 0, sgstAmount = 0, igstAmount = 0;
+
+      // Split GST based on Intrastate or Interstate
+      if (isIntraState) {
+        cgstRate = productTotalGst / 2;
+        sgstRate = productTotalGst / 2;
+        cgstAmount = taxAmount / 2;
+        sgstAmount = taxAmount / 2;
+        totalCgst += cgstAmount;
+        totalSgst += sgstAmount;
       } else {
-        const totalCgstSgst = cgst + sgst;
-        if (totalCgstSgst > 0) {
-          totalCgst += taxAmount * (cgst / totalCgstSgst);
-          totalSgst += taxAmount * (sgst / totalCgstSgst);
-        }
+        igstRate = productTotalGst;
+        igstAmount = taxAmount;
+        totalIgst += igstAmount;
       }
+
+      const lineTotal = baseTotal + taxAmount;
 
       return [
         index + 1,
-        item.product_name,
+        item.products?.name || item.product_name,
         hsn,
         qty,
-        baseUnitPrice.toFixed(2),
-        baseTotal.toFixed(2),
-        rate > 0 ? `${rate}%` : "-",
-        taxAmount > 0 ? taxAmount.toFixed(2) : "-",
-        lineTotal.toFixed(2)
+        `₹ ${baseUnitPrice.toFixed(2)}`,
+        `₹ ${baseTotal.toFixed(2)}`,
+        isIntraState ? `${cgstRate}% / ${sgstRate}%` : `${igstRate}%`,
+        `₹ ${taxAmount.toFixed(2)}`,
+        `₹ ${lineTotal.toFixed(2)}`
       ];
     });
 
@@ -211,12 +270,12 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       head: [
         [
           { content: 'Sr', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'Goods & Service Discription', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
+          { content: 'Goods & Service Description', rowSpan: 2, styles: { halign: 'left', valign: 'middle' } },
           { content: 'HSN', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
           { content: 'Quantity', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
           { content: 'Rate', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } },
           { content: 'Taxable', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } },
-          { content: 'GST', colSpan: 2, styles: { halign: 'center' } },
+          { content: isIntraState ? 'CGST / SGST' : 'IGST', colSpan: 2, styles: { halign: 'center' } },
           { content: 'Total', rowSpan: 2, styles: { halign: 'right', valign: 'middle' } }
         ],
         [
@@ -235,8 +294,8 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
         3: { cellWidth: 15, halign: 'center' },
         4: { cellWidth: 20, halign: 'right' },
         5: { cellWidth: 22, halign: 'right' },
-        6: { cellWidth: 12, halign: 'center' },
-        7: { cellWidth: 18, halign: 'right' },
+        6: { cellWidth: 18, halign: 'center' },
+        7: { cellWidth: 20, halign: 'right' },
         8: { cellWidth: 25, halign: 'right' }
       },
       margin: { left: 10, right: 10 },
@@ -245,10 +304,10 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
           { content: 'Sub-Total:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
           { content: totalQuantity.toString(), styles: { halign: 'center', fontStyle: 'bold' } },
           { content: '', styles: { halign: 'right' } },
-          { content: subtotalTaxable.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: `₹ ${subtotalTaxable.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } },
           { content: '', styles: { halign: 'center' } },
-          { content: (totalIgst + totalCgst + totalSgst).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: parseFloat(invoice.total_amount).toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }
+          { content: `₹ ${(totalIgst + totalCgst + totalSgst).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: `₹ ${(subtotalTaxable + totalIgst + totalCgst + totalSgst).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
         ]
       ],
       footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 }
@@ -257,14 +316,14 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     let finalY = (doc as any).lastAutoTable.finalY;
 
     // Check if footer fits, otherwise add page
-    if (finalY + 75 > doc.internal.pageSize.getHeight() - 10) {
+    if (finalY + 85 > doc.internal.pageSize.getHeight() - 10) {
       doc.addPage();
       finalY = 10;
     }
 
     // Draw Footer Outer Box
     doc.setLineWidth(0.3);
-    doc.rect(10, finalY, 190, 70); // height 70
+    doc.rect(10, finalY, 190, 80); // height 80
 
     // Left side: Bank Details
     doc.setFont("helvetica", "bold");
@@ -304,9 +363,23 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.setFillColor(220, 235, 245);
     doc.rect(10, finalY + 30, 120, 5, "F");
     doc.setFont("helvetica", "bold");
-    doc.text("Invoice Total in Word", 12, finalY + 34);
+    doc.text("Invoice Total (In Words)", 12, finalY + 34);
+
+    // Ensure accurate calculation
+    const freightAmount = parseFloat(invoice.shipping_amount || 0);
+    const freightGst = Math.round(freightAmount * 0.18 * 100) / 100;
+    const discountAmount = parseFloat(invoice.discount_amount || 0);
+
+    const calculatedGrandTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + freightAmount + freightGst - discountAmount;
+
+    // Calculations Verification
+    const tolerance = 1.0; // 1 rupee tolerance for floating point math
+    if (Math.abs(calculatedGrandTotal - parseFloat(invoice.total_amount)) > tolerance) {
+      console.warn(`Calculated total (${calculatedGrandTotal}) differs from invoice total (${invoice.total_amount})`);
+    }
+
     doc.setFont("helvetica", "normal");
-    doc.text(`Rupees ${numberToWords(Math.round(parseFloat(invoice.total_amount)))} Only`, 12, finalY + 40);
+    doc.text(`Rupees ${numberToWords(Math.round(calculatedGrandTotal))} Only`, 12, finalY + 40);
 
     // Line below words
     doc.line(10, finalY + 44, 200, finalY + 44);
@@ -320,61 +393,70 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
     doc.text("E. & O.E.", 12, finalY + 62);
 
     // Right Side: Summary Table
-    doc.line(130, finalY, 130, finalY + 70); // vertical line for summary
+    doc.line(130, finalY, 130, finalY + 80); // vertical line for summary
 
     doc.setFillColor(220, 235, 245);
     doc.rect(130, finalY, 70, 5, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.text("SUMMARY", 145, finalY + 4);
-    doc.text("AMOUNT", 198, finalY + 4, { align: "right" });
+    doc.text("SUMMARY", 135, finalY + 4);
+    doc.text("AMOUNT", 195, finalY + 4, { align: "right" });
 
     doc.line(130, finalY + 5, 200, finalY + 5);
 
+    let currentY = finalY + 9;
+
     doc.setFont("helvetica", "normal");
-    doc.text("CGST Amt :", 175, finalY + 9, { align: "right" });
-    doc.text(totalCgst.toFixed(2), 198, finalY + 9, { align: "right" });
-    doc.line(130, finalY + 10, 200, finalY + 10);
+    doc.text("Taxable Value", 135, currentY);
+    doc.text(`₹ ${subtotalTaxable.toFixed(2)}`, 195, currentY, { align: "right" });
+    doc.line(130, currentY + 1, 200, currentY + 1);
+    currentY += 5;
 
-    doc.text("SGST Amt :", 175, finalY + 14, { align: "right" });
-    doc.text(totalSgst.toFixed(2), 198, finalY + 14, { align: "right" });
-    doc.line(130, finalY + 15, 200, finalY + 15);
+    if (isIntraState) {
+      doc.text("CGST Amount", 135, currentY);
+      doc.text(`₹ ${totalCgst.toFixed(2)}`, 195, currentY, { align: "right" });
+      doc.line(130, currentY + 1, 200, currentY + 1);
+      currentY += 5;
 
-    doc.text("IGST Amt :", 175, finalY + 19, { align: "right" });
-    doc.text(totalIgst.toFixed(2), 198, finalY + 19, { align: "right" });
-    doc.line(130, finalY + 20, 200, finalY + 20);
+      doc.text("SGST Amount", 135, currentY);
+      doc.text(`₹ ${totalSgst.toFixed(2)}`, 195, currentY, { align: "right" });
+      doc.line(130, currentY + 1, 200, currentY + 1);
+      currentY += 5;
+    } else {
+      doc.text("IGST Amount", 135, currentY);
+      doc.text(`₹ ${totalIgst.toFixed(2)}`, 195, currentY, { align: "right" });
+      doc.line(130, currentY + 1, 200, currentY + 1);
+      currentY += 5;
+    }
 
-    doc.text("Freight Packing Charges :", 175, finalY + 24, { align: "right" });
-    doc.text(parseFloat(invoice.shipping_amount).toFixed(2), 198, finalY + 24, { align: "right" });
-    doc.line(130, finalY + 25, 200, finalY + 25);
+    doc.text("Freight Charges", 135, currentY);
+    doc.text(`₹ ${freightAmount.toFixed(2)}`, 195, currentY, { align: "right" });
+    doc.line(130, currentY + 1, 200, currentY + 1);
+    currentY += 5;
 
-    const discountAmount = parseFloat(invoice.discount_amount || 0);
-    doc.text("Discount :", 175, finalY + 29, { align: "right" });
-    doc.text(discountAmount > 0 ? `-${discountAmount.toFixed(2)}` : "0.00", 198, finalY + 29, { align: "right" });
-    doc.line(130, finalY + 30, 200, finalY + 30);
+    doc.text("GST on Freight", 135, currentY);
+    doc.text(`₹ ${freightGst.toFixed(2)}`, 195, currentY, { align: "right" });
+    doc.line(130, currentY + 1, 200, currentY + 1);
+    currentY += 5;
 
-    const shippingGst = Math.round(parseFloat(invoice.shipping_amount) * 0.18 * 100) / 100;
-    doc.text("Shipping GST (18%) :", 175, finalY + 34, { align: "right" });
-    doc.text(shippingGst.toFixed(2), 198, finalY + 34, { align: "right" });
-    doc.line(130, finalY + 35, 200, finalY + 35);
-
-    // Calculate precise sum vs rounded total for actual roundoff
-    const rawTotal = subtotalTaxable + totalCgst + totalSgst + totalIgst + parseFloat(invoice.shipping_amount) + shippingGst - discountAmount;
-    const finalRoundedTotal = parseFloat(invoice.total_amount);
+    doc.text("Discount", 135, currentY);
+    doc.text(discountAmount > 0 ? `-₹ ${discountAmount.toFixed(2)}` : "₹ 0.00", 195, currentY, { align: "right" });
+    doc.line(130, currentY + 1, 200, currentY + 1);
+    currentY += 5;
 
     doc.setFillColor(220, 235, 245);
-    doc.rect(130, finalY + 35, 70, 9, "F");
+    doc.rect(130, currentY, 70, 9, "F");
     doc.setFont("helvetica", "bold");
-    doc.text("Total Amount :", 175, finalY + 41, { align: "right" });
-    doc.text(finalRoundedTotal.toFixed(2), 198, finalY + 41, { align: "right" });
+    doc.text("Grand Total", 135, currentY + 6);
+    doc.text(`₹ ${calculatedGrandTotal.toFixed(2)}`, 195, currentY + 6, { align: "right" });
 
     // Signature
     doc.setFont("helvetica", "normal");
-    doc.text("For, UC ENTERPRISES", 165, finalY + 50, { align: "center" });
-    doc.text("Authorised Signatory", 165, finalY + 63, { align: "center" });
+    doc.text("For, UC ENTERPRISES", 165, finalY + 60, { align: "center" });
+    doc.text("Authorized Signatory", 165, finalY + 75, { align: "center" });
 
     doc.setFont("helvetica", "bold");
-    doc.text("Thank You For Business With US!", 110, finalY + 120, { align: "center" });
+    doc.text("Thank You For Doing Business With Us!", 105, finalY + 100, { align: "center" });
 
     // 4. Save to buffer and upload to Supabase Storage
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

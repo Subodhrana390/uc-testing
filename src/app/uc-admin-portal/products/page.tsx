@@ -806,6 +806,7 @@ export default function ProductsPage() {
               <RefreshCw className="w-4.5 h-4.5 animate-duration-1000" />
               <span>Refresh</span>
             </Button>
+
             <Link href="/uc-admin-portal/products/add" passHref legacyBehavior>
               <Button className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2">
                 <Plus className="w-4 h-4" /> Add Product

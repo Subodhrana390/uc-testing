@@ -5,7 +5,7 @@ import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { useEffect, useState } from "react";
 
-export default function CartButton() {
+export default function CartButton({ onClick }: { onClick?: (e: React.MouseEvent) => void }) {
   const cartCount = useCartStore((state) => state.items.length);
 
   // Hydration fix for Zustand persist
@@ -15,7 +15,16 @@ export default function CartButton() {
   const count = isMounted ? cartCount : 0;
 
   return (
-    <Link href="/cart" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors">
+    <Link
+      href="/cart"
+      onClick={(e) => {
+        if (window.innerWidth < 640 && onClick) {
+          e.preventDefault();
+          onClick(e);
+        }
+      }}
+      className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors"
+    >
       <div className="relative">
         <ShoppingCart className="h-5 w-5" />
         {count > 0 && (

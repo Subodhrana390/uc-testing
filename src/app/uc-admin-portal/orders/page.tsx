@@ -978,57 +978,7 @@ export default function OrdersPage() {
     }
   };
 
-  const handleSyncShipment = async (orderId: string) => {
-    setIsSyncingShipment(true);
-    const toastId = toast.loading("Syncing courier shipment status...");
-    try {
-      const response = await fetch("/api/cron/sync-shipments?bypass=true", {
-        method: "GET"
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Sync failed");
-      
-      toast.success(`Shipment synced successfully! (${data.synced || 0} updated)`, { id: toastId });
-      
-      // Refresh selected order
-      const { data: refreshed, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          items:order_items (
-            *,
-            products (
-              name,
-              hsn_code,
-              is_tax_inclusive,
-              igst_rate,
-              cgst_rate,
-              sgst_rate
-            )
-          ),
-          status_history:order_status_history (
-            *
-          ),
-          shipments (
-            *
-          )
-        `)
-        .eq("id", orderId)
-        .single();
-      
-      if (refreshed) {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...refreshed } : o));
-        setTableOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...refreshed, items: refreshed.items } : o));
-        setSelectedOrder(refreshed);
-      }
-      
-      fetchTableOrders();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to sync shipment", { id: toastId });
-    } finally {
-      setIsSyncingShipment(false);
-    }
-  };
+
 
   const exportToPDF = async () => {
     const { default: jsPDF } = await import("jspdf");
@@ -2082,17 +2032,17 @@ export default function OrdersPage() {
 
       {/* Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[850px] gap-0 p-0 bg-white border border-zinc-200 shadow-xl rounded-2xl overflow-hidden">
-          <DialogHeader className="p-6 pb-4 border-b border-zinc-150">
-            <DialogTitle className="text-zinc-900 font-bold">
+        <DialogContent className="sm:max-w-[850px] max-h-[90vh] gap-0 p-0 bg-white border border-zinc-200 shadow-xl rounded-2xl overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-zinc-150 shrink-0">
+            <DialogTitle className="text-zinc-900 font-bold text-sm sm:text-base break-all">
               Order Details - {selectedOrder ? getDisplayOrderId(selectedOrder.id, selectedOrder.created_at) : ""}
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">
+            <DialogDescription className="text-zinc-500 text-xs sm:text-sm">
               Manage order status and view customer details
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh]">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {selectedOrder && (
               <div className="p-6 space-y-6 text-[#18181b]">
                 {/* Order Status Controller */}
@@ -2132,7 +2082,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-sm">
                   <div className="space-y-1">
                     <h4 className="font-bold text-zinc-900">Customer Information</h4>
                     <p className="text-zinc-600">{selectedOrder.customer_name}</p>
@@ -2248,7 +2198,7 @@ export default function OrdersPage() {
 
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-zinc-900">Purchased Items</h4>
-                  <div className="rounded-xl border border-zinc-200 overflow-hidden">
+                  <div className="rounded-xl border border-zinc-200 overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-zinc-50">
                         <TableRow className="border-b border-zinc-200">
@@ -2515,24 +2465,6 @@ export default function OrdersPage() {
                             <p className="text-[10px] text-zinc-400 font-medium">Granular courier transit logs</p>
                           </div>
                         </div>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shrink-0"
-                          onClick={() => handleSyncShipment(selectedOrder.id)}
-                          disabled={isSyncingShipment}
-                        >
-                          {isSyncingShipment ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5" /> Sync Courier
-                            </>
-                          )}
-                        </Button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-xs">
@@ -2728,9 +2660,9 @@ export default function OrdersPage() {
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
 
-          <div className="p-6 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between mt-auto">
+          <div className="p-6 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between mt-auto shrink-0">
             <span className="text-sm font-bold text-zinc-600">Total Invoice Amount</span>
             <span className="text-xl font-extrabold text-[#18181b]">
               ₹{selectedOrder ? parseFloat(selectedOrder.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
