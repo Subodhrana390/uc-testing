@@ -4,6 +4,7 @@ import "jspdf-autotable";
 import { numberToWords } from "@/lib/numberToWords";
 import { getDisplayOrderId } from "@/lib/order";
 import { LOGO_BASE_64 } from "@/lib/logo-base64";
+import { ROBOTO_REGULAR_BASE64, ROBOTO_BOLD_BASE64 } from "@/lib/font-base64";
 
 const getLogoBase64 = () => {
   return LOGO_BASE_64;
@@ -92,6 +93,11 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     // 4. Generate PDF
     const doc = new jsPDF();
+    doc.addFileToVFS("Roboto-Regular.ttf", ROBOTO_REGULAR_BASE64);
+    doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
+    doc.addFileToVFS("Roboto-Bold.ttf", ROBOTO_BOLD_BASE64);
+    doc.addFont("Roboto-Bold.ttf", "Roboto", "bold");
+
     const pageWidth = doc.internal.pageSize.getWidth();
 
     const businessInfo = {
@@ -285,8 +291,8 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
       ],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
-      bodyStyles: { textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
+      headStyles: { font: "Roboto", fillColor: [220, 235, 245], textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
+      bodyStyles: { font: "Roboto", textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
         1: { cellWidth: 'auto' },
@@ -310,7 +316,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
           { content: `₹ ${(subtotalTaxable + totalIgst + totalCgst + totalSgst).toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold' } }
         ]
       ],
-      footStyles: { fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 }
+      footStyles: { font: "Roboto", fillColor: 255, textColor: 0, lineWidth: 0.1, lineColor: 0, fontSize: 8 }
     });
 
     let finalY = (doc as any).lastAutoTable.finalY;
@@ -406,7 +412,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     let currentY = finalY + 9;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Roboto", "normal");
     doc.text("Taxable Value", 135, currentY);
     doc.text(`₹ ${subtotalTaxable.toFixed(2)}`, 195, currentY, { align: "right" });
     doc.line(130, currentY + 1, 200, currentY + 1);
@@ -446,7 +452,7 @@ export async function generateAndStoreInvoicePDF(invoiceId: string) {
 
     doc.setFillColor(220, 235, 245);
     doc.rect(130, currentY, 70, 9, "F");
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Roboto", "bold");
     doc.text("Grand Total", 135, currentY + 6);
     doc.text(`₹ ${calculatedGrandTotal.toFixed(2)}`, 195, currentY + 6, { align: "right" });
 
