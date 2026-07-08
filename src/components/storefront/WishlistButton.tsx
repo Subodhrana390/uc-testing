@@ -6,7 +6,7 @@ import { Heart } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function WishlistButton({ className }: { className?: string }) {
+export default function WishlistButton({ className, onClick }: { className?: string; onClick?: (e: React.MouseEvent) => void }) {
   const [count, setCount] = useState(0);
   const supabase = createClient();
   const user = useAuthStore((state) => state.user);
@@ -50,6 +50,12 @@ export default function WishlistButton({ className }: { className?: string }) {
   return (
     <Link 
       href="/account/wishlist" 
+      onClick={(e) => {
+        if (window.innerWidth < 640 && onClick) {
+          e.preventDefault();
+          onClick(e);
+        }
+      }}
       className={className || "inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors"}
     >
       <div className="relative">

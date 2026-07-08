@@ -26,6 +26,8 @@ import {
 import CartButton from "@/components/storefront/CartButton";
 import WishlistButton from "@/components/storefront/WishlistButton";
 import HeaderSearch from "@/components/storefront/HeaderSearch";
+import CartDrawer from "@/components/storefront/CartDrawer";
+import WishlistDrawer from "@/components/storefront/WishlistDrawer";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,6 +48,8 @@ interface HeaderProps {
 export default function Header({ categories, user, settings, navLinks }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();
 
@@ -80,9 +84,8 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
 
   return (
     <>
-      <div className="sticky top-0 z-50 w-full">
-        {/* Top Bar */}
-        <div className="bg-zinc-950 text-white overflow-hidden">
+      {/* Top Bar */}
+      <div className="bg-zinc-950 text-white overflow-hidden w-full">
           <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto flex flex-wrap items-center justify-between gap-3 py-2 text-[11px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-6">
               <a
@@ -109,7 +112,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
           </div>
         </div>
 
-        <header className="border-b border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm">
+        <header className="sticky lg:relative top-0 z-50 border-b lg:border-b-0 border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm lg:shadow-none">
           <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
             <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-8 relative">
               <div className="flex items-center gap-1 sm:gap-4 shrink-0 min-w-0">
@@ -220,14 +223,35 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   {isMobileSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                 </button>
 
-                <WishlistButton />
+                <WishlistButton onClick={() => setIsWishlistOpen(true)} />
 
-                <CartButton />
+                <CartButton onClick={() => setIsCartOpen(true)} />
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8 py-3 border-t border-zinc-50 text-sm font-semibold text-zinc-700">
+            {/* Mobile Search (toggle) */}
+            <AnimatePresence>
+              {isMobileSearchOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="lg:hidden overflow-hidden"
+                >
+                  <div className="pb-3">
+                    <HeaderSearch />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </header>
+
+        {/* Desktop Navigation (Sticky) */}
+        <div className="sticky top-0 z-40 hidden lg:block w-full border-t border-b border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm">
+          <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
+            <nav className="flex items-center gap-8 py-3 text-sm font-semibold text-zinc-700">
               {/* Categories Trigger */}
               <div className="group relative">
                 <button className="inline-flex items-center gap-2 text-primary hover:text-red-700 transition-colors">
@@ -316,26 +340,8 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 </Link>
               ))}
             </nav>
-
-            {/* Mobile Search (toggle) */}
-            <AnimatePresence>
-              {isMobileSearchOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeInOut" }}
-                  className="lg:hidden overflow-hidden"
-                >
-                  <div className="pb-3">
-                    <HeaderSearch />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-        </header>
-      </div>
+        </div>
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
@@ -408,7 +414,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
 
                     {/* Wishlist */}
                     <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm">
-                      <WishlistButton />
+                      <WishlistButton onClick={() => { setIsMobileMenuOpen(false); setIsWishlistOpen(true); }} />
                       <span>Saved</span>
                     </div>
                   </div>
@@ -491,6 +497,8 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
           </>
         )}
       </AnimatePresence>
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <WishlistDrawer isOpen={isWishlistOpen} onClose={() => setIsWishlistOpen(false)} />
     </>
   );
 }
