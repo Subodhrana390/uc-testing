@@ -29,18 +29,21 @@ export default async function HomePage() {
   const [
     { flashDeals, newArrivals, featuredProducts, sections },
     { data: categories },
+    { data: parentCategories },
     { data: banners },
     { data: deals },
     { data: faqs }
   ] = await Promise.all([
     getDynamicSections(),
     supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", true).order("name", { ascending: true }),
+    supabase.from("categories").select("id, name, slug, parent_id,image_url").eq("status", true).is("parent_id", null).order("name", { ascending: true }).limit(8),
     supabase.from("banners").select("*").eq("status", true).order("position", { ascending: true }),
     supabase.from("deals").select("*").eq("status", true).order("position", { ascending: true }),
     supabase.from("faqs").select("id, question, answer, category").eq("is_published", true).order("sort_order", { ascending: true })
   ]);
 
   const safeCategories = categories || [];
+  const safeParentCategories = parentCategories || [];
   const safeBanners = banners || [];
 
   const safeFlashDeals = flashDeals || [];
@@ -136,14 +139,13 @@ export default async function HomePage() {
         </div>
 
         {/* Dynamic Curved Glass category cards */}
-        <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          {safeCategories
-            .filter((c) => !c.parent_id)
+        <div className="flex overflow-x-auto md:grid gap-5 md:grid-cols-3 lg:grid-cols-6 pb-4 md:pb-0 custom-scrollbar">
+          {safeParentCategories
             .map((category) => (
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className="bg-white overflow-hidden"
+                className="bg-white overflow-hidden w-[160px] md:w-auto shrink-0 md:shrink group"
               >
                 {/* Image */}
                 <div className="relative h-40 w-full bg-zinc-50">

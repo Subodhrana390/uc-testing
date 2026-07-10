@@ -491,7 +491,7 @@ export default function ProductDetailsClient({
                 <span>Share</span>
               </button>
             </div>
-            <p className="text-base leading-relaxed text-zinc-600 max-w-2xl">
+            <p className="text-base text-justify leading-relaxed text-zinc-600 max-w-2xl">
               {activeProduct.short_description}
             </p>
           </div>
@@ -509,8 +509,8 @@ export default function ProductDetailsClient({
                           key={val}
                           onClick={() => setSelectedAttributes({ ...selectedAttributes, [attrKey]: val })}
                           className={`px-4 py-2 text-sm font-semibold border rounded-lg transition-all ${isSelected
-                              ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
-                              : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                            ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
                             }`}
                         >
                           {val}

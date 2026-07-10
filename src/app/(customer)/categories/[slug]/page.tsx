@@ -228,11 +228,8 @@ export default async function CategoryPage({
             {!safeProducts.length && (
               <div className="space-y-12 w-full">
                 {/* No Products Found */}
-                <div className="border border-zinc-200/80 bg-white p-16 rounded-xl shadow-2xs text-center flex flex-col items-center justify-center">
+                <div className="border border-zinc-200/80 bg-white p-8 rounded-xl shadow-2xs text-center flex flex-col items-center justify-center">
                   <h3 className="text-lg font-bold text-zinc-900 mb-2">No products found</h3>
-                  <p className="text-sm font-medium text-zinc-500 max-w-sm">
-                    We couldn't find any published products in this category matching your current filters.
-                  </p>
                 </div>
 
                 {/* Browse Other Categories */}

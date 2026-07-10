@@ -202,19 +202,19 @@ export default function ProductSidebarFilters({
 
       <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Price (₹)</h3>
-        
+
         <div className="space-y-4 py-2">
           {/* Dual Range Slider Container */}
           <div className="relative h-2 w-full bg-zinc-100 rounded-lg">
             {/* Highlights the range between min and max */}
-            <div 
+            <div
               className="absolute h-2 bg-primary rounded-lg"
               style={{
                 left: `${(minPrice / 200000) * 100}%`,
                 right: `${100 - (maxPrice / 200000) * 100}%`
               }}
             />
-            
+
             {/* Min Range Slider */}
             <input
               type="range"
@@ -374,7 +374,7 @@ export default function ProductSidebarFilters({
       })}
 
       {/* ── Rating ─────────────────────── */}
-      <div className="space-y-2">
+      <div className="bg-white border border-zinc-200/80 p-5 rounded-xl shadow-2xs space-y-4">
         <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Avg Rating</h4>
         <div className="space-y-1">
           {[5, 4, 3, 2, 1].map((stars) => {

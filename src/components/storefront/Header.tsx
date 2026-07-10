@@ -173,14 +173,14 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 {!user ? (
                   <button
                     onClick={goToLogin}
-                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                    className="lg:hidden p-2 text-zinc-700 hover:text-primary"
                   >
                     <User className="h-4 w-4" />
                   </button>
                 ) : (
                   <Link
                     href="/account/profile"
-                    className="sm:hidden p-2 text-zinc-700 hover:text-primary"
+                    className="lg:hidden p-2 text-zinc-700 hover:text-primary"
                   >
                     <User className="h-4 w-4" />
                   </Link>
@@ -189,13 +189,13 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 {!user ? (
                   <button
                     onClick={goToLogin}
-                    className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
+                    className="hidden lg:inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                   >
                     <User className="h-4 w-4" />
                     <span>Login</span>
                   </button>
                 ) : (
-                  <div className="hidden sm:flex items-center gap-3">
+                  <div className="hidden lg:flex items-center gap-3">
                     <Link
                       href="/account/profile"
                       className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
@@ -259,9 +259,9 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
                 {/* Categories Dropdown */}
-                <div className="invisible absolute left-0 top-full z-50 mt-2 w-[550px] border border-zinc-100 bg-white opacity-0 shadow-2xl rounded-none overflow-hidden transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-y-1 flex">
+                <div className="invisible absolute left-0 top-full z-50 mt-2 w-[820px] border border-zinc-100 bg-white opacity-0 shadow-2xl rounded-none overflow-hidden transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-y-1 flex">
                   {/* Main Categories (Left Sidebar) */}
-                  <div className="w-1/3 bg-zinc-50 border-r border-zinc-100 p-2 max-h-[450px] overflow-y-auto custom-scrollbar">
+                  <div className="w-[32%] bg-zinc-50 border-r border-zinc-100 p-2 max-h-[450px] overflow-y-auto custom-scrollbar">
                     <div className="space-y-1 mt-1">
                       {categories
                         .filter((c) => !c.parent_id)
@@ -269,14 +269,14 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                           <div key={mainCat.id} className="group/main">
                             <Link
                               href={`/categories/${mainCat.slug}`}
-                              className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
+                              className="flex items-center justify-between gap-3 w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
                             >
-                              {mainCat.name}
-                              <ChevronDown className="h-4 w-4 -rotate-90 opacity-40 group-hover/main:opacity-100" />
+                              <span className="truncate">{mainCat.name}</span>
+                              <ChevronDown className="h-4 w-4 -rotate-90 opacity-40 group-hover/main:opacity-100 shrink-0" />
                             </Link>
 
                             {/* Subcategories (Right Panel) */}
-                            <div className="invisible absolute left-[33.33%] top-0 w-[66.66%] h-full p-5 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar text-left">
+                            <div className="invisible absolute left-[32%] top-0 w-[68%] h-full pt-8 px-6 pb-8 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar text-left">
                               <div className="flex items-center justify-between mb-5">
                                 <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
                                   {mainCat.name}
@@ -288,7 +288,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                                   View All
                                 </Link>
                               </div>
-                              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                              <div className="grid grid-cols-2 gap-x-8 gap-y-3.5">
                                 {categories
                                   .filter((sub) => sub.parent_id === mainCat.id)
                                   .map((subCat) => (
@@ -408,7 +408,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                         className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm min-w-0"
                       >
                         <User className="h-4 w-4 text-primary shrink-0" />
-                        <span className="truncate max-w-[75px]">{displayName}</span>
+                        <span className="truncate max-w-[75px]">{firstName}</span>
                       </Link>
                     )}
 

@@ -210,7 +210,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Content Section */}
-      <Link href={`/products/${product.slug}`} className="p-2.5 space-y-1.5 flex-1 flex flex-col">
+      <Link href={`/products/${product.slug}`} className="px-2.5 pt-2.5 pb-1 space-y-1.5 flex-1 flex flex-col">
         {/* Category & Rating */}
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[75%]" title={displayCategory}>{displayCategory}</span>
@@ -247,15 +247,15 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       {/* Bottom Action Bar with expanded Cart button */}
-      <div className="px-2.5 pb-2.5 mt-auto">
+      <div className="px-2.5 pb-2.5">
         <button
           onClick={toggleCart}
           disabled={product.stock_quantity === 0}
           className={`w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-xl transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] active:scale-[0.97] whitespace-nowrap ${product.stock_quantity === 0
-              ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
-              : inCart
-                ? "bg-emerald-600 text-white"
-                : "bg-primary text-white hover:bg-zinc-950"
+            ? "bg-zinc-200 text-zinc-500 cursor-not-allowed"
+            : inCart
+              ? "bg-emerald-600 text-white"
+              : "bg-primary text-white hover:bg-zinc-950"
             }`}
         >
           {product.stock_quantity === 0 ? (
