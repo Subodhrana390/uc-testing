@@ -426,7 +426,7 @@ export default function ProductDetailsClient({
           {/* Main Image */}
           <div className="flex-1 w-full relative">
             <div
-              className="relative w-full aspect-square overflow-hidden rounded-2xl group cursor-zoom-in bg-white border border-zinc-100"
+              className="relative w-full aspect-square overflow-hidden rounded-2xl group cursor-zoom-in bg-white"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseMove={(e) => {

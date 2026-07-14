@@ -80,11 +80,11 @@ export default async function CategoriesPage({
         </div>
 
         {/* Categories Grid */}
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-8 [column-fill:_balance] w-full">
           {categoriesWithSubs.map((main) => (
             <div
               key={main.id}
-              className="group relative flex flex-col bg-white border border-orange-100 p-8 transition-all hover:border-primary hover:shadow-2xl hover:shadow-primary/5"
+              className="break-inside-avoid mb-8 group relative flex flex-col bg-white border border-orange-100 p-6 rounded-2xl overflow-hidden transition-all hover:border-primary hover:shadow-2xl hover:shadow-primary/5"
             >
               {/* Large Background Ghost Icon */}
               <div className="absolute -bottom-6 -right-6 w-48 h-48 opacity-[0.04] pointer-events-none group-hover:opacity-[0.08] transition-opacity group-hover:rotate-12 duration-500">
@@ -92,8 +92,21 @@ export default async function CategoriesPage({
               </div>
 
               <div className="relative z-10 flex flex-col h-full">
-                <Link href={`/categories/${main.slug}`} className="mb-6 flex h-16 w-16 items-center justify-center bg-orange-50 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                  <FolderTree className="h-8 w-8" />
+                <Link
+                  href={`/categories/${main.slug}`}
+                  className="mb-6 relative h-40 w-full overflow-hidden rounded-xl bg-orange-50/50 flex items-center justify-center text-primary transition-all"
+                >
+                  {main.image_url ? (
+                    <Image
+                      src={main.image_url}
+                      alt={main.name}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <FolderTree className="h-10 w-10 text-primary/70 transition-transform duration-300 group-hover:scale-110" />
+                  )}
                 </Link>
 
                 <div className="space-y-4 flex-1">
@@ -106,17 +119,26 @@ export default async function CategoriesPage({
                   {main.subs.length > 0 && (
                     <div className="flex flex-col gap-2 pt-2">
                       <p className="text-[9px] font-black uppercase tracking-widest text-zinc-300 mb-1">Sub Categories</p>
-                      {main.subs.map((sub) => (
+                      {main.subs.slice(0, 5).map((sub) => (
                         <Link
                           key={sub.id}
                           href={`/categories/${sub.slug}`}
-                          className={`flex items-center gap-2 text-[11px] font-bold transition-colors ${subFilter === sub.slug ? "text-primary" : "text-zinc-500 hover:text-primary"
-                            }`}
+                          className={`flex items-center gap-2 text-[11px] font-bold transition-colors ${
+                            subFilter === sub.slug ? "text-primary" : "text-zinc-500 hover:text-primary"
+                          }`}
                         >
                           <ChevronRight className={`w-3 h-3 ${subFilter === sub.slug ? "text-primary" : "text-primary/40"}`} />
                           {sub.name}
                         </Link>
                       ))}
+                      {main.subs.length > 5 && (
+                        <Link
+                          href={`/categories/${main.slug}`}
+                          className="text-[10px] font-bold text-primary hover:underline mt-1 pl-5"
+                        >
+                          + {main.subs.length - 5} more
+                        </Link>
+                      )}
                     </div>
                   )}
 
