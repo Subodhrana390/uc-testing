@@ -638,7 +638,7 @@ export default function OrderDetailsPage() {
                   )
                 )}
 
-                {!["cancelled", "failed"].includes(order.status?.toLowerCase()) && (
+                {["delivered", "returned", "return_requested", "return_approved", "refund_pending", "refunded"].includes(order.status?.toLowerCase()) && (
                   <Button
                     onClick={() => handleDownloadInvoice(order)}
                     variant="outline"
@@ -1039,7 +1039,35 @@ export default function OrderDetailsPage() {
                 igstAmt = fallbackIgst;
               }
 
-              const actualTax = cgstAmt + sgstAmt + igstAmt;
+              let actualTax = cgstAmt + sgstAmt + igstAmt;
+
+              // Determine if Shipping GST was applied and deduct it from display CGST/SGST/IGST
+              let shippingGst = 0;
+              const expectedShipGst = shipAmt * 0.18;
+              if (expectedShipGst > 0) {
+                if (hasSplitTax) {
+                  if (igstAmt > 0 && igstAmt >= expectedShipGst - 0.1) {
+                    shippingGst = expectedShipGst;
+                    igstAmt -= shippingGst;
+                  } else if (cgstAmt > 0 && cgstAmt >= (expectedShipGst / 2) - 0.1) {
+                    shippingGst = expectedShipGst;
+                    cgstAmt -= shippingGst / 2;
+                    sgstAmt -= shippingGst / 2;
+                  }
+                  actualTax = cgstAmt + sgstAmt + igstAmt;
+                } else {
+                  // Fallback heuristic if it was calculated purely on items
+                  if (baseSubtotal === 0 && totalAmt > 0) {
+                    const rawTaxAmt = parseFloat(order.tax_amount || 0);
+                    baseSubtotal = totalAmt - rawTaxAmt - shipAmt + discAmt;
+                  }
+                  const tempExpectedTotal = baseSubtotal + actualTax + shipAmt - discAmt;
+                  const diff = totalAmt - tempExpectedTotal;
+                  if (diff > 0 && Math.abs(diff - expectedShipGst) < 0.1) {
+                    shippingGst = diff;
+                  }
+                }
+              }
 
               if (baseSubtotal === 0 && totalAmt > 0) {
                 // Fallback if no items found
@@ -1050,11 +1078,9 @@ export default function OrderDetailsPage() {
               // Clamp to prevent negative subtotals in edge cases
               baseSubtotal = Math.max(0, Math.round(baseSubtotal * 100) / 100);
 
-              const expectedTotal = baseSubtotal + actualTax + shipAmt - discAmt;
+              const expectedTotal = baseSubtotal + actualTax + shipAmt + shippingGst - discAmt;
               const diff = totalAmt - expectedTotal;
-              const isShippingGst = diff > 0 && Math.abs(diff - (shipAmt * 0.18)) < 0.1;
-              const shippingGst = isShippingGst ? diff : 0;
-              const roundOff = isShippingGst ? 0 : diff;
+              const roundOff = diff;
 
               return (
                 <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50/50 space-y-2.5 max-w-sm ml-auto mt-6">

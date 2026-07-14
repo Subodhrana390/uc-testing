@@ -499,7 +499,7 @@ function TrackOrderContent() {
                         </div>
                       )}
 
-                      {order.status?.toLowerCase() === "delivered" ? (
+                      {["delivered", "returned", "return_requested", "return_approved", "refund_pending", "refunded"].includes(order.status?.toLowerCase()) && (
                         <button
                           onClick={() => handleDownloadInvoice(order)}
                           className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 active:scale-95 transition-all text-xs font-bold uppercase tracking-wider group"
@@ -507,10 +507,6 @@ function TrackOrderContent() {
                           Download Invoice
                           <FileDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
                         </button>
-                      ) : (
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-dashed border-white/10 rounded-xl px-3 py-2 whitespace-nowrap">
-                          Invoice after delivery
-                        </p>
                       )}
                     </div>
 

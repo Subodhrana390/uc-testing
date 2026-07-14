@@ -335,7 +335,7 @@ export default function OrderHistoryPage() {
 
 
 
-  const { data: fetchedOrders, isLoading: loading, refetch: refreshOrders } = useOrders();
+  const { data: fetchedOrders, isLoading: loading, isFetching: refreshing, refetch: refreshOrders } = useOrders();
   
   useEffect(() => {
     if (fetchedOrders) {
@@ -417,11 +417,12 @@ export default function OrderHistoryPage() {
         <div className="flex items-center gap-3">
           <Button
             onClick={() => refreshOrders()}
+            disabled={refreshing}
             variant="outline"
             className="h-9 gap-1.5 border-zinc-200 text-zinc-600 hover:bg-zinc-50"
           >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+            {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
           <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "current" | "archived")}>
             <TabsList className="bg-zinc-100 rounded-lg h-9">
