@@ -17,10 +17,10 @@ export default async function NotFound() {
   const user = authData?.user || null;
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="w-full flex h-full flex-col bg-white">
       <Header categories={categories || []} user={user} />
 
-      <main className="flex-1 flex flex-col">
+      <main className="w-full flex-1 flex flex-col">
         <NotFoundClient />
       </main>
 

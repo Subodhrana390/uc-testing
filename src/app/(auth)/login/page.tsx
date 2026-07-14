@@ -454,11 +454,11 @@ export default function LoginPage() {
   }, [supabase]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50">
+    <div className="w-full min-h-screen flex flex-col bg-zinc-50">
       <Header categories={categories} user={user} />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center py-12 md:py-20 px-4 sm:px-6">
+      <main className="w-full flex-1 flex items-center justify-center py-12 md:py-20 px-4 sm:px-6">
         <Suspense fallback={
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />

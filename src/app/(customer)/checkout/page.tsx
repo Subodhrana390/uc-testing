@@ -910,7 +910,7 @@ export default function CheckoutPage() {
             {/* Stepper UI */}
             <div className="mb-4 sm:mb-8">
               <div className="flex items-center justify-between relative px-1 sm:px-2 z-10">
-                <div className="absolute left-[20px] right-[20px] sm:left-[28px] sm:right-[28px] top-[16px] sm:top-5 -translate-y-1/2 h-1 sm:h-1.5 bg-zinc-100 rounded-full -z-10">
+                <div className="absolute left-[16px] right-[16px] sm:left-[20px] sm:right-[20px] md:left-[28px] md:right-[28px] top-[16px] sm:top-5 -translate-y-1/2 h-1 sm:h-1.5 bg-zinc-100 rounded-full -z-10">
                   <div className="h-full bg-primary rounded-full transition-all duration-500 ease-in-out" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
                 </div>
 
@@ -932,7 +932,7 @@ export default function CheckoutPage() {
                         {isCompleted ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : item.step}
                       </div>
                       <span className={cn(
-                        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-white px-1 sm:px-2",
+                        "text-[9px] xs:text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-white px-1 sm:px-2 whitespace-nowrap",
                         isActive ? "text-zinc-950" : isCompleted ? "text-primary" : "text-zinc-400"
                       )}>
                         {item.label}
@@ -1025,7 +1025,7 @@ export default function CheckoutPage() {
                   )}
                 </section>
 
-                <div className="hidden lg:flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end pt-4 gap-3">
                   <button onClick={handleNextStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Continue to Payment
                   </button>
@@ -1109,7 +1109,7 @@ export default function CheckoutPage() {
                       ) : (
                         <div className="space-y-6">
                           {/* Banks Grid */}
-                          <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
                             {emiProviders.map((prov) => (
                               <div
                                 key={prov.id}
@@ -1136,7 +1136,7 @@ export default function CheckoutPage() {
                           {selectedProviderId && (
                             <div className="space-y-3">
                               <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400">Available Tenures</h4>
-                              <div className="grid gap-3 sm:grid-cols-3">
+                              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
                                 {emiProviders
                                   .find((p) => p.id === selectedProviderId)
                                   ?.plans.map((plan: any) => (
@@ -1208,7 +1208,7 @@ export default function CheckoutPage() {
                   <button onClick={handlePrevStep} className="rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-950 font-bold text-xs sm:text-sm transition inline-flex items-center justify-center gap-2">
                     Back to Shipping
                   </button>
-                  <button onClick={handleNextStep} className="hidden lg:inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition items-center justify-center gap-2">
+                  <button onClick={handleNextStep} className="inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary text-white font-bold text-xs sm:text-sm transition items-center justify-center gap-2">
                     Continue to Review
                   </button>
                 </div>
@@ -1303,7 +1303,7 @@ export default function CheckoutPage() {
                   <button
                     onClick={handlePlaceOrder}
                     disabled={submitting || isPlacingOrder}
-                    className="hidden lg:inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2"
+                    className="inline-flex rounded-xl h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center gap-2"
                   >
                     {submitting || isPlacingOrder
                       ? "Processing..."
@@ -1360,7 +1360,7 @@ export default function CheckoutPage() {
 
                   {(actualTax > 0 || deliveryCharge > 0 || shippingGst > 0) && (
                     <details className="group">
-                      <summary className="flex justify-between text-xs font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors">
+                      <summary className="flex justify-between text-xs font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors [&::-webkit-details-marker]:hidden">
                         <span className="flex items-center gap-1">
                           <span className="text-[10px] transition-transform duration-200 group-open:rotate-90">▶</span>
                           TOTAL FEE
@@ -1562,7 +1562,7 @@ export default function CheckoutPage() {
 
                     {(actualTax > 0 || deliveryCharge > 0 || shippingGst > 0) && (
                       <details className="group">
-                        <summary className="flex justify-between text-[11px] font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors">
+                        <summary className="flex justify-between text-[11px] font-bold text-zinc-500 cursor-pointer list-none appearance-none group-hover:text-zinc-700 transition-colors [&::-webkit-details-marker]:hidden">
                           <span className="flex items-center gap-1">
                             <span className="text-[9px] transition-transform duration-200 group-open:rotate-90">▶</span>
                             TOTAL FEE

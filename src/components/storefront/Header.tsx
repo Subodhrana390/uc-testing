@@ -112,7 +112,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
           </div>
         </div>
 
-        <header className="sticky lg:relative top-0 z-50 border-b lg:border-b-0 border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm lg:shadow-none">
+        <header className="w-full sticky lg:relative top-0 z-50 border-b lg:border-b-0 border-zinc-100 bg-white/95 backdrop-blur-md shadow-sm lg:shadow-none">
           <div className="w-full px-4 md:px-8 2xl:px-12 mx-auto">
             <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-8 relative">
               <div className="flex items-center gap-1 sm:gap-4 shrink-0 min-w-0">

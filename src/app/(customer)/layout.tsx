@@ -34,7 +34,7 @@ export default async function CustomerLayout({
   const activeNavLinks = (navLinks || []).filter(link => link.is_active);
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="w-full flex min-h-screen flex-col bg-white">
       <Header 
         categories={categories || []} 
         user={user} 
@@ -42,7 +42,7 @@ export default async function CustomerLayout({
         navLinks={activeNavLinks} 
       />
 
-      <main className="flex-1">{children}</main>
+      <main className="w-full flex-1">{children}</main>
 
       <Footer settings={settings} />
       <BackToTop />
