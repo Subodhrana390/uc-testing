@@ -14,7 +14,10 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { items, updateQuantity, removeItem, getCartTotal } = useCartStore();
+  const items = useCartStore((state) => state.items);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const getCartTotal = useCartStore((state) => state.getCartTotal);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {

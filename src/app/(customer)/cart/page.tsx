@@ -21,7 +21,11 @@ import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency, getExclusivePrice } from "@/lib/format";
 
 export default function CartPage() {
-  const { items, updateQuantity: updateCartItemQuantity, removeItem: removeCartItem, getCartTotal, getCartCount } = useCartStore();
+  const items = useCartStore((state) => state.items);
+  const updateCartItemQuantity = useCartStore((state) => state.updateQuantity);
+  const removeCartItem = useCartStore((state) => state.removeItem);
+  const getCartTotal = useCartStore((state) => state.getCartTotal);
+  const getCartCount = useCartStore((state) => state.getCartCount);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => setIsMounted(true), []);

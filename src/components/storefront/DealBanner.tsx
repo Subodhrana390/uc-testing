@@ -8,6 +8,7 @@ interface DealBannerProps {
   linkUrl: string;
   imageUrl?: string;
   gradient?: string;
+  priority?: boolean;
 }
 
 export default function DealBanner({
@@ -16,7 +17,8 @@ export default function DealBanner({
   linkText, // eslint-disable-line no-unused-vars
   linkUrl,
   imageUrl,
-  gradient = "from-zinc-900 via-zinc-800 to-zinc-950"
+  gradient = "from-zinc-900 via-zinc-800 to-zinc-950",
+  priority = false
 }: DealBannerProps) {
   const content = (
     <div data-nosnippet className={`relative overflow-hidden aspect-[16/9] md:aspect-[3/1] w-full bg-gradient-to-r ${gradient}`}>
@@ -29,6 +31,7 @@ export default function DealBanner({
             alt=""
             fill
             sizes="100vw"
+            priority={priority}
             placeholder="blur"
             blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
             className="w-full h-full object-cover object-center pointer-events-none"

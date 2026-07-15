@@ -189,12 +189,24 @@ function SearchInput() {
           onKeyDown={handleKeyDown}
           placeholder="Search products, categories, brands..."
           className="h-11 w-full rounded-full border border-zinc-200 bg-zinc-100/50 pl-10 pr-4 text-sm text-left outline-none transition-all hover:bg-zinc-100 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 shadow-inner"
+          aria-label="Search Catalog"
+          role="combobox"
+          aria-expanded={showSuggestions && hasSuggestions}
+          aria-autocomplete="list"
+          aria-controls="search-results-listbox"
+          aria-haspopup="listbox"
+          aria-activedescendant={activeIndex >= 0 ? `search-item-${activeIndex}` : undefined}
         />
       </form>
 
       {/* Auto Suggestions Grouped Dropdown */}
       {showSuggestions && debouncedQuery.length >= 1 && (loading || hasSuggestions || (!loading && !hasSuggestions)) && (
-        <div className="absolute top-14 left-0 right-0 z-50 overflow-hidden bg-white border border-zinc-200 shadow-2xl rounded-2xl animate-in fade-in duration-150 divide-y divide-zinc-150 max-h-[450px] overflow-y-auto custom-scrollbar">
+        <div 
+          id="search-results-listbox"
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute top-14 left-0 right-0 z-50 overflow-hidden bg-white border border-zinc-200 shadow-2xl rounded-2xl animate-in fade-in duration-150 divide-y divide-zinc-150 max-h-[450px] overflow-y-auto custom-scrollbar"
+        >
           
           {/* Loading state inside the search results area */}
           {loading && (
@@ -221,6 +233,9 @@ function SearchInput() {
                 const isHighlighted = index === activeIndex;
                 return (
                   <Link 
+                    id={`search-item-${index}`}
+                    role="option"
+                    aria-selected={isHighlighted}
                     href={`/search?q=${encodeURIComponent(suggestions.did_you_mean || "")}`}
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => {
@@ -251,6 +266,9 @@ function SearchInput() {
                       return (
                         <Link
                           key={cat.id}
+                          id={`search-item-${index}`}
+                          role="option"
+                          aria-selected={isHighlighted}
                           href={`/categories/${cat.slug}`}
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => setShowSuggestions(false)}
@@ -279,6 +297,9 @@ function SearchInput() {
                       return (
                         <Link
                           key={brand.id}
+                          id={`search-item-${index}`}
+                          role="option"
+                          aria-selected={isHighlighted}
                           href={`/products?brand=${encodeURIComponent(brand.name)}`}
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => setShowSuggestions(false)}
@@ -307,6 +328,9 @@ function SearchInput() {
                       return (
                         <Link
                           key={prod.id}
+                          id={`search-item-${index}`}
+                          role="option"
+                          aria-selected={isHighlighted}
                           href={`/products/${prod.slug}`}
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => setShowSuggestions(false)}

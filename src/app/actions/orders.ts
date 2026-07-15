@@ -5,8 +5,45 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { getReturnWindowInfo } from '@/lib/order'
 import { createServiceRoleClient } from "@/utils/supabase/service-role";
-import { number } from 'zod'
+import { z } from 'zod'
 
+const createOrderSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  postalCode: z.string().min(6, "Postal code must be at least 6 characters"),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      slug: z.string(),
+      name: z.string(),
+      price: z.number(),
+      quantity: z.number().min(1),
+      image_url: z.string().optional().nullable(),
+      variant_id: z.string().optional().nullable(),
+      product_id: z.string().optional().nullable(),
+    })
+  ).min(1, "Order must contain at least one item"),
+  total: z.number().min(0),
+  taxAmount: z.number().optional(),
+  shippingAmount: z.number().optional(),
+  paymentMethod: z.string().min(1),
+  deliveryEstimate: z.string().optional(),
+  paymentStatus: z.string().optional(),
+  couponCode: z.string().optional(),
+  isEmi: z.boolean().optional(),
+  emiProviderId: z.string().optional(),
+  emiPlanId: z.string().optional(),
+  emiTenure: z.number().optional(),
+  emiMonthlyInstallment: z.number().optional(),
+  emiInterestRate: z.number().optional(),
+  emiTotalPayable: z.number().optional(),
+  emiDetails: z.any().optional(),
+  country: z.string().optional(),
+});
 
 export async function createOrder(orderData: {
   fullName: string
@@ -35,6 +72,11 @@ export async function createOrder(orderData: {
   country?: string
 }) {
   try {
+    const parsed = createOrderSchema.safeParse(orderData);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues.map((issue) => issue.message).join(", ") };
+    }
+
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()

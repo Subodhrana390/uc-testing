@@ -43,7 +43,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { addItem, removeItem, isInCart } = useCartStore();
+  const addItem = useCartStore((state) => state.addItem);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const isAdded = useCartStore((state) => state.items.some((i) => i.id === product.id));
   const user = useAuthStore((state) => state.user);
   const isAuthInitialized = useAuthStore((state) => state.isInitialized);
 
@@ -75,7 +77,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   }, [product.id, supabase, user, isAuthInitialized]);
 
-  const inCart = isMounted ? isInCart(product.id) : false;
+  const inCart = isMounted ? isAdded : false;
 
   const price = Number(product.price);
   const salePrice = product.sale_price ? Number(product.sale_price) : 0;

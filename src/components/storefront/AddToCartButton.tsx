@@ -32,12 +32,14 @@ export default function AddToCartButton({
   label = "Add to Cart",
   allowRemove = true,
 }: Props) {
-  const { addItem, removeItem, isInCart } = useCartStore();
+  const addItem = useCartStore((state) => state.addItem);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const isAddedInCart = useCartStore((state) => state.items.some((i) => i.id === product.id));
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => setIsMounted(true), []);
 
-  const isAdded = isMounted ? isInCart(product.id) : false;
+  const isAdded = isMounted ? isAddedInCart : false;
   const isOutOfStock = product.stock_quantity === 0;
 
   return (

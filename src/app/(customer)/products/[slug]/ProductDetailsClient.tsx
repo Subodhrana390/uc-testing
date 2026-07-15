@@ -28,8 +28,9 @@ export default function ProductDetailsClient({
   frequentlyBoughtTogetherEnabled?: boolean;
 }) {
   const router = useRouter();
-  const { addItem, updateQuantity, isInCart, items: cartItems } = useCartStore();
-  const existingCartItem = useMemo(() => cartItems.find((item) => item.id === product.id), [cartItems, product.id]);
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const existingCartItem = useCartStore((state) => state.items.find((item) => item.id === product.id));
 
   const originalPrice = Number(product.price);
   const salePriceVal = product.sale_price ? Number(product.sale_price) : 0;
@@ -217,10 +218,10 @@ export default function ProductDetailsClient({
   };
 
   useEffect(() => {
-    if (activeProduct && isInCart(activeProduct.id) && existingCartItem && existingCartItem.quantity !== quantity) {
+    if (activeProduct && existingCartItem && existingCartItem.quantity !== quantity) {
       updateQuantity(activeProduct.id, quantity);
     }
-  }, [quantity, activeProduct.id, existingCartItem, isInCart, updateQuantity]);
+  }, [quantity, activeProduct.id, existingCartItem, updateQuantity]);
 
   const renderTabContent = (tabId: string) => {
     switch (tabId) {
@@ -293,13 +294,13 @@ export default function ProductDetailsClient({
       case "manufacturing":
         return (
           <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm flow-root"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info || "<p>Manufacturing details pending.</p>") }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.manufacturing_info) }}
           />
         );
       case "warranty":
         return (
           <div className="prose prose-sm sm:prose-base max-w-none text-zinc-700 leading-relaxed prose-img:rounded-2xl prose-img:mx-auto prose-img:w-auto prose-img:max-h-[500px] prose-img:object-contain prose-img:my-6 prose-img:shadow-sm flow-root"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info || "<p>Warranty details pending.</p>") }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.warranty_info) }}
           />
         );
       case "shipping":

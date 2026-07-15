@@ -26,8 +26,10 @@ import {
 import CartButton from "@/components/storefront/CartButton";
 import WishlistButton from "@/components/storefront/WishlistButton";
 import HeaderSearch from "@/components/storefront/HeaderSearch";
-import CartDrawer from "@/components/storefront/CartDrawer";
-import WishlistDrawer from "@/components/storefront/WishlistDrawer";
+import dynamic from "next/dynamic";
+
+const CartDrawer = dynamic(() => import("@/components/storefront/CartDrawer"), { ssr: false });
+const WishlistDrawer = dynamic(() => import("@/components/storefront/WishlistDrawer"), { ssr: false });
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
