@@ -15,12 +15,8 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/uc-admin-portal/",
           "/api/",
-          "/checkout/",
-          "/cart/",
           "/account/",
-          "/search/",
           "/*?q=*", // Block internal search queries from indexation to save crawl budget
-          "/_next/",
         ],
       },
       // Block known scrapers and aggressive SEO tools
