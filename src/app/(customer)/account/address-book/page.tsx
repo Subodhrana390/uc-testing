@@ -186,7 +186,7 @@ export default function AddressBookPage() {
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900">Address Book</h1>
           <p className="text-sm text-zinc-500 mt-1">Manage your delivery addresses</p>
           {returnTo && (
-            <Link
+            <Link prefetch={false}
               href={returnTo}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 mt-2"
             >

@@ -92,7 +92,7 @@ export default function PolicyLayout({
           <nav aria-label="Breadcrumb">
             <ol className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
               <li>
-                <Link href="/" className="hover:text-zinc-700 transition">
+                <Link prefetch={false} href="/" className="hover:text-zinc-700 transition">
                   Home
                 </Link>
               </li>
@@ -136,7 +136,7 @@ export default function PolicyLayout({
                 const PageIcon = page.icon;
                 const isActive = pathname === page.href;
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={page.href}
                     href={page.href}
                     className={cn(

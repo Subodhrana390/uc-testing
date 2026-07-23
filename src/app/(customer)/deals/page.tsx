@@ -68,7 +68,7 @@ export default async function DealsPage() {
                   {deal.image_url ? (
                     <div className="relative h-44 bg-orange-50 overflow-hidden">
                       {dealLink ? (
-                        <Link href={dealLink}>
+                        <Link prefetch={false} href={dealLink}>
                           <Image src={deal.image_url} alt={deal.title} fill className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                         </Link>
                       ) : (
@@ -92,7 +92,7 @@ export default async function DealsPage() {
                         </div>
                       )}
                       {dealLink ? (
-                        <Link href={dealLink} className="block">
+                        <Link prefetch={false} href={dealLink} className="block">
                           <h2 className="text-xl font-bold text-zinc-950 group-hover:text-primary transition-colors">{deal.title}</h2>
                         </Link>
                       ) : (
@@ -103,7 +103,7 @@ export default async function DealsPage() {
                     <div className="space-y-3 pt-2">
                       {deal.end_date && <CountdownTimer endDate={deal.end_date} />}
                       {dealLink && (
-                        <Link href={dealLink} className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-primary hover:underline">
+                        <Link prefetch={false} href={dealLink} className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-primary hover:underline">
                           View Deal<ArrowRight className="w-3 h-3" />
                         </Link>
                       )}

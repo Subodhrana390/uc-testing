@@ -48,7 +48,7 @@ export default function WishlistButton({ className, onClick }: { className?: str
   }, [user]);
 
   return (
-    <Link 
+    <Link prefetch={false} 
       href="/account/wishlist" 
       onClick={(e) => {
         if (window.innerWidth < 640 && onClick) {

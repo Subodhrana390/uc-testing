@@ -54,7 +54,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
             Try again
           </button>
           
-          <Link
+          <Link prefetch={false}
             href="/"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl font-bold text-sm transition-all duration-200 active:scale-95 cursor-pointer shadow-sm"
           >

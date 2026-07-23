@@ -62,7 +62,7 @@ export default function Pagination({
     const isCurrent = page === currentPage;
     
     return (
-      <Link
+      <Link prefetch={false}
         key={index}
         href={getPageHref(page)}
         onClick={(e) => handlePageClick(page, e)}
@@ -79,7 +79,7 @@ export default function Pagination({
 
   return (
     <div className="flex items-center justify-center gap-2 py-10">
-      <Link
+      <Link prefetch={false}
         href={getPageHref(Math.max(1, currentPage - 1))}
         onClick={(e) => handlePageClick(Math.max(1, currentPage - 1), e)}
         className={`flex h-10 w-10 items-center justify-center border border-zinc-100 bg-white text-zinc-500 transition-all hover:border-primary hover:text-primary ${currentPage === 1 ? "pointer-events-none opacity-30" : ""}`}
@@ -101,7 +101,7 @@ export default function Pagination({
         return elements;
       })}
 
-      <Link
+      <Link prefetch={false}
         href={getPageHref(Math.min(totalPages, currentPage + 1))}
         onClick={(e) => handlePageClick(Math.min(totalPages, currentPage + 1), e)}
         className={`flex h-10 w-10 items-center justify-center border border-zinc-100 bg-white text-zinc-500 transition-all hover:border-primary hover:text-primary ${currentPage === totalPages ? "pointer-events-none opacity-30" : ""}`}

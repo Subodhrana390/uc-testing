@@ -527,7 +527,7 @@ export default function OrderDetailsPage() {
   if (!order) {
     return (
       <div className="space-y-6">
-        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
+        <Link prefetch={false} href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </Link>
         <Card className="border-dashed py-16 text-center space-y-4">
@@ -538,7 +538,7 @@ export default function OrderDetailsPage() {
             <h3 className="text-base font-semibold text-zinc-900">Order not found</h3>
             <p className="text-sm text-zinc-500 max-w-xs mx-auto mt-1">We couldn't retrieve the details for this order. It may not exist or you may not have permission to view it.</p>
           </div>
-          <Link href="/account/orders">
+          <Link prefetch={false} href="/account/orders">
             <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
               View Order History
             </Button>
@@ -557,7 +557,7 @@ export default function OrderDetailsPage() {
     <div className="space-y-6">
       {/* Navigation Breadcrumbs */}
       <div className="flex items-center justify-between">
-        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
+        <Link prefetch={false} href="/account/orders" className="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-red-600 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Orders
         </Link>
 
@@ -751,7 +751,7 @@ export default function OrderDetailsPage() {
                   )}
                 </div>
                 {order.tracking_id && !["delivered", "cancelled", "returned", "refunded", "return_requested", "return_approved", "refund_pending"].includes(order.status?.toLowerCase()) && (
-                  <Link href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="inline-block mt-3">
+                  <Link prefetch={false} href={`/track-order?orderId=${getDisplayOrderId(order.id, order.created_at)}`} className="inline-block mt-3">
                     <Button variant="link" size="sm" className="text-red-600 hover:text-red-700 p-0 text-xs font-semibold h-auto">
                       Live tracking view <ChevronRight className="w-3 h-3 ml-0.5" />
                     </Button>

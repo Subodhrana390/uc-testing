@@ -110,7 +110,7 @@ export default function Footer({ settings }: FooterProps) {
           <ul className="space-y-4 text-sm text-zinc-500 font-medium text-left">
             {footerLinks.company.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="hover:text-primary transition-colors">
+                <Link prefetch={false} href={link.href} className="hover:text-primary transition-colors">
                   {link.label}
                 </Link>
               </li>
@@ -124,7 +124,7 @@ export default function Footer({ settings }: FooterProps) {
           <ul className="space-y-4 text-sm text-zinc-500 font-medium text-left">
             {footerLinks.policies.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="hover:text-primary transition-colors">
+                <Link prefetch={false} href={link.href} className="hover:text-primary transition-colors">
                   {link.label}
                 </Link>
               </li>

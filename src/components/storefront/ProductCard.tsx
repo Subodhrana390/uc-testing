@@ -161,7 +161,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div data-nosnippet className="group/prodcard relative flex flex-col bg-transparent transition-all h-full overflow-hidden rounded-2xl">
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden">
-        <Link href={`/products/${product.slug}`} className="absolute inset-0 z-0">
+        <Link prefetch={false} href={`/products/${product.slug}`} className="absolute inset-0 z-0">
           {product.image_url ? (
             <Image
               src={product.image_url}
@@ -212,7 +212,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Content Section */}
-      <Link href={`/products/${product.slug}`} className="px-2.5 pt-2.5 pb-1 space-y-1.5 flex-1 flex flex-col">
+      <Link prefetch={false} href={`/products/${product.slug}`} className="px-2.5 pt-2.5 pb-1 space-y-1.5 flex-1 flex flex-col">
         {/* Category & Rating */}
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[75%]" title={displayCategory}>{displayCategory}</span>

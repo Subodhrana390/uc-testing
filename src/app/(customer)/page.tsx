@@ -98,7 +98,7 @@ export default async function HomePage() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Flash Sale</p>
               <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Industrial Deals of the Week</h2>
             </div>
-            <Link
+            <Link prefetch={false}
               href="/products?filter=on-sale"
               className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
             >
@@ -130,7 +130,7 @@ export default async function HomePage() {
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Categories</p>
             <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Browse your product categories</h2>
           </div>
-          <Link
+          <Link prefetch={false}
             href="/categories"
             className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
           >
@@ -142,7 +142,7 @@ export default async function HomePage() {
         <div className="flex overflow-x-auto md:grid gap-5 md:grid-cols-3 lg:grid-cols-6 pb-4 md:pb-0 custom-scrollbar">
           {safeParentCategories
             .map((category) => (
-              <Link
+              <Link prefetch={false}
                 key={category.id}
                 href={`/categories/${category.slug}`}
                 className="bg-white overflow-hidden w-[160px] md:w-auto shrink-0 md:shrink group"
@@ -198,7 +198,7 @@ export default async function HomePage() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Fresh</p>
               <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">New Arrivals</h2>
             </div>
-            <Link
+            <Link prefetch={false}
               href="/products?sort=latest"
               className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
             >
@@ -217,7 +217,7 @@ export default async function HomePage() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Curated</p>
               <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">Featured Products</h2>
             </div>
-            <Link
+            <Link prefetch={false}
               href="/products"
               className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
             >
@@ -237,7 +237,7 @@ export default async function HomePage() {
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{section.tag}</p>
                 <h2 className="mt-1 text-2xl md:text-3xl font-extrabold text-zinc-950 tracking-tight">{section.title}</h2>
               </div>
-              <Link
+              <Link prefetch={false}
                 href={section.href}
                 className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary hover:text-red-700 transition-colors"
               >
@@ -289,7 +289,7 @@ export default async function HomePage() {
         <FAQAccordion items={safeFaqs.slice(0, 5)} className="max-w-3xl mx-auto" />
 
         <div className="text-center mt-10">
-          <Link
+          <Link prefetch={false}
             href="/faq"
             className="inline-flex items-center justify-center gap-2 bg-zinc-950 text-white hover:bg-zinc-800 active:scale-95 transition-all text-xs font-bold px-6 py-3.5 rounded-xl shadow-sm uppercase tracking-wider"
           >

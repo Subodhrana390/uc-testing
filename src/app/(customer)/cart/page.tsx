@@ -39,7 +39,7 @@ export default function CartPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Breadcrumb */}
         <div className="mb-6">
-          <Link href="/products" className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors">
+          <Link prefetch={false} href="/products" className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors">
             <ChevronLeft className="w-4 h-4" />
             Continue Shopping
           </Link>
@@ -66,7 +66,7 @@ export default function CartPage() {
               <p className="text-zinc-500 mb-8 max-w-md mx-auto text-sm sm:text-base leading-relaxed">
                 Looks like you haven't added any products to your cart yet. Explore our catalog to find what you need.
               </p>
-              <Link
+              <Link prefetch={false}
                 href="/products"
                 className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-zinc-950 text-white font-bold hover:bg-primary hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
               >
@@ -101,7 +101,7 @@ export default function CartPage() {
                   <div className="flex-1 flex flex-col min-w-0 py-1">
                     <div className="flex justify-between gap-4 items-start">
                       <div className="space-y-2 max-w-xl">
-                        <Link
+                        <Link prefetch={false}
                           href={`/products/${item.slug}`}
                           className="text-sm font-bold text-zinc-900 hover:text-primary transition-colors line-clamp-2 leading-snug pr-4"
                         >
@@ -224,7 +224,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="pt-6 space-y-4">
-                  <Link href="/checkout" className="block">
+                  <Link prefetch={false} href="/checkout" className="block">
                     <button className="w-full h-12 rounded-xl bg-zinc-950 hover:bg-primary hover:shadow-lg hover:shadow-primary/20 text-white font-bold text-sm transition-all active:scale-[0.98]">
                       Proceed to Checkout
                     </button>

@@ -385,7 +385,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div className="flex items-center gap-4">
-          <Link href="/uc-admin-portal/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors shrink-0">
+          <Link prefetch={false} href="/uc-admin-portal/products" className="p-2 border rounded-md hover:bg-gray-50 transition-colors shrink-0">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <div>

@@ -15,7 +15,7 @@ export default function CartButton({ onClick }: { onClick?: (e: React.MouseEvent
   const count = isMounted ? cartCount : 0;
 
   return (
-    <Link
+    <Link prefetch={false}
       href="/cart"
       onClick={(e) => {
         if (window.innerWidth < 640 && onClick) {

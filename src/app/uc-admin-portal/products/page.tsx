@@ -748,7 +748,7 @@ export default function ProductsPage() {
         const product = info.row.original;
         return (
           <div className="flex items-center justify-end gap-1">
-            <Link href={`/uc-admin-portal/products/${product.id}`} passHref legacyBehavior>
+            <Link prefetch={false} href={`/uc-admin-portal/products/${product.id}`} passHref legacyBehavior>
               <Button variant="ghost" className="w-8 h-8 p-0 rounded-lg text-zinc-400 hover:text-[#f97316] hover:bg-zinc-100">
                 <Edit className="w-4 h-4" />
               </Button>
@@ -807,7 +807,7 @@ export default function ProductsPage() {
               <span>Refresh</span>
             </Button>
 
-            <Link href="/uc-admin-portal/products/add" passHref legacyBehavior>
+            <Link prefetch={false} href="/uc-admin-portal/products/add" passHref legacyBehavior>
               <Button className="h-11 px-5 bg-white/20 hover:bg-white/30 text-white font-bold text-sm rounded-xl transition-all border border-white/10 shadow-sm gap-2">
                 <Plus className="w-4 h-4" /> Add Product
               </Button>

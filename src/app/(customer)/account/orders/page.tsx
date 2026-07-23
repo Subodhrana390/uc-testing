@@ -588,7 +588,7 @@ export default function OrderHistoryPage() {
                 <h3 className="text-base font-semibold text-zinc-900">No orders found</h3>
                 <p className="text-sm text-zinc-500 max-w-xs mx-auto mt-1">No orders match your current filters.</p>
               </div>
-              <Link href="/products">
+              <Link prefetch={false} href="/products">
                 <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
                   Start Shopping
                 </Button>

@@ -121,7 +121,7 @@ export default async function ProductsPage({
                   We couldn't find anything matching your current filters or search term.
                 </p>
                 <div className="mt-6">
-                  <Link
+                  <Link prefetch={false}
                     href="/products"
                     className="inline-flex items-center justify-center text-xs font-medium h-9 px-4 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 transition-all shadow-sm"
                   >

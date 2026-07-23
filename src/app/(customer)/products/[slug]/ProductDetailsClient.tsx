@@ -366,13 +366,13 @@ export default function ProductDetailsClient({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-medium text-zinc-500 mb-4">
-        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+        <Link prefetch={false} href="/" className="hover:text-primary transition-colors">Home</Link>
         <span className="text-zinc-300">/</span>
-        <Link href="/products" className="hover:text-primary transition-colors">Products</Link>
+        <Link prefetch={false} href="/products" className="hover:text-primary transition-colors">Products</Link>
         <span className="text-zinc-300">/</span>
         {product.categories?.parent?.name && (
           <>
-            <Link
+            <Link prefetch={false}
               href={`/categories/${product.categories.parent.slug}`}
               className="hover:text-primary transition-colors"
             >
@@ -383,7 +383,7 @@ export default function ProductDetailsClient({
         )}
         {product.categories?.slug && (
           <>
-            <Link
+            <Link prefetch={false}
               href={`/categories/${product.categories.slug}`}
               className="hover:text-primary transition-colors"
             >

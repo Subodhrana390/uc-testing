@@ -92,7 +92,7 @@ export default async function CategoriesPage({
               </div>
 
               <div className="relative z-10 flex flex-col h-full">
-                <Link
+                <Link prefetch={false}
                   href={`/categories/${main.slug}`}
                   className="mb-6 relative h-40 w-full overflow-hidden rounded-xl bg-orange-50/50 flex items-center justify-center text-primary transition-all"
                 >
@@ -110,7 +110,7 @@ export default async function CategoriesPage({
                 </Link>
 
                 <div className="space-y-4 flex-1">
-                  <Link href={`/categories/${main.slug}`} className="block group/title">
+                  <Link prefetch={false} href={`/categories/${main.slug}`} className="block group/title">
                     <h2 className="text-2xl font-black text-zinc-950 uppercase tracking-tight group-hover/title:text-primary transition-colors">
                       {main.name}
                     </h2>
@@ -120,7 +120,7 @@ export default async function CategoriesPage({
                     <div className="flex flex-col gap-2 pt-2">
                       <p className="text-[9px] font-black uppercase tracking-widest text-zinc-300 mb-1">Sub Categories</p>
                       {main.subs.slice(0, 5).map((sub) => (
-                        <Link
+                        <Link prefetch={false}
                           key={sub.id}
                           href={`/categories/${sub.slug}`}
                           className={`flex items-center gap-2 text-[11px] font-bold transition-colors ${
@@ -132,7 +132,7 @@ export default async function CategoriesPage({
                         </Link>
                       ))}
                       {main.subs.length > 5 && (
-                        <Link
+                        <Link prefetch={false}
                           href={`/categories/${main.slug}`}
                           className="text-[10px] font-bold text-primary hover:underline mt-1 pl-5"
                         >
@@ -149,7 +149,7 @@ export default async function CategoriesPage({
                   )}
                 </div>
 
-                <Link
+                <Link prefetch={false}
                   href={`/categories/${main.slug}`}
                   className="mt-8 pt-6 border-t border-orange-50 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-primary transition-colors"
                 >

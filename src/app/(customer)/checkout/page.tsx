@@ -891,7 +891,7 @@ export default function CheckoutPage() {
     <div className="bg-[linear-gradient(180deg,#fcfcfd_0%,#ffffff_100%)] min-h-[calc(100vh-80px)] pb-28 lg:pb-20">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
-          <Link
+          <Link prefetch={false}
             href="/cart"
             className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-zinc-400 hover:text-zinc-950 transition-colors shrink-0"
           >
@@ -958,7 +958,7 @@ export default function CheckoutPage() {
                     </div>
 
                     {user && (
-                      <Link href="/account/address-book?returnTo=/checkout">
+                      <Link prefetch={false} href="/account/address-book?returnTo=/checkout">
                         <button className="inline-flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-3 sm:px-4 rounded-lg sm:rounded-xl border border-zinc-200 hover:border-zinc-950 hover:bg-zinc-50 text-[10px] sm:text-xs font-bold text-zinc-700 transition">
                           <span className="hidden sm:inline">Change / Manage</span>
                           <span className="sm:hidden">Manage</span>
@@ -1016,7 +1016,7 @@ export default function CheckoutPage() {
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-zinc-500 text-sm mb-4">No saved addresses found. Please add a shipping address in your address book to proceed.</p>
-                      <Link href="/account/address-book?returnTo=/checkout">
+                      <Link prefetch={false} href="/account/address-book?returnTo=/checkout">
                         <button className="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-zinc-950 text-white font-bold text-xs hover:bg-primary transition">
                           Add Shipping Address
                         </button>

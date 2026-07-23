@@ -329,7 +329,7 @@ function TrackOrderContent() {
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-950">Track Your Order</h1>
             <p className="text-zinc-500 text-sm mt-1 max-w-md">Enter your Order ID (starting with OD) for real-time shipment status.</p>
           </div>
-          <Link href="/account/orders">
+          <Link prefetch={false} href="/account/orders">
             <button className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors border border-zinc-200 rounded-xl px-4 py-2.5 bg-white hover:bg-zinc-50">
               <ReceiptText className="w-4 h-4" /> View All Orders
             </button>

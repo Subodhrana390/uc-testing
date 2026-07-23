@@ -127,7 +127,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 </button>
 
                 {/* Logo */}
-                <Link
+                <Link prefetch={false}
                   href="/"
                   className="shrink flex items-center gap-2 sm:gap-3 group min-w-0 pr-4"
                 >
@@ -180,7 +180,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                     <User className="h-4 w-4" />
                   </button>
                 ) : (
-                  <Link
+                  <Link prefetch={false}
                     href="/account/profile"
                     className="lg:hidden p-2 text-zinc-700 hover:text-primary"
                   >
@@ -198,7 +198,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   </button>
                 ) : (
                   <div className="hidden lg:flex items-center gap-3">
-                    <Link
+                    <Link prefetch={false}
                       href="/account/profile"
                       className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:text-primary transition-colors"
                     >
@@ -269,7 +269,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                         .filter((c) => !c.parent_id)
                         .map((mainCat) => (
                           <div key={mainCat.id} className="group/main">
-                            <Link
+                            <Link prefetch={false}
                               href={`/categories/${mainCat.slug}`}
                               className="flex items-center justify-between gap-3 w-full px-3 py-2.5 text-sm font-bold rounded-xl hover:bg-white hover:text-primary transition-all text-zinc-700"
                             >
@@ -283,7 +283,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                                 <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
                                   {mainCat.name}
                                 </h3>
-                                <Link
+                                <Link prefetch={false}
                                   href={`/categories/${mainCat.slug}`}
                                   className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
                                 >
@@ -294,7 +294,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                                 {categories
                                   .filter((sub) => sub.parent_id === mainCat.id)
                                   .map((subCat) => (
-                                    <Link
+                                    <Link prefetch={false}
                                       key={subCat.id}
                                       href={`/categories/${subCat.slug}`}
                                       className="text-sm font-bold text-zinc-600 hover:text-primary transition-colors py-1"
@@ -331,7 +331,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
               </div>
 
               {linksToRender.map((link) => (
-                <Link
+                <Link prefetch={false}
                   key={link.href}
                   href={link.href}
                   target={link.isExternal ? "_blank" : undefined}
@@ -364,7 +364,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
               className="fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-[101] flex flex-col shadow-2xl"
             >
               <div className="p-5 flex items-center justify-between border-b">
-                <Link
+                <Link prefetch={false}
                   href="/"
                   className="flex items-center gap-2 font-black text-lg tracking-tight"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -404,7 +404,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                         <span>Login</span>
                       </button>
                     ) : (
-                      <Link
+                      <Link prefetch={false}
                         href="/account/profile"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors font-semibold text-sm min-w-0"
@@ -427,7 +427,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                       Menu
                     </p>
                     {linksToRender.map((link) => (
-                      <Link
+                      <Link prefetch={false}
                         key={link.href}
                         href={link.href}
                         target={link.isExternal ? "_blank" : undefined}
@@ -450,7 +450,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                         .filter((c) => !c.parent_id)
                         .map((mainCat) => (
                           <div key={mainCat.id} className="space-y-1">
-                            <Link
+                            <Link prefetch={false}
                               href={`/categories/${mainCat.slug}`}
                               onClick={() => setIsMobileMenuOpen(false)}
                               className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold text-zinc-900 bg-zinc-50 hover:bg-zinc-100 transition-colors"
@@ -461,7 +461,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                               {categories
                                 .filter((sub) => sub.parent_id === mainCat.id)
                                 .map((subCat) => (
-                                  <Link
+                                  <Link prefetch={false}
                                     key={subCat.id}
                                     href={`/categories/${subCat.slug}`}
                                     onClick={() => setIsMobileMenuOpen(false)}

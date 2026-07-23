@@ -2149,7 +2149,7 @@ export default function OrdersPage() {
 
                     {(selectedOrder.transaction_id || selectedOrder.razorpay_payment_id) && (
                       <div className="pt-1.5">
-                        <Link
+                        <Link prefetch={false}
                           href={`/uc-admin-portal/payments?search=${selectedOrder.transaction_id || selectedOrder.razorpay_payment_id}`}
                           className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
                         >

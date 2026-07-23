@@ -324,7 +324,7 @@ export default function InvoiceAdminPage() {
                     </td>
                     <td className="px-6 py-4">
                       {inv.orders ? (
-                        <Link
+                        <Link prefetch={false}
                           href={`/uc-admin-portal/orders?search=${getDisplayOrderId(inv.orders.id, inv.orders.created_at)}`}
                           className="font-mono text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors hover:underline"
                         >

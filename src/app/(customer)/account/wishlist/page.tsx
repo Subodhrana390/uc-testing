@@ -154,7 +154,7 @@ export default function WishlistPage() {
                 </div>
 
                 <h3 className="text-sm sm:text-base font-semibold text-zinc-900 leading-snug line-clamp-2">
-                  <Link href={`/products/${item.products?.slug}`} className="hover:text-red-650 transition-colors">
+                  <Link prefetch={false} href={`/products/${item.products?.slug}`} className="hover:text-red-650 transition-colors">
                     {item.products?.name}
                   </Link>
                 </h3>
@@ -228,7 +228,7 @@ export default function WishlistPage() {
                   Start searching our catalogue for products to add to your list.
                 </p>
               </div>
-              <Link href="/products" className="inline-block">
+              <Link prefetch={false} href="/products" className="inline-block">
                 <Button className="bg-red-600 hover:bg-red-700 text-white h-9 px-6 text-sm">
                   Discover Products <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>

@@ -129,7 +129,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     {/* Item Details */}
                     <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                       <div>
-                        <Link
+                        <Link prefetch={false}
                           href={`/products/${item.slug}`}
                           onClick={onClose}
                           className="text-xs font-bold text-zinc-800 hover:text-primary transition-colors block truncate"
@@ -220,12 +220,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
 
                 <div className="space-y-1.5 pt-1">
-                  <Link href="/checkout" onClick={onClose} className="block">
+                  <Link prefetch={false} href="/checkout" onClick={onClose} className="block">
                     <button className="w-full h-10 bg-zinc-950 hover:bg-primary text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-[0.98]">
                       Proceed to Checkout
                     </button>
                   </Link>
-                  <Link href="/cart" onClick={onClose} className="block text-center">
+                  <Link prefetch={false} href="/cart" onClick={onClose} className="block text-center">
                     <span className="text-xs font-bold text-zinc-500 hover:text-zinc-900 transition-colors py-1 inline-block">
                       View Full Cart &rarr;
                     </span>

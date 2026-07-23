@@ -152,7 +152,7 @@ export default function VariantsPage() {
         const image = product?.images?.[0];
 
         return (
-          <Link href={`/uc-admin-portal/products/${productId}`} className="flex items-center gap-3 font-semibold text-zinc-900 hover:text-primary transition-colors group">
+          <Link prefetch={false} href={`/uc-admin-portal/products/${productId}`} className="flex items-center gap-3 font-semibold text-zinc-900 hover:text-primary transition-colors group">
             {image ? (
               <div className="relative w-10 h-10 rounded-md overflow-hidden bg-zinc-100 shrink-0 border border-zinc-200 group-hover:border-primary/30 transition-colors">
                 <Image src={image} alt={product.name || "Product image"} fill className="object-cover" sizes="40px" />

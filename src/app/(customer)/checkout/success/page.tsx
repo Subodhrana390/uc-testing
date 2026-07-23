@@ -69,14 +69,14 @@ export default function OrderSuccessPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 pt-2">
-          <Link href="/account/orders" className="w-full">
+          <Link prefetch={false} href="/account/orders" className="w-full">
             <button className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md">
               <Package className="w-4 h-4" />
               View My Orders
             </button>
           </Link>
           
-          <Link href="/" className="w-full">
+          <Link prefetch={false} href="/" className="w-full">
             <button className="w-full h-12 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
               <ShoppingBag className="w-4 h-4" />
               Continue Shopping

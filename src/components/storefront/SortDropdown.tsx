@@ -50,7 +50,7 @@ export default function SortDropdown() {
                 params.set("page", "1");
                 const href = `${pathname}?${params.toString()}`;
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={option.value}
                     href={href}
                     onClick={() => setIsOpen(false)}

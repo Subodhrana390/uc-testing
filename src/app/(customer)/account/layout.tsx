@@ -102,7 +102,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                         const isActive = pathname === link.href;
                         return (
                           <li key={link.href}>
-                            <Link
+                            <Link prefetch={false}
                               href={link.href}
                               className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${isActive
                                 ? "bg-red-600 text-white"
@@ -202,7 +202,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                             const isActive = pathname === link.href;
                             return (
                               <li key={link.href}>
-                                <Link
+                                <Link prefetch={false}
                                   href={link.href}
                                   onClick={() => setIsMobileSidebarOpen(false)}
                                   className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium text-sm transition-all ${isActive

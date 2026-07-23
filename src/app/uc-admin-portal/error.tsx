@@ -61,7 +61,7 @@ export default function AdminError({ error, reset }: ErrorProps) {
             Refresh Workspace
           </button>
           
-          <Link
+          <Link prefetch={false}
             href="/uc-admin-portal"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border border-zinc-250 text-zinc-700 hover:bg-zinc-50 rounded-xl font-bold text-sm transition-all duration-250 active:scale-95 cursor-pointer shadow-sm"
           >

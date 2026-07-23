@@ -186,7 +186,7 @@ export default async function SearchPage({
                     <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Related Departments & Lenders</p>
                     <div className="flex flex-wrap justify-center gap-1.5">
                       {spellingSuggestions.categories.map((cat: any) => (
-                        <Link
+                        <Link prefetch={false}
                           key={cat.id}
                           href={`/categories/${cat.slug}`}
                           className="px-3 py-1.5 rounded-full bg-white border border-zinc-250 text-[10px] font-bold text-zinc-650 hover:bg-zinc-50 hover:text-zinc-950 transition-all hover:border-zinc-350 shadow-2xs"
@@ -195,7 +195,7 @@ export default async function SearchPage({
                         </Link>
                       ))}
                       {spellingSuggestions.brands.map((brand: any) => (
-                        <Link
+                        <Link prefetch={false}
                           key={brand.id}
                           href={`/products?brand=${encodeURIComponent(brand.name)}`}
                           className="px-3 py-1.5 rounded-full bg-white border border-zinc-250 text-[10px] font-bold text-zinc-650 hover:bg-zinc-50 hover:text-zinc-950 transition-all hover:border-zinc-350 shadow-2xs"
@@ -208,7 +208,7 @@ export default async function SearchPage({
                 )}
 
                 <div className="mt-6">
-                  <Link
+                  <Link prefetch={false}
                     href="/search"
                     className="inline-flex items-center justify-center text-xs font-medium h-9 px-4 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 transition-all shadow-sm"
                   >

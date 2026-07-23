@@ -141,7 +141,7 @@ export default function BulkUploadPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 pb-6">
         <div className="flex items-center gap-4">
-          <Link href="/uc-admin-portal/products" className="p-2 border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors">
+          <Link prefetch={false} href="/uc-admin-portal/products" className="p-2 border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors">
             <ArrowLeft className="w-5 h-5 text-zinc-600" />
           </Link>
           <div>

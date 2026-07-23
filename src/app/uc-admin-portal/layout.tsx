@@ -364,7 +364,7 @@ export default function AdminLayout({
         </button>
 
         <div className={cn("p-6 border-b border-slate-100 bg-white flex items-center", isSidebarCollapsed ? "justify-center" : "justify-between")}>
-          <Link href="/uc-admin-portal" className="flex items-center gap-3">
+          <Link prefetch={false} href="/uc-admin-portal" className="flex items-center gap-3">
             {/* Logo Image */}
             <div className="w-9 h-9 overflow-hidden flex items-center justify-center select-none shrink-0 relative">
               <Image src="/logo.png" alt="UC Logo" fill sizes="36px" className="object-contain" />
@@ -391,7 +391,7 @@ export default function AdminLayout({
                         const isActive = pathname === item.href;
                         const styles = getMenuItemStyles(item.label, isActive);
                         return (
-                          <Link
+                          <Link prefetch={false}
                             key={item.label}
                             href={item.href}
                             className={cn(
@@ -443,7 +443,7 @@ export default function AdminLayout({
                             const isActive = pathname === item.href;
                             const styles = getMenuItemStyles(item.label, isActive);
                             return (
-                              <Link
+                              <Link prefetch={false}
                                 key={item.label}
                                 href={item.href}
                                 className={cn(
@@ -600,7 +600,7 @@ export default function AdminLayout({
                         const isActive = pathname === item.href;
                         const styles = getMenuItemStyles(item.label, isActive);
                         return (
-                          <Link
+                          <Link prefetch={false}
                             key={item.label}
                             href={item.href}
                             onClick={() => setIsMobileMenuOpen(false)}

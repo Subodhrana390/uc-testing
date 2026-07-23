@@ -179,7 +179,7 @@ export default function AdminLoginPage() {
 
           {/* Footer */}
           <div className="pt-2 flex flex-col items-center gap-4">
-            <Link
+            <Link prefetch={false}
               href="/"
               className="group flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest transition-colors hover:text-indigo-600"
             >

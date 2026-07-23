@@ -176,9 +176,9 @@ export default async function CategoryPage({
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-400">
-            <li><Link href="/">Home</Link></li>
+            <li><Link prefetch={false} href="/">Home</Link></li>
             <li><ChevronRight className="h-3 w-3" /></li>
-            <li><Link href="/categories">Categories</Link></li>
+            <li><Link prefetch={false} href="/categories">Categories</Link></li>
             <li><ChevronRight className="h-3 w-3" /></li>
             <li className="text-zinc-700">{category.name}</li>
           </ol>
@@ -243,7 +243,7 @@ export default async function CategoryPage({
                         .filter(c => c.slug !== category.slug)
                         .slice(0, 6)
                         .map((otherCat) => (
-                          <Link
+                          <Link prefetch={false}
                             key={otherCat.id}
                             href={`/categories/${otherCat.slug}`}
                             className="flex items-center justify-between p-5 rounded-2xl bg-white border border-zinc-200/80 hover:border-primary/30 hover:shadow-sm transition-all group animate-fade-in"

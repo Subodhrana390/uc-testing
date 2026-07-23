@@ -232,7 +232,7 @@ function SearchInput() {
                 const index = getItemIndex("did_you_mean", "dym");
                 const isHighlighted = index === activeIndex;
                 return (
-                  <Link 
+                  <Link prefetch={false} 
                     id={`search-item-${index}`}
                     role="option"
                     aria-selected={isHighlighted}
@@ -264,7 +264,7 @@ function SearchInput() {
                       const index = getItemIndex("category", cat.id);
                       const isHighlighted = index === activeIndex;
                       return (
-                        <Link
+                        <Link prefetch={false}
                           key={cat.id}
                           id={`search-item-${index}`}
                           role="option"
@@ -295,7 +295,7 @@ function SearchInput() {
                       const index = getItemIndex("brand", brand.id);
                       const isHighlighted = index === activeIndex;
                       return (
-                        <Link
+                        <Link prefetch={false}
                           key={brand.id}
                           id={`search-item-${index}`}
                           role="option"
@@ -326,7 +326,7 @@ function SearchInput() {
                       const index = getItemIndex("product", prod.id);
                       const isHighlighted = index === activeIndex;
                       return (
-                        <Link
+                        <Link prefetch={false}
                           key={prod.id}
                           id={`search-item-${index}`}
                           role="option"

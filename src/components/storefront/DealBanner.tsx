@@ -42,7 +42,7 @@ export default function DealBanner({
   );
 
   if (linkUrl) {
-    return <Link href={linkUrl} className="block w-full cursor-pointer">{content}</Link>;
+    return <Link prefetch={false} href={linkUrl} className="block w-full cursor-pointer">{content}</Link>;
   }
 
   return content;

@@ -67,7 +67,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
           </p>
 
           <div className="relative z-10 mt-8 flex flex-wrap items-center gap-4">
-            <Link
+            <Link prefetch={false}
               href="/products"
               className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all hover:scale-[1.01]"
             >
@@ -143,7 +143,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
               }}
             >
               {banner.link_url ? (
-                <Link href={banner.link_url} className="absolute inset-0 block cursor-pointer">
+                <Link prefetch={false} href={banner.link_url} className="absolute inset-0 block cursor-pointer">
                   {slideContent}
                 </Link>
               ) : (

@@ -68,7 +68,7 @@ function ForgotPasswordContainer() {
               <span className="text-sm font-semibold">Secure, encrypted checkout</span>
             </div>
           </div>
-          <Link href="/login">
+          <Link prefetch={false} href="/login">
             <button className="w-full bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-950 hover:text-white hover:border-zinc-950 font-bold rounded-xl h-12 transition-all duration-200 active:scale-95 shadow-sm">
               Return to Sign In
             </button>
@@ -100,7 +100,7 @@ function ForgotPasswordContainer() {
             </button>
 
             <div className="text-center">
-              <Link href="/login" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+              <Link prefetch={false} href="/login" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
                 ← Back to sign in
               </Link>
             </div>

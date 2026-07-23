@@ -53,14 +53,14 @@ export default function OrderFailedPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 pt-2">
-          <Link href="/checkout" className="w-full">
+          <Link prefetch={false} href="/checkout" className="w-full">
             <button className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md">
               <RefreshCw className="w-4 h-4" />
               Try Again
             </button>
           </Link>
           
-          <Link href="/cart" className="w-full">
+          <Link prefetch={false} href="/cart" className="w-full">
             <button className="w-full h-12 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
               <ShoppingCart className="w-4 h-4" />
               Return to Cart

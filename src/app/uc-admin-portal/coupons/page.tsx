@@ -261,7 +261,7 @@ export default function AdminCouponsPage() {
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <div>
             <span>Coupons and promotions are currently <strong>disabled</strong> on the storefront. You can change this in </span>
-            <Link href="/uc-admin-portal/settings" className="text-indigo-650 hover:underline font-bold">Site Settings</Link>.
+            <Link prefetch={false} href="/uc-admin-portal/settings" className="text-indigo-650 hover:underline font-bold">Site Settings</Link>.
           </div>
         </div>
       )}
