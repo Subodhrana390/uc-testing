@@ -20,8 +20,12 @@ export function baseMetadata(overrides: Partial<Metadata> = {}): Metadata {
     metadataBase: new URL(SITE_URL),
     applicationName: SITE_NAME,
     appleWebApp: {
+      capable: true,
       title: SITE_NAME,
       statusBarStyle: "default",
+    },
+    other: {
+      "mobile-web-app-capable": "yes",
     },
     title: {
       default: SITE_NAME,
@@ -82,8 +86,7 @@ export function baseMetadata(overrides: Partial<Metadata> = {}): Metadata {
       canonical: SITE_URL,
     },
     verification: {
-      // Add your Google Search Console verification token here when available
-      // google: "YOUR_VERIFICATION_TOKEN",
+      google: "VVSj1XQYTO5swmPK0Whmsh3EDGMOE-ljQygtAtZ2bfo",
     },
     ...overrides,
   };

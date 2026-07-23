@@ -6,7 +6,7 @@ import TrackingInitializer from "@/components/TrackingInitializer";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationSchema, websiteSchema, localBusinessSchema } from "@/lib/jsonld";
-import { baseMetadata } from "@/lib/seo";
+import { baseMetadata, SITE_DESCRIPTION } from "@/lib/seo";
 import { getSiteSettings } from "@/app/actions/settings";
 import QueryProvider from "@/components/providers/QueryProvider";
 
@@ -34,6 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return baseMetadata({
     applicationName: settings.site_name,
     appleWebApp: {
+      capable: true,
       title: settings.site_name,
       statusBarStyle: "default",
     },
@@ -41,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
       default: settings.seo_title_default || settings.site_name,
       template: `%s | ${settings.site_name}`,
     },
-    description: settings.seo_description_default || undefined,
+    description: settings.seo_description_default || SITE_DESCRIPTION,
     keywords: keywords.length > 0 ? keywords : undefined,
     icons: {
       icon: settings.favicon_url || "/favicon.ico",
@@ -53,13 +54,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "https://uc-enterprises.vercel.app",
       siteName: settings.site_name,
       title: settings.seo_title_default || settings.site_name,
-      description: settings.seo_description_default || undefined,
+      description: settings.seo_description_default || SITE_DESCRIPTION,
       images: settings.logo_url ? [{ url: settings.logo_url, width: 800, height: 800, alt: settings.site_name }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: settings.seo_title_default || settings.site_name,
-      description: settings.seo_description_default || undefined,
+      description: settings.seo_description_default || SITE_DESCRIPTION,
       images: settings.logo_url ? [settings.logo_url] : undefined,
     }
   });
