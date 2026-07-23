@@ -40,7 +40,7 @@ function ForgotPasswordContainer() {
         <div className="relative z-10 space-y-8">
           <div className="flex items-center gap-3">
             <div className="relative w-10 h-10 flex items-center justify-center overflow-hidden">
-              <Image src="/logo.png" alt="UC Enterprises Logo" width={40} height={40} className="object-cover" />
+              <Image src="/logo.png" alt="UC Enterprises" width={40} height={40} className="object-cover" />
             </div>
             <span className="text-sm font-black tracking-widest uppercase text-zinc-800">
               UC Enterprises

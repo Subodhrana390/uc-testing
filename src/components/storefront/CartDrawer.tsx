@@ -80,6 +80,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500 hover:text-zinc-900"
+                aria-label="Close cart"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -159,6 +160,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             className="p-1 text-zinc-500 hover:text-zinc-950 transition-colors"
+                            aria-label="Decrease quantity"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -168,6 +170,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="p-1 text-zinc-500 hover:text-zinc-950 transition-colors"
+                            aria-label="Increase quantity"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -186,6 +189,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                           <button
                             onClick={() => removeItem(item.id)}
                             className="text-zinc-400 hover:text-red-500 p-1 rounded transition-colors"
+                            aria-label="Remove item"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

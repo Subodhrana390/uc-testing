@@ -91,7 +91,7 @@ export default function ShareModal({ isOpen, onClose, title, text, url, imageUrl
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-zinc-100">
-                <h3 className="text-lg font-black text-zinc-900">Share Product</h3>
+                <h2 className="text-lg font-black text-zinc-900">Share Product</h2>
                 <button
                   onClick={onClose}
                   className="p-2 -mr-2 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
@@ -109,7 +109,7 @@ export default function ShareModal({ isOpen, onClose, title, text, url, imageUrl
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-zinc-900 truncate">{title}</h4>
+                    <h3 className="text-sm font-bold text-zinc-900 truncate">{title}</h3>
                     <p className="text-xs font-medium text-zinc-500 truncate mt-0.5">Check out this product</p>
                   </div>
                 </div>

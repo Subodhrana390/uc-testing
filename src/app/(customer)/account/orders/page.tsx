@@ -687,7 +687,7 @@ export default function OrderHistoryPage() {
                       <div className="flex flex-wrap gap-2 mb-2">
                         {uploadedImages.map((url, idx) => (
                           <div key={idx} className="relative w-16 h-16 border border-zinc-200 rounded-lg overflow-hidden bg-zinc-50 flex items-center justify-center p-1 group">
-                            <img src={url} alt={`Damage photo ${idx + 1}`} className="max-h-full max-w-full object-contain" />
+                            <img src={url} alt={`Damage preview ${idx + 1}`} className="max-h-full max-w-full object-contain" />
                             <button
                               type="button"
                               onClick={() => removeReturnImage(idx)}

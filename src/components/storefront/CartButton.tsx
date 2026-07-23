@@ -24,6 +24,7 @@ export default function CartButton({ onClick }: { onClick?: (e: React.MouseEvent
         }
       }}
       className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors"
+      aria-label="Cart"
     >
       <div className="relative">
         <ShoppingCart className="h-5 w-5" />

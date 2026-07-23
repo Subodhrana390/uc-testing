@@ -143,7 +143,7 @@ export default function BannerCarousel({ banners }: BannerCarouselProps) {
               }}
             >
               {banner.link_url ? (
-                <Link prefetch={false} href={banner.link_url} className="absolute inset-0 block cursor-pointer">
+                <Link prefetch={false} href={banner.link_url} className="absolute inset-0 block cursor-pointer" aria-label={banner.title || "Banner link"}>
                   {slideContent}
                 </Link>
               ) : (

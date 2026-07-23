@@ -57,6 +57,7 @@ export default function WishlistButton({ className, onClick }: { className?: str
         }
       }}
       className={className || "inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-primary transition-colors"}
+      aria-label="Wishlist"
     >
       <div className="relative">
         <Heart className={className ? "h-5 w-5 text-primary" : "h-5 w-5"} />

@@ -80,12 +80,13 @@ export default function CategorySelector({
         <div className="relative z-10 flex flex-row items-end gap-2.5 sm:gap-4 w-full">
           {/* Main Category */}
           <div className="space-y-1.5 flex-1 min-w-0">
-            <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1 block truncate">
+            <label htmlFor="main-category-select" className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1 block truncate">
               1. Department
             </label>
 
             <div className="relative">
               <select
+                id="main-category-select"
                 value={selectedMain}
                 onChange={(e) => setSelectedMain(e.target.value)}
                 className="w-full h-12 sm:h-14 pl-8 sm:pl-12 pr-6 sm:pr-4 rounded-xl border border-zinc-100 bg-white text-xs sm:text-sm font-bold text-zinc-950 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
@@ -106,12 +107,13 @@ export default function CategorySelector({
 
           {/* Sub Category */}
           <div className="space-y-1.5 flex-1 min-w-0">
-            <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1 block truncate">
+            <label htmlFor="sub-category-select" className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 px-1 block truncate">
               2. Category
             </label>
 
             <div className="relative">
               <select
+                id="sub-category-select"
                 value={selectedSub}
                 onChange={(e) => setSelectedSub(e.target.value)}
                 disabled={!selectedMain}

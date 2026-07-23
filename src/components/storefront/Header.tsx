@@ -122,6 +122,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 <button
                   className="lg:hidden -ml-2 p-2 shrink-0 text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(true)}
+                  aria-label="Open mobile menu"
                 >
                   <Menu className="h-5 w-5" />
                 </button>
@@ -176,6 +177,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   <button
                     onClick={goToLogin}
                     className="lg:hidden p-2 text-zinc-700 hover:text-primary"
+                    aria-label="Go to login"
                   >
                     <User className="h-4 w-4" />
                   </button>
@@ -183,6 +185,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   <Link prefetch={false}
                     href="/account/profile"
                     className="lg:hidden p-2 text-zinc-700 hover:text-primary"
+                    aria-label="Go to profile"
                   >
                     <User className="h-4 w-4" />
                   </Link>
@@ -280,9 +283,9 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                             {/* Subcategories (Right Panel) */}
                             <div className="invisible absolute left-[32%] top-0 w-[68%] h-full pt-8 px-6 pb-8 bg-white border-l border-zinc-100 opacity-0 transition-all group-hover/main:visible group-hover/main:opacity-100 z-10 overflow-y-auto custom-scrollbar text-left">
                               <div className="flex items-center justify-between mb-5">
-                                <h3 className="text-lg font-black tracking-tight text-zinc-950 uppercase">
+                                <div className="text-lg font-black tracking-tight text-zinc-950 uppercase">
                                   {mainCat.name}
-                                </h3>
+                                </div>
                                 <Link prefetch={false}
                                   href={`/categories/${mainCat.slug}`}
                                   className="text-xs font-bold text-primary hover:underline uppercase tracking-wider"
@@ -314,15 +317,15 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                     <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center p-2 mb-3 mx-auto">
                       <Image
                         src={logoSrc}
-                        alt="Logo"
+                        alt=""
                         width={32}
                         height={32}
                         className="w-8 h-8 object-contain opacity-50"
                       />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-950 mb-1">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-950 mb-1">
                       Explore Catalog
-                    </h4>
+                    </div>
                     <p className="text-[9px] text-zinc-500 max-w-[180px] mx-auto leading-relaxed font-bold uppercase tracking-wider opacity-60">
                       Hover to browse specialized industrial segments.
                     </p>
@@ -372,7 +375,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                   <div className="w-7 h-7 flex items-center justify-center">
                     <Image
                       src={logoSrc}
-                      alt="Logo"
+                      alt=""
                       width={28}
                       height={28}
                       className="w-full h-full object-contain"
@@ -385,6 +388,7 @@ export default function Header({ categories, user, settings, navLinks }: HeaderP
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="p-2 rounded-full hover:bg-zinc-50 text-zinc-500 transition-colors"
+                  aria-label="Close menu"
                 >
                   <X className="h-5 w-5" />
                 </button>

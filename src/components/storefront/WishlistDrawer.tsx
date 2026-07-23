@@ -154,6 +154,7 @@ export default function WishlistDrawer({ isOpen, onClose }: WishlistDrawerProps)
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500 hover:text-zinc-900"
+                aria-label="Close wishlist"
               >
                 <X className="w-5 h-5" />
               </button>

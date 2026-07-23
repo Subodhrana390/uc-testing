@@ -161,7 +161,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div data-nosnippet className="group/prodcard relative flex flex-col bg-transparent transition-all h-full overflow-hidden rounded-2xl">
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden">
-        <Link prefetch={false} href={`/products/${product.slug}`} className="absolute inset-0 z-0">
+        <Link prefetch={false} href={`/products/${product.slug}`} className="absolute inset-0 z-0" aria-label={product.name}>
           {product.image_url ? (
             <Image
               src={product.image_url}

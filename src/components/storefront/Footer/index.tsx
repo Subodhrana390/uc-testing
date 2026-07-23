@@ -52,6 +52,7 @@ export default function Footer({ settings }: FooterProps) {
                 href={socialLinks.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Instagram"
                 className="p-2 rounded-full bg-pink-50 border border-pink-200 text-pink-600 hover:bg-pink-600 hover:text-white transition-all shadow-sm"
               >
                 <Instagram className="w-4 h-4" />
@@ -63,6 +64,7 @@ export default function Footer({ settings }: FooterProps) {
                 href={socialLinks.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Facebook"
                 className="p-2 rounded-full bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
               >
                 <Facebook className="w-4 h-4" />
@@ -74,6 +76,7 @@ export default function Footer({ settings }: FooterProps) {
                 href={socialLinks.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Twitter"
                 className="p-2 rounded-full bg-sky-50 border border-sky-200 text-sky-500 hover:bg-sky-500 hover:text-white transition-all shadow-sm"
               >
                 <Twitter className="w-4 h-4" />
@@ -85,6 +88,7 @@ export default function Footer({ settings }: FooterProps) {
                 href={socialLinks.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="LinkedIn"
                 className="p-2 rounded-full bg-blue-50 border border-blue-200 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-all shadow-sm"
               >
                 <Linkedin className="w-4 h-4" />
@@ -96,6 +100,7 @@ export default function Footer({ settings }: FooterProps) {
                 href={socialLinks.youtube}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="YouTube"
                 className="p-2 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
               >
                 <Youtube className="w-4 h-4" />
